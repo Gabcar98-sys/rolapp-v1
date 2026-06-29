@@ -4,8 +4,8 @@
     "phase": "F0 — Andamiaje",
     "title": "Andamiaje del repo: Vite+Tailwind, Express+Socket.io, SQLite+sqlite-vec, Docker, auth básica",
     "priority": 0,
-    "status": "in_progress",
-    "description": "Repo nuevo funcional: frontend React+Vite+Tailwind con tokens, backend Express+Socket.io, SQLite con better-sqlite3 + carga de sqlite-vec (degradación elegante si no carga), docker-compose, auth DM/player con PIN (SHA-256). Debe levantar con `docker compose up` y permitir registro/login. Bootstrap hecho por el founder (el harness gobierna de F1 en adelante)."
+    "status": "done",
+    "description": "Repo nuevo funcional: frontend React+Vite+Tailwind con tokens, backend Express+Socket.io, SQLite con better-sqlite3 + carga de sqlite-vec (degradación elegante si no carga), docker-compose, auth DM/player con PIN (SHA-256). Debe levantar con `docker compose up` y permitir registro/login. Bootstrap hecho por el founder (el harness gobierna de F1 en adelante). VERIFICADO 2026-06-29: docker compose build+up OK, sqlite-vec v0.1.9 cargado (vecEnabled:true), register/login/401 OK, frontend 200."
   },
   {
     "id": "F1-schema",

@@ -12,20 +12,23 @@ Bootstrap del repo v1.0 (founder). Portado el harness de agentes desde la v0 y a
 
 ## Feature en progreso
 
-`F0-scaffold` — Andamiaje del repo.
+Ninguna. `F0-scaffold` quedó `done` y verificado. La próxima es `F1-schema`, ya bajo el harness.
 
-> Excepción al protocolo: F0 lo hace el founder a mano porque el harness no puede
+> Excepción al protocolo: F0 lo hizo el founder a mano porque el harness no puede
 > correr antes de que exista el repo. De `F1` en adelante, el ciclo es
 > líder → implementer → reviewer.
 
-## Plan
+## Verificación de F0 (2026-06-29)
 
-Crear: backend (Express+Socket.io, SQLite+sqlite-vec, auth PIN), frontend (Vite+Tailwind+tokens, login),
-docker-compose, .env.example, README. Levantar con `docker compose up`.
+- `docker compose build` → backend y frontend compilan (incl. better-sqlite3/sqlite-vec nativos).
+- `docker compose up -d` → `/api/health` = `{"status":"ok","vecEnabled":true,"version":"1.0.0"}`.
+- `sqlite-vec` v0.1.9 cargado dentro del contenedor.
+- Auth: register DM OK, login OK, login con PIN incorrecto → 401, frontend → 200.
 
-## Estado por feature
+## Próximo paso
 
-Ver `.claude/feature_list.json`. F1 (schema consolidado) es la próxima, ya bajo el harness.
+`F1-schema`: schema.sql consolidado (identidad/sesión, game systems, personajes, planificación,
+post-sesión, RAG) + sistema de migraciones reiniciado. Ejecutar vía harness (líder → implementer → reviewer).
 
 ## Preguntas abiertas
 
