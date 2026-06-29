@@ -1,0 +1,23 @@
+{
+  "name": "rolapp-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "RolApp v1.0 backend — Express + Socket.io + SQLite",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "lint": "eslint src",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.8.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1",
+    "sqlite-vec": "^0.1.6"
+  },
+  "devDependencies": {
+    "eslint": "^9.18.0"
+  }
+}

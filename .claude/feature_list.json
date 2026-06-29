@@ -1,0 +1,74 @@
+[
+  {
+    "id": "F0-scaffold",
+    "phase": "F0 — Andamiaje",
+    "title": "Andamiaje del repo: Vite+Tailwind, Express+Socket.io, SQLite+sqlite-vec, Docker, auth básica",
+    "priority": 0,
+    "status": "in_progress",
+    "description": "Repo nuevo funcional: frontend React+Vite+Tailwind con tokens, backend Express+Socket.io, SQLite con better-sqlite3 + carga de sqlite-vec (degradación elegante si no carga), docker-compose, auth DM/player con PIN (SHA-256). Debe levantar con `docker compose up` y permitir registro/login. Bootstrap hecho por el founder (el harness gobierna de F1 en adelante)."
+  },
+  {
+    "id": "F1-schema",
+    "phase": "F1 — Schema consolidado",
+    "title": "schema.sql limpio y consolidado + sistema de migraciones reiniciado",
+    "priority": 1,
+    "status": "pending",
+    "description": "Reunir en un schema.sql limpio todo lo que en la v0 estaba disperso en 32 migraciones (identidad/sesión, game systems, personajes, planificación, post-sesión, RAG). Tabla _migrations vacía como baseline."
+  },
+  {
+    "id": "F2-game-systems",
+    "phase": "F2 — Game systems data-driven",
+    "title": "Builder in-app de sistemas de juego + import/export de packs JSON",
+    "priority": 2,
+    "status": "pending",
+    "description": "Editor visual (atributos, formatos de skill/item, slots, mecánicas, docs) + importar/exportar game pack JSON versionado. Packs de ejemplo (Stormlight, Dragonbane) como archivos en game-packs/, no seeds en código."
+  },
+  {
+    "id": "F4-session-engine",
+    "phase": "F4 — Motor de sesión",
+    "title": "Lifecycle de sesión, members, presencia, canvas (tldraw), chat, session_events",
+    "priority": 3,
+    "status": "pending",
+    "description": "Portar de la v0 el motor de sesión: crear/cerrar sesión, miembros, presencia por socket, canvas colaborativo, chat, log append-only session_events."
+  },
+  {
+    "id": "F5-planning",
+    "phase": "F5 — Planificación",
+    "title": "Preps, ubicaciones/sub-ubicaciones, grafo de eventos con ramas/enlaces, disparo con participantes, NPCs",
+    "priority": 4,
+    "status": "pending",
+    "description": "Portar el motor de planificación (el activo de la app): session_preps → locations → sub_locations → event_templates + event_links, disparo de eventos con participantes, eventos de NPC."
+  },
+  {
+    "id": "F3-characters",
+    "phase": "F3 — Personajes",
+    "title": "Mis personajes, pregens/base characters, fichas dinámicas por game system, inventario/equipo/skills",
+    "priority": 5,
+    "status": "pending",
+    "description": "Personajes desacoplados de sesión, plantillas base/pregens, fichas dinámicas según el game system, inventario, equipo y skills."
+  },
+  {
+    "id": "F6-rag-ai",
+    "phase": "F6 — RAG / IA",
+    "title": "sqlite-vec, ingesta/chunking, retrieval híbrido, contexto/tools, resumen de sesión",
+    "priority": 6,
+    "status": "pending",
+    "description": "Reescribir el RAG: vectores en sqlite-vec con scoping por game system, chunking jerárquico, retrieval híbrido (vector+FTS5), contexto estructurado/tools para el modelo, resumen de sesión al cerrar."
+  },
+  {
+    "id": "F7-stats",
+    "phase": "F7 — Estadísticas",
+    "title": "Estadísticas por sesión/campaña/personaje derivadas del log + snapshot al cerrar",
+    "priority": 7,
+    "status": "pending",
+    "description": "Derivar estadísticas de session_events + personajes; snapshot en session_stats al cerrar; visualización en historial y campaña."
+  },
+  {
+    "id": "F8-ui-polish",
+    "phase": "F8 — Pulido UI mobile",
+    "title": "Layouts finales jugador/DM, bottom-sheets, gestos, accesibilidad, distribución",
+    "priority": 8,
+    "status": "pending",
+    "description": "Pulir la experiencia mobile-first: layouts diferenciados jugador (celular) y DM (escritorio/tablet), bottom-sheets, gestos, accesibilidad y empaquetado para distribución."
+  }
+]
