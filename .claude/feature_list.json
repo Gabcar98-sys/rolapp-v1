@@ -28,8 +28,8 @@
     "phase": "F4 — Motor de sesión",
     "title": "Lifecycle de sesión, members, presencia, canvas (tldraw), chat, session_events",
     "priority": 3,
-    "status": "pending",
-    "description": "Portar de la v0 el motor de sesión: crear/cerrar sesión, miembros, presencia por socket, canvas colaborativo, chat, log append-only session_events."
+    "status": "done",
+    "description": "Portar de la v0 el motor de sesión: crear/cerrar sesión, miembros, presencia por socket, canvas colaborativo, chat, log append-only session_events. F4 acota canvas a tablero de imagen compartida con sync; dibujo libre (tldraw) se posterga a F8. VERIFICADO 2026-06-29 (tras 1 ronda de corrección de tooling de lint): backend lint exit 0, 6/6 tests, frontend build OK, smoke completo (crear/cerrar sesión, 400/403/404, autorización DM, append-only). Reviewer APROBADO."
   },
   {
     "id": "F5-planning",

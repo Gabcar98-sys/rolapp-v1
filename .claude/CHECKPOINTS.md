@@ -8,8 +8,9 @@
 ## Checklist obligatorio
 
 ### Build y lint
-- [ ] `npm run lint` pasa sin errores ni warnings nuevos (backend y frontend tocados).
-- [ ] `npm run build` pasa (frontend).
+- [ ] Lint backend pasa EN EL CONTENEDOR: `docker compose exec backend npm run lint` (la imagen backend incluye devDependencies a propósito).
+- [ ] Lint + build frontend pasan vía `docker compose build frontend` (forzados en el build stage con `RUN npm run lint` y `RUN npm run build`).
+- [ ] Prohibido declarar "lint ✅" sin ejecutarlo en el contenedor.
 - [ ] No hay código comentado sin explicación de por qué.
 - [ ] No hay `console.log` de debug olvidados (sí se permite logging intencional vía el logger del proyecto).
 

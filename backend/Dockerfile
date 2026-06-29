@@ -8,9 +8,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       python3 make g++ \
     && rm -rf /var/lib/apt/lists/*
 
+# Incluye devDependencies (eslint + runner de tests) para verificar lint/tests
+# dentro del contenedor — entorno canónico sin Node local.
 COPY package.json ./
-RUN npm install --omit=dev
+RUN npm install
 
+COPY eslint.config.js ./
 COPY src ./src
 
 ENV PORT=3001

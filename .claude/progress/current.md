@@ -12,7 +12,11 @@ Bootstrap del repo v1.0 (founder). Portado el harness de agentes desde la v0 y a
 
 ## Feature en progreso
 
-`F4-session-engine` (próxima a lanzar). `F0` y `F1` cerradas y verificadas.
+`F5-planning` (próxima a lanzar). `F0`, `F1`, `F4` cerradas y verificadas.
+
+## Deuda técnica conocida (no bloqueante)
+- Frontend ESLint: 12 warnings falsos `no-unused-vars` sobre componentes JSX por faltar
+  `eslint-plugin-react` (`react/jsx-uses-vars`). Arreglar en la próxima feature que toque frontend (F5).
 
 > Excepción al protocolo: F0 lo hizo el founder a mano porque el harness no puede
 > correr antes de que exista el repo. De `F1` en adelante, el ciclo es

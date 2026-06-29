@@ -5,20 +5,35 @@
 
 ---
 
-## Verificación mínima obligatoria
+## Verificación mínima obligatoria (entorno canónico = Docker, sin Node local)
+
+El founder NO tiene Node en el host. Lint y tests se corren DENTRO de contenedores.
 
 ```bash
-# Backend
-cd backend && npm run lint && npm test
+cd /c/Users/gabri/dev/rolapp-v1
+docker compose up -d --build
 
-# Frontend
-cd frontend && npm run lint && npm run build && npm test
+# Backend: la imagen incluye devDependencies (Dockerfile NO usa --omit=dev),
+# así que eslint y el test runner están disponibles en el contenedor.
+docker compose exec backend npm run lint
+docker compose exec backend npm test
+
+# Frontend: lint y build se FUERZAN en el build stage de su Dockerfile
+# (RUN npm run lint && RUN npm run build antes de copiar a nginx).
+# Por tanto, que la imagen frontend buildee = lint + build en verde.
+docker compose build frontend
+# Tests de frontend (si existen) — ejecutar en el build stage o vía contenedor de node:
+docker compose exec backend sh -lc 'cd /app && true'   # placeholder; ver nota frontend-tests
 ```
 
 Todo debe pasar en verde. Si algo falla, la feature no está terminada.
 
-> **Nota:** si el proyecto de tests aún no existe, el implementer lo crea como parte de
-> la primera feature que requiera tests.
+> **Lint:** está prohibido declarar "lint ✅" sin haberlo ejecutado en el contenedor.
+> Backend → `docker compose exec backend npm run lint`. Frontend → enforced en `docker compose build frontend`.
+>
+> **Tests:** si el proyecto de tests aún no existe para una capa, el implementer lo crea
+> como parte de la primera feature que requiera tests. Backend usa `node --test` (sin
+> dependencia extra). Frontend usa vitest (si una feature añade lógica testeable).
 
 ---
 

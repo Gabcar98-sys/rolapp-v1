@@ -1,10 +1,12 @@
-// Handlers de Socket.io. En F4 se agregan presencia, canvas, chat y eventos de sesión.
+import { registerSessionHandlers } from './session.js';
+import { registerChatHandlers } from './chat.js';
+import { registerCanvasHandlers } from './canvas.js';
+
+// Punto de entrada de Socket.io. Cada dominio registra sus handlers por socket.
 export function initSockets(io) {
   io.on('connection', (socket) => {
-    console.log(`socket conectado: ${socket.id}`);
-
-    socket.on('disconnect', () => {
-      console.log(`socket desconectado: ${socket.id}`);
-    });
+    registerSessionHandlers(io, socket);
+    registerChatHandlers(io, socket);
+    registerCanvasHandlers(io, socket);
   });
 }

@@ -1,0 +1,169 @@
+import { Router } from 'express';
+import db from '../db/index.js';
+import { logEvent, listEvents } from '../services/events.js';
+
+// El router necesita io para emitir eventos por socket al insertarlos vía REST.
+export default function createSessionsRouter(io) {
+  const router = Router();
+
+  // GET /api/sessions?status=active|closed  — incluye DM, campaña y conteo de miembros.
+  router.get('/', (req, res) => {
+    const status = req.query.status === 'closed' ? 'closed' : 'active';
+    const sessions = db
+      .prepare(`
+        SELECT s.*, u.username AS dm_username,
+               c.name AS campaign_name,
+               COUNT(sm.user_id) AS member_count
+        FROM sessions s
+        JOIN users u ON s.dm_id = u.id
+        LEFT JOIN campaigns c ON s.campaign_id = c.id
+        LEFT JOIN session_members sm ON s.id = sm.session_id
+        WHERE s.status = ?
+        GROUP BY s.id
+        ORDER BY s.created_at DESC
+      `)
+      .all(status);
+    res.json({ sessions });
+  });
+
+  // GET /api/sessions/:id  — sesión con miembros y personajes.
+  router.get('/:id', (req, res) => {
+    const session = db
+      .prepare(`
+        SELECT s.*, u.username AS dm_username, c.name AS campaign_name
+        FROM sessions s
+        JOIN users u ON s.dm_id = u.id
+        LEFT JOIN campaigns c ON s.campaign_id = c.id
+        WHERE s.id = ?
+      `)
+      .get(req.params.id);
+    if (!session) return res.status(404).json({ error: 'Sesión no encontrada' });
+
+    const members = db
+      .prepare(`
+        SELECT u.id, u.username, u.role, sm.joined_at
+        FROM session_members sm
+        JOIN users u ON sm.user_id = u.id
+        WHERE sm.session_id = ?
+        ORDER BY sm.joined_at ASC
+      `)
+      .all(session.id);
+
+    const characters = db
+      .prepare(`
+        SELECT ch.id, ch.user_id, ch.name, sc.joined_at
+        FROM session_characters sc
+        JOIN characters ch ON sc.character_id = ch.id
+        WHERE sc.session_id = ?
+        ORDER BY sc.joined_at ASC
+      `)
+      .all(session.id);
+
+    res.json({ session, members, characters });
+  });
+
+  // POST /api/sessions  { name, dm_id, campaign_id? }  → crea sesión activa.
+  router.post('/', (req, res) => {
+    const { name, dm_id, campaign_id = null } = req.body ?? {};
+    if (!name || !dm_id) {
+      return res.status(400).json({ error: 'name y dm_id son requeridos' });
+    }
+
+    const dm = db.prepare("SELECT id FROM users WHERE id = ? AND role = 'dm'").get(dm_id);
+    if (!dm) return res.status(404).json({ error: 'DM no encontrado' });
+
+    const create = db.transaction(() => {
+      const info = db
+        .prepare('INSERT INTO sessions (name, dm_id, campaign_id) VALUES (?, ?, ?)')
+        .run(name, dm_id, campaign_id);
+      const sessionId = info.lastInsertRowid;
+      // El DM es miembro de su propia sesión desde el arranque.
+      db.prepare('INSERT OR IGNORE INTO session_members (session_id, user_id) VALUES (?, ?)')
+        .run(sessionId, dm_id);
+      logEvent(sessionId, 'session_start', dm_id, { name });
+      return sessionId;
+    });
+
+    const sessionId = create();
+    const session = db.prepare('SELECT * FROM sessions WHERE id = ?').get(sessionId);
+    res.status(201).json({ session });
+  });
+
+  // PATCH /api/sessions/:id/close  { dm_id }  → status='closed' (solo el DM dueño).
+  router.patch('/:id/close', (req, res) => {
+    const { dm_id } = req.body ?? {};
+    if (!dm_id) return res.status(400).json({ error: 'dm_id es requerido' });
+
+    const session = db.prepare('SELECT * FROM sessions WHERE id = ?').get(req.params.id);
+    if (!session) return res.status(404).json({ error: 'Sesión no encontrada' });
+    if (String(session.dm_id) !== String(dm_id)) {
+      return res.status(403).json({ error: 'Solo el DM dueño puede finalizar la sesión' });
+    }
+
+    db.prepare("UPDATE sessions SET status = 'closed' WHERE id = ?").run(session.id);
+    logEvent(session.id, 'session_end', dm_id, {});
+    io.to(`session:${session.id}`).emit('session:closed', { sessionId: session.id });
+
+    res.json({ ok: true });
+  });
+
+  // PATCH /api/sessions/:id/reset  { dm_id }  → limpia canvas_state (solo el DM dueño).
+  router.patch('/:id/reset', (req, res) => {
+    const { dm_id } = req.body ?? {};
+    if (!dm_id) return res.status(400).json({ error: 'dm_id es requerido' });
+
+    const session = db.prepare('SELECT * FROM sessions WHERE id = ?').get(req.params.id);
+    if (!session) return res.status(404).json({ error: 'Sesión no encontrada' });
+    if (String(session.dm_id) !== String(dm_id)) {
+      return res.status(403).json({ error: 'Solo el DM dueño puede reiniciar la sesión' });
+    }
+
+    db.prepare(
+      'UPDATE canvas_state SET image_url = NULL, tldraw_snapshot = NULL, updated_at = unixepoch() WHERE session_id = ?'
+    ).run(session.id);
+    logEvent(session.id, 'session_reset', dm_id, {});
+    io.to(`session:${session.id}`).emit('session:reset', { sessionId: session.id });
+
+    res.json({ ok: true });
+  });
+
+  // POST /api/sessions/:id/members  { user_id }  → idempotente (INSERT OR IGNORE).
+  router.post('/:id/members', (req, res) => {
+    const { user_id } = req.body ?? {};
+    if (!user_id) return res.status(400).json({ error: 'user_id es requerido' });
+
+    const session = db.prepare('SELECT * FROM sessions WHERE id = ?').get(req.params.id);
+    if (!session) return res.status(404).json({ error: 'Sesión no encontrada' });
+
+    const user = db.prepare('SELECT id FROM users WHERE id = ?').get(user_id);
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+    db.prepare('INSERT OR IGNORE INTO session_members (session_id, user_id) VALUES (?, ?)')
+      .run(session.id, user_id);
+
+    res.status(201).json({ ok: true });
+  });
+
+  // GET /api/sessions/:id/events  → lista session_events (append-only) en orden cronológico.
+  router.get('/:id/events', (req, res) => {
+    const session = db.prepare('SELECT id FROM sessions WHERE id = ?').get(req.params.id);
+    if (!session) return res.status(404).json({ error: 'Sesión no encontrada' });
+    res.json({ events: listEvents(session.id) });
+  });
+
+  // POST /api/sessions/:id/events  { actor_id, type, payload }  → inserta y emite por socket.
+  router.post('/:id/events', (req, res) => {
+    const { actor_id = null, type, payload = {} } = req.body ?? {};
+    if (!type) return res.status(400).json({ error: 'type es requerido' });
+
+    const session = db.prepare('SELECT id FROM sessions WHERE id = ?').get(req.params.id);
+    if (!session) return res.status(404).json({ error: 'Sesión no encontrada' });
+
+    const event = logEvent(session.id, type, actor_id, payload);
+    io.to(`session:${session.id}`).emit('session:event_fired', { event });
+
+    res.status(201).json({ event });
+  });
+
+  return router;
+}

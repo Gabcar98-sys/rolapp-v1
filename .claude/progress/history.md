@@ -27,3 +27,14 @@ Schema consolidado de la v1.0. Implementer → Reviewer APROBADO.
 - Verificado en contenedor: 49 tablas + vec_chunks, health vecEnabled:true, sin errores SQL.
 - Lecciones añadidas: vec0 fuera de schema.sql; verificar migraciones con PRAGMA.
 - Próxima: F4-session-engine.
+
+## 2026-06-29 — F4-session-engine (DONE)
+
+Motor de sesión portado de la v0. Implementer → Reviewer RECHAZADO (tooling lint) → corrección → APROBADO.
+
+- **Backend:** `routes/campaigns.js`, `routes/sessions.js` (factory con io), `routes/canvas.js`; `services/events.js`; sockets por dominio (`session.js`/`chat.js`/`canvas.js`) con presencia en memoria por room, chat (público/privado), canvas de imagen compartida, fire de eventos. Autorización DM en close/reset/canvas. session_events y messages append-only. 6/6 tests.
+- **Frontend:** `components/ui/` (Button, Card, Tabs, Modal/Sheet), `pages/Lobby.jsx`, `pages/SessionView.jsx` (shell mobile-first con tabs/toggle sin innerWidth), `ConnectedUsers`, `ChatPanel`; `App.jsx` enruta Login→Lobby→Session; `lib/api.js` ampliado. 100% Tailwind, sin estilos inline.
+- **Infra/verificación:** se corrigió el hueco de F0 — backend Dockerfile sin `--omit=dev` + `COPY eslint.config.js`; frontend Dockerfile fuerza `npm run lint` antes de `vite build`; `frontend/eslint.config.js` creado. Estrategia de lint/test canónica (Docker) documentada en verification.md/CHECKPOINTS.
+- **Alcance:** canvas = imagen compartida con sync; dibujo libre (tldraw) postergado a F8.
+- Deuda: 12 warnings falsos de eslint frontend (falta eslint-plugin-react) → arreglar en F5.
+- Próxima: F5-planning.

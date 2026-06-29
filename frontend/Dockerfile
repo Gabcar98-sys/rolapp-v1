@@ -4,6 +4,8 @@ WORKDIR /app
 COPY package.json ./
 RUN npm install
 COPY . .
+# Lint forzado antes del build: que la imagen buildee = lint + build en verde.
+RUN npm run lint
 RUN npm run build
 
 # ── Serve (nginx) ─────────────────────────────────────────────────────────────────
