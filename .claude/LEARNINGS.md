@@ -55,11 +55,19 @@ Las lecciones se agrupan por categoría. Cada entrada tiene:
 - **Lección:** `better-sqlite3` es **síncrono**. NO uses async/await ni `.then()` con sus métodos. Usa `db.prepare(...).get()/.all()/.run()` directo, y `db.transaction(fn)` para atomicidad.
 - **Por qué importa:** Envolverlo en async añade complejidad inútil y oculta errores; las transacciones síncronas son más simples y seguras.
 
+### Verificar migraciones consolidadas con PRAGMA en el contenedor, no leyendo el .sql
+- **Contexto:** F1, consolidar 31 migraciones de la v0 en un solo schema.sql.
+- **Lección:** Al consolidar columnas que en la v0 venían de migraciones (`ALTER TABLE`), confirma con `PRAGMA table_info(tabla)` dentro del contenedor que cada columna quedó en el baseline. Leer el .sql no basta. En un mismo `db.exec` con varios CREATE TABLE, SQLite tolera FKs hacia tablas declaradas más abajo, así que el orden de bloques puede priorizar legibilidad.
+- **Por qué importa:** Una columna migrada que se olvida en el baseline rompe queries de features posteriores de forma silenciosa.
+
 ---
 
 ## RAG / embeddings / sqlite-vec
 
-> Aún no hay lecciones en esta categoría.
+### La tabla virtual vec0 no puede vivir en schema.sql
+- **Contexto:** F1, al consolidar el esquema con la tabla de vectores de sqlite-vec.
+- **Lección:** La tabla virtual `vec0` solo existe **tras** `sqliteVec.load(db)`. Patrón: aplicar `schema.sql` primero y luego crear `vec_chunks` con `CREATE VIRTUAL TABLE IF NOT EXISTS … vec0(…, embedding FLOAT[768])` dentro de un try/catch que degrade `vecEnabled` sin romper el arranque. nomic-embed-text = 768 dims. vec0 genera 4 tablas sombra (`vec_chunks_*`) que aparecen en `sqlite_master` — no las cuentes como tablas de aplicación.
+- **Por qué importa:** Ponerla en `schema.sql` rompe el arranque cuando la extensión no cargó, y descuadra los conteos de tablas en verificaciones.
 
 ---
 
@@ -121,3 +129,4 @@ Las lecciones se agrupan por categoría. Cada entrada tiene:
 <!-- El líder y el consultor registran aquí cada vez que agregan una lección -->
 <!-- Formato: [fecha] — [agente] agregó lección "[título]" en categoría [categoría] -->
 - 2026-06-29 — founder sembró lecciones iniciales del stack al portar el harness desde la v0.
+- 2026-06-29 — líder agregó "La tabla virtual vec0 no puede vivir en schema.sql" (RAG/sqlite-vec) y "Verificar migraciones consolidadas con PRAGMA" (SQLite) tras cerrar F1.

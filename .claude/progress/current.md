@@ -12,7 +12,7 @@ Bootstrap del repo v1.0 (founder). Portado el harness de agentes desde la v0 y a
 
 ## Feature en progreso
 
-Ninguna. `F0-scaffold` quedó `done` y verificado. La próxima es `F1-schema`, ya bajo el harness.
+`F4-session-engine` (próxima a lanzar). `F0` y `F1` cerradas y verificadas.
 
 > Excepción al protocolo: F0 lo hizo el founder a mano porque el harness no puede
 > correr antes de que exista el repo. De `F1` en adelante, el ciclo es

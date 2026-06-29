@@ -30,6 +30,21 @@ try {
 const schema = readFileSync(join(__dirname, 'schema.sql'), 'utf8');
 db.exec(schema);
 
+// ── Tabla virtual de vectores (solo si sqlite-vec cargó) ─────────────────────────
+// No vive en schema.sql porque vec0 únicamente existe tras cargar la extensión.
+// 768 dimensiones = nomic-embed-text. Idempotente; un fallo aquí no debe romper el
+// arranque (la app sigue salvo el RAG).
+if (vecEnabled) {
+  try {
+    db.exec(
+      'CREATE VIRTUAL TABLE IF NOT EXISTS vec_chunks USING vec0(chunk_id INTEGER PRIMARY KEY, embedding FLOAT[768])'
+    );
+  } catch (err) {
+    console.warn(`No se pudo crear vec_chunks — RAG vectorial deshabilitado: ${err.message}`);
+    vecEnabled = false;
+  }
+}
+
 // ── Migraciones (baseline vacío; se llenan desde F1) ────────────────────────────
 runMigrations();
 

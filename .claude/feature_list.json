@@ -12,8 +12,8 @@
     "phase": "F1 — Schema consolidado",
     "title": "schema.sql limpio y consolidado + sistema de migraciones reiniciado",
     "priority": 1,
-    "status": "pending",
-    "description": "Reunir en un schema.sql limpio todo lo que en la v0 estaba disperso en 32 migraciones (identidad/sesión, game systems, personajes, planificación, post-sesión, RAG). Tabla _migrations vacía como baseline."
+    "status": "done",
+    "description": "Reunir en un schema.sql limpio todo lo que en la v0 estaba disperso en 32 migraciones (identidad/sesión, game systems, personajes, planificación, post-sesión, RAG). Tabla _migrations vacía como baseline. VERIFICADO 2026-06-29: 49 tablas de aplicación + vec_chunks (vec0/768d), legacy excluidas, sin seeds, columnas de migración aplicadas. Reviewer APROBADO."
   },
   {
     "id": "F2-game-systems",
