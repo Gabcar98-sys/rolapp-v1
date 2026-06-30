@@ -80,6 +80,7 @@ beforeEach(() => {
   // Esquema ya aplicado por db/index.js; limpiamos datos entre tests.
   db.exec(`
     DELETE FROM session_events;
+    DELETE FROM session_stats;
     DELETE FROM session_members;
     DELETE FROM canvas_state;
     DELETE FROM sessions;

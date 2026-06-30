@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import db from '../db/index.js';
 import { logEvent, listEvents } from '../services/events.js';
+import { saveSessionStats } from '../services/stats.js';
 
 // El router necesita io para emitir eventos por socket al insertarlos vía REST.
 export default function createSessionsRouter(io) {
@@ -102,6 +103,15 @@ export default function createSessionsRouter(io) {
 
     db.prepare("UPDATE sessions SET status = 'closed' WHERE id = ?").run(session.id);
     logEvent(session.id, 'session_end', dm_id, {});
+
+    // Snapshot de estadísticas al cerrar (F7). Si el cálculo falla, el cierre NO se
+    // rompe: se loguea y se sigue. session_events solo se lee.
+    try {
+      saveSessionStats(db, session.id);
+    } catch (err) {
+      console.error(`No se pudo generar el snapshot de stats para la sesión ${session.id}:`, err.message);
+    }
+
     io.to(`session:${session.id}`).emit('session:closed', { sessionId: session.id });
 
     res.json({ ok: true });

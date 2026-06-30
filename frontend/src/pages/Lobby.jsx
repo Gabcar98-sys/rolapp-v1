@@ -6,6 +6,8 @@ import SessionPrepPanel from '../components/DMMaster/SessionPrepPanel.jsx';
 import EventTemplatePanel from '../components/DMMaster/EventTemplatePanel.jsx';
 import GameSystemPanel from '../components/DMMaster/GameSystemPanel.jsx';
 import BaseCharactersPanel from '../components/DMMaster/BaseCharactersPanel.jsx';
+import SessionStatsPanel from '../components/Stats/SessionStatsPanel.jsx';
+import CampaignStatsPanel from '../components/Stats/CampaignStatsPanel.jsx';
 import MyCharacters from './MyCharacters.jsx';
 
 // Agrupa sesiones por campaña; las que no tienen campaña van bajo "Sin campaña".
@@ -32,6 +34,10 @@ export default function Lobby({ user, onEnterSession, onLogout }) {
   // Vista del lobby: 'sessions' (por defecto) o 'prep' (constructor de preparación, solo DM).
   const [view, setView] = useState('sessions');
   const [editingPrep, setEditingPrep] = useState(null);
+  // Historial de sesiones cerradas (F7) + estadísticas de campaña.
+  const [closedSessions, setClosedSessions] = useState([]);
+  const [openStatsSessionId, setOpenStatsSessionId] = useState(null);
+  const [statsCampaignId, setStatsCampaignId] = useState('');
 
   async function loadSessions() {
     try {
@@ -48,6 +54,15 @@ export default function Lobby({ user, onEnterSession, onLogout }) {
       setPreps(list);
     } catch {
       // Sin preps no bloquea el lobby; el selector queda vacío.
+    }
+  }
+
+  async function loadClosedSessions() {
+    try {
+      const { sessions: list } = await api.listSessions('closed');
+      setClosedSessions(list);
+    } catch (err) {
+      setError(err.message);
     }
   }
 
@@ -176,6 +191,89 @@ export default function Lobby({ user, onEnterSession, onLogout }) {
     );
   }
 
+  // ── Vista de historial + estadísticas (sesiones cerradas y campaña) ─────────
+  if (view === 'history') {
+    return (
+      <div className="mx-auto flex min-h-full max-w-4xl flex-col gap-6 p-4 md:p-6">
+        <header className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gold">Historial y estadísticas</h1>
+            <p className="text-sm text-gray-400">Sesiones cerradas y métricas de campaña</p>
+          </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              setView('sessions');
+              setOpenStatsSessionId(null);
+              setStatsCampaignId('');
+            }}
+          >
+            ← Lobby
+          </Button>
+        </header>
+
+        {error && (
+          <p className="rounded-md bg-danger/20 px-3 py-2 text-sm text-red-300">{error}</p>
+        )}
+
+        {isDM && campaigns.length > 0 && (
+          <Card className="p-4">
+            <h2 className="mb-3 text-sm font-semibold text-gray-200">Estadísticas de campaña</h2>
+            <select
+              value={statsCampaignId}
+              onChange={(e) => setStatsCampaignId(e.target.value)}
+              className="mb-4 w-full rounded-md border border-ink-line bg-ink-900 px-3 py-2 text-sm text-gray-100 outline-none focus:border-gold md:w-72"
+            >
+              <option value="">— Elige una campaña —</option>
+              {campaigns.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            {statsCampaignId && <CampaignStatsPanel campaignId={statsCampaignId} />}
+          </Card>
+        )}
+
+        <section className="flex flex-col gap-3">
+          <h2 className="text-sm font-semibold text-gray-200">Sesiones cerradas</h2>
+          {closedSessions.length === 0 ? (
+            <p className="text-center text-sm text-gray-500">No hay sesiones cerradas.</p>
+          ) : (
+            closedSessions.map((session) => (
+              <Card key={session.id} className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-gray-100">{session.name}</p>
+                    <p className="mt-0.5 text-xs text-gray-400">
+                      {session.campaign_name || 'Sin campaña'} · DM: {session.dm_username}
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="ml-3 flex-shrink-0"
+                    onClick={() =>
+                      setOpenStatsSessionId((cur) => (cur === session.id ? null : session.id))
+                    }
+                  >
+                    {openStatsSessionId === session.id ? 'Ocultar' : '📊 Ver stats'}
+                  </Button>
+                </div>
+                {openStatsSessionId === session.id && (
+                  <div className="mt-4 border-t border-ink-line pt-4">
+                    <SessionStatsPanel sessionId={session.id} />
+                  </div>
+                )}
+              </Card>
+            ))
+          )}
+        </section>
+      </div>
+    );
+  }
+
   // ── Vista de sesiones (por defecto) ─────────────────────────────────────────
   return (
     <div className="mx-auto flex min-h-full max-w-4xl flex-col gap-6 p-4 md:p-6">
@@ -189,6 +287,16 @@ export default function Lobby({ user, onEnterSession, onLogout }) {
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="secondary" size="sm" onClick={() => setView('characters')}>
             ⚔️ Mis personajes
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              loadClosedSessions();
+              setView('history');
+            }}
+          >
+            📊 Historial
           </Button>
           {isDM && (
             <>

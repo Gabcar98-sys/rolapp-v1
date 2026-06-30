@@ -293,4 +293,11 @@ export const api = {
   getSessionSummary: (sessionId) => request(`/sessions/${sessionId}/summary`),
   generateSessionSummary: (sessionId, dmId) =>
     request(`/sessions/${sessionId}/summary`, { method: 'POST', body: { dm_id: dmId } }),
+
+  // ── Estadísticas derivadas (F7) ───────────────────────────────────────────────
+  getSessionStats: (sessionId) => request(`/sessions/${sessionId}/stats`),
+  regenerateSessionStats: (sessionId, dmId) =>
+    request(`/sessions/${sessionId}/stats`, { method: 'POST', body: { dm_id: dmId } }),
+  getCampaignStats: (campaignId) => request(`/campaigns/${campaignId}/stats`),
+  getCharacterStats: (characterId) => request(`/characters/${characterId}/stats`),
 };

@@ -60,8 +60,8 @@
     "phase": "F7 — Estadísticas",
     "title": "Estadísticas por sesión/campaña/personaje derivadas del log + snapshot al cerrar",
     "priority": 7,
-    "status": "pending",
-    "description": "Derivar estadísticas de session_events + personajes; snapshot en session_stats al cerrar; visualización en historial y campaña."
+    "status": "done",
+    "description": "Derivar estadísticas de session_events + personajes; snapshot en session_stats al cerrar; visualización en historial y campaña. VERIFICADO 2026-06-29: 52 tests, stats sesión/campaña/personaje derivadas del log, snapshot UPSERT al cerrar (sin romper el cierre si falla), gráficos propios sin deps nuevas, historial de sesiones cerradas + stats cableados. Reviewer APROBADO."
   },
   {
     "id": "F8-ui-polish",

@@ -78,3 +78,12 @@ RAG/IA rehecho. Implementer → Reviewer APROBADO (sin rondas extra).
 - **Verificación:** 44 tests (pipeline ingesta→retrieval con stub determinista sin red, RRF, reindex, degradación), frontend build OK, health vecEnabled:true, degradación confirmada con Ollama apagado.
 - **Nota:** la IA real requiere `docker compose --profile ai up` + `ollama pull nomic-embed-text`.
 - Próxima: F7-stats.
+
+## 2026-06-29 — F7-stats (DONE)
+
+Estadísticas derivadas. Implementer → Reviewer APROBADO (sin rondas extra).
+
+- **Backend:** `services/stats.js` (computeSessionStats/CampaignStats/CharacterStats derivadas de session_events append-only + personajes + notas, parseo JSON defensivo), snapshot UPSERT en `session_stats` al cerrar sesión (no rompe el cierre si falla), `routes/stats.js` (sesión/campaña/personaje, 404 correctos).
+- **Frontend:** gráficos propios (barras/sparklines, sin deps), historial de sesiones cerradas + panel de stats + resumen, stats de campaña, stats de personaje en MyCharacters. Cableado desde Lobby, Tailwind, lint 0.
+- **Verificación:** 52 tests, frontend build OK, smoke e2e (eventos→cerrar→snapshot→stats campaña).
+- Próxima: F8-ui-polish (último).

@@ -21,6 +21,7 @@ import subLocationsRouter from './routes/subLocations.js';
 import eventTemplatesRouter from './routes/eventTemplates.js';
 import npcsRouter from './routes/npcs.js';
 import createRagRouter from './routes/rag.js';
+import statsRouter from './routes/stats.js';
 import { initSockets } from './sockets/index.js';
 
 const PORT = process.env.PORT || 3001;
@@ -59,6 +60,8 @@ app.use('/api/npcs', npcsRouter);
 // RAG / IA (F6): docs por game system, búsqueda híbrida, IA y resumen de sesión.
 // Factory porque el resumen emite por socket. Rutas absolutas (montado en /api).
 app.use('/api', createRagRouter(io));
+// Estadísticas derivadas (F7): sesión, campaña y personaje. Rutas absolutas (montado en /api).
+app.use('/api', statsRouter);
 
 initSockets(io);
 

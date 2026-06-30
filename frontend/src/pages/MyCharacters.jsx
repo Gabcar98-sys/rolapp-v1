@@ -3,6 +3,7 @@ import { api } from '../lib/api.js';
 import Button from '../components/ui/Button.jsx';
 import Card from '../components/ui/Card.jsx';
 import CharacterSheet from '../components/Character/CharacterSheet.jsx';
+import CharacterStatsPanel from '../components/Stats/CharacterStatsPanel.jsx';
 
 const inputCls =
   'rounded-md border border-ink-line bg-ink-900 px-3 py-2 text-sm text-gray-100 outline-none focus:border-gold';
@@ -13,7 +14,7 @@ export default function MyCharacters({ user, onBack }) {
   const [characters, setCharacters] = useState([]);
   const [systems, setSystems] = useState([]);
   const [baseChars, setBaseChars] = useState([]);
-  const [view, setView] = useState('list'); // 'list' | 'create' | 'pregen' | 'sheet'
+  const [view, setView] = useState('list'); // 'list' | 'create' | 'pregen' | 'sheet' | 'stats'
   const [activeId, setActiveId] = useState(null);
   const [form, setForm] = useState({ name: '', game_system_template_id: '' });
   const [error, setError] = useState('');
@@ -75,6 +76,32 @@ export default function MyCharacters({ user, onBack }) {
     } catch (err) {
       setError(err.message);
     }
+  }
+
+  // ── Estadísticas de un personaje ─────────────────────────────────────────────
+  if (view === 'stats' && activeId) {
+    const active = characters.find((c) => c.id === activeId);
+    return (
+      <div className="mx-auto flex min-h-full max-w-3xl flex-col gap-6 p-4 md:p-6">
+        <header className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gold">Estadísticas</h1>
+            <p className="text-sm text-gray-400">{active?.name ?? 'Personaje'}</p>
+          </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              setView('list');
+              setActiveId(null);
+            }}
+          >
+            ← Volver
+          </Button>
+        </header>
+        <CharacterStatsPanel characterId={activeId} />
+      </div>
+    );
   }
 
   // ── Ficha de un personaje ───────────────────────────────────────────────────
@@ -218,6 +245,16 @@ export default function MyCharacters({ user, onBack }) {
                       }}
                     >
                       Ver ficha
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => {
+                        setActiveId(char.id);
+                        setView('stats');
+                      }}
+                    >
+                      📊
                     </Button>
                     <Button variant="danger" size="sm" onClick={() => remove(char)}>
                       🗑
