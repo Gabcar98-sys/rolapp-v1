@@ -75,7 +75,18 @@ export default function SessionCharactersPanel({ sessionId, session, user }) {
   }
 
   const myInSession = sessionChars.filter((c) => String(c.user_id) === String(user.id));
-  const bringable = myChars.filter((c) => !sessionChars.some((sc) => sc.id === c.id));
+  // Coherencia de sistema de juego (F8a): si la campaña de la sesión define un
+  // game_system_id, solo se pueden llevar personajes de ese mismo sistema. Si la
+  // campaña no tiene sistema (o la sesión no tiene campaña), no se filtra.
+  const campaignSystemId = session?.campaign_game_system_id ?? null;
+  const notInSession = myChars.filter((c) => !sessionChars.some((sc) => sc.id === c.id));
+  const bringable = campaignSystemId
+    ? notInSession.filter(
+        (c) => String(c.game_system_template_id) === String(campaignSystemId)
+      )
+    : notInSession;
+  // Hay personajes disponibles pero ninguno compatible con el sistema de la campaña.
+  const hasIncompatibleOnly = campaignSystemId && notInSession.length > 0 && bringable.length === 0;
 
   return (
     <div className="flex flex-col gap-4 overflow-y-auto p-3">
@@ -91,7 +102,11 @@ export default function SessionCharactersPanel({ sessionId, session, user }) {
             </p>
           )}
           {bringable.length === 0 ? (
-            <p className="text-xs text-gray-500">No tienes más personajes para añadir.</p>
+            <p className="text-xs text-gray-500">
+              {hasIncompatibleOnly
+                ? 'No tienes personajes del sistema de juego de esta campaña.'
+                : 'No tienes más personajes para añadir.'}
+            </p>
           ) : (
             <div className="flex gap-2">
               <select value={pick} onChange={(e) => setPick(e.target.value)} className={`flex-1 ${inputCls}`}>

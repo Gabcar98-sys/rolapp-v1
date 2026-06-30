@@ -86,4 +86,13 @@ Estadísticas derivadas. Implementer → Reviewer APROBADO (sin rondas extra).
 - **Backend:** `services/stats.js` (computeSessionStats/CampaignStats/CharacterStats derivadas de session_events append-only + personajes + notas, parseo JSON defensivo), snapshot UPSERT en `session_stats` al cerrar sesión (no rompe el cierre si falla), `routes/stats.js` (sesión/campaña/personaje, 404 correctos).
 - **Frontend:** gráficos propios (barras/sparklines, sin deps), historial de sesiones cerradas + panel de stats + resumen, stats de campaña, stats de personaje en MyCharacters. Cableado desde Lobby, Tailwind, lint 0.
 - **Verificación:** 52 tests, frontend build OK, smoke e2e (eventos→cerrar→snapshot→stats campaña).
-- Próxima: F8-ui-polish (último).
+- Próxima: F8-ui-polish (último). [Reorganizada en F8a/F8b/F8c por observaciones del founder.]
+
+## 2026-06-29 — F8a-gamesystem-coherence (DONE)
+
+Coherencia de sistema de juego campaña↔personaje. Implementer → Reviewer APROBADO.
+
+- Campaña acepta/persiste `game_system_id` (UI selector al crear/editar; PUT con autorización DM 200/403).
+- Validación al vincular personaje a sesión: si la campaña tiene game_system_id, el personaje debe coincidir → 422 si no. Aplicada en todos los endpoints de vínculo. Sin campaña/sin sistema → permite (compat. hacia atrás).
+- Frontend: selector de personaje filtra por compatibilidad; maneja 422.
+- 63/64 tests (1 skip RAG pre-existente). Próxima: F8b.

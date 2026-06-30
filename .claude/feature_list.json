@@ -64,11 +64,27 @@
     "description": "Derivar estadísticas de session_events + personajes; snapshot en session_stats al cerrar; visualización en historial y campaña. VERIFICADO 2026-06-29: 52 tests, stats sesión/campaña/personaje derivadas del log, snapshot UPSERT al cerrar (sin romper el cierre si falla), gráficos propios sin deps nuevas, historial de sesiones cerradas + stats cableados. Reviewer APROBADO."
   },
   {
-    "id": "F8-ui-polish",
-    "phase": "F8 — Pulido UI mobile",
-    "title": "Layouts finales jugador/DM, bottom-sheets, gestos, accesibilidad, distribución",
+    "id": "F8a-gamesystem-coherence",
+    "phase": "F8 — Pulido (a)",
+    "title": "Coherencia de sistema de juego campaña↔personaje",
     "priority": 8,
+    "status": "done",
+    "description": "Elegir game system al crear/editar campaña (UI). Validar en backend que un personaje solo pueda unirse a una sesión cuya campaña tenga el mismo game_system_id que el personaje (422 si no coincide). En los selectores de personaje, filtrar/mostrar solo los compatibles. Sesiones sin campaña o sin game system: permitir cualquiera (compatibilidad hacia atrás). VERIFICADO 2026-06-29: 63/64 tests, 422 en ambos endpoints de vínculo, PUT campaña 200/403, selector filtra por compatibilidad. Reviewer APROBADO."
+  },
+  {
+    "id": "F8b-visual-planner",
+    "phase": "F8 — Pulido (b)",
+    "title": "Editor visual del grafo de eventos + edición del flujo desde la sesión (DM)",
+    "priority": 9,
+    "status": "in_progress",
+    "description": "Recuperar la vista visual tipo EventFlowGraph (nodos = eventos por ubicación/sub-ubicación, aristas = event_links con label; crear/mover/enlazar visualmente). Permitir al DM editar esa serie de acciones/flujo DESDE la ventana de sesión (PlanningPanel), no solo en el constructor del Lobby. Mobile-friendly o al menos tablet+."
+  },
+  {
+    "id": "F8c-ui-polish",
+    "phase": "F8 — Pulido (c)",
+    "title": "Pulido mobile-first (layouts jugador/DM, bottom-sheets, gestos) + canvas tldraw",
+    "priority": 10,
     "status": "pending",
-    "description": "Pulir la experiencia mobile-first: layouts diferenciados jugador (celular) y DM (escritorio/tablet), bottom-sheets, gestos, accesibilidad y empaquetado para distribución."
+    "description": "Pulir la experiencia mobile-first: layouts diferenciados jugador (celular) y DM (escritorio/tablet), bottom-sheets, gestos, accesibilidad. Integrar tldraw para dibujo libre en el canvas (sobre la imagen compartida ya existente, sync por socket)."
   }
 ]

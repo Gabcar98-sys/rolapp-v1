@@ -78,6 +78,7 @@ beforeEach(() => {
     DELETE FROM session_events;
     DELETE FROM session_members;
     DELETE FROM sessions;
+    DELETE FROM campaigns;
     DELETE FROM game_system_templates;
     DELETE FROM users;
   `);
@@ -255,6 +256,39 @@ test('POST /:id/sessions/:sessionId  vincula el personaje y emite por socket', a
   ).get(sessionId, charId);
   assert.ok(link, 'el personaje debe quedar vinculado a la sesión');
   assert.ok(io.emits.some((e) => e.event === 'characters:list_updated'));
+});
+
+test('POST /:id/sessions/:sessionId  422 si el personaje no es del sistema de la campaña', async () => {
+  const router = createCharactersRouter(makeFakeIo());
+  // Personaje en el systemId base.
+  const { data } = await createChar(router);
+  const charId = data.character.id;
+  // Otro sistema para la campaña.
+  const otherSystem = db.prepare('INSERT INTO game_system_templates (name, dm_id) VALUES (?, ?)').run('Otro', dmId).lastInsertRowid;
+  const campaignId = db.prepare('INSERT INTO campaigns (name, dm_id, game_system_id) VALUES (?, ?, ?)').run('Camp', dmId, otherSystem).lastInsertRowid;
+  const sessionId = db.prepare('INSERT INTO sessions (name, dm_id, campaign_id) VALUES (?, ?, ?)').run('Mesa', dmId, campaignId).lastInsertRowid;
+
+  const res = await invoke(router, 'post', '/:id/sessions/:sessionId', {
+    params: { id: String(charId), sessionId: String(sessionId) },
+    body: { user_id: playerId },
+  });
+  assert.equal(res.status, 422);
+  const link = db.prepare('SELECT 1 FROM session_characters WHERE session_id = ? AND character_id = ?').get(sessionId, charId);
+  assert.ok(!link, 'no debe vincular un personaje incompatible');
+});
+
+test('POST /:id/sessions/:sessionId  vincula si coincide el sistema de la campaña', async () => {
+  const router = createCharactersRouter(makeFakeIo());
+  const { data } = await createChar(router); // personaje en systemId
+  const charId = data.character.id;
+  const campaignId = db.prepare('INSERT INTO campaigns (name, dm_id, game_system_id) VALUES (?, ?, ?)').run('Camp', dmId, systemId).lastInsertRowid;
+  const sessionId = db.prepare('INSERT INTO sessions (name, dm_id, campaign_id) VALUES (?, ?, ?)').run('Mesa', dmId, campaignId).lastInsertRowid;
+
+  const res = await invoke(router, 'post', '/:id/sessions/:sessionId', {
+    params: { id: String(charId), sessionId: String(sessionId) },
+    body: { user_id: playerId },
+  });
+  assert.equal(res.status, 201);
 });
 
 test('DELETE /:id  borra un personaje aunque esté vinculado a una sesión', async () => {

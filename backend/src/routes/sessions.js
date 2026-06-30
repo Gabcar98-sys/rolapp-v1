@@ -2,6 +2,7 @@ import { Router } from 'express';
 import db from '../db/index.js';
 import { logEvent, listEvents } from '../services/events.js';
 import { saveSessionStats } from '../services/stats.js';
+import { checkCharacterFitsSession } from '../services/gameSystemCoherence.js';
 
 // El router necesita io para emitir eventos por socket al insertarlos vía REST.
 export default function createSessionsRouter(io) {
@@ -14,6 +15,7 @@ export default function createSessionsRouter(io) {
       .prepare(`
         SELECT s.*, u.username AS dm_username,
                c.name AS campaign_name,
+               c.game_system_id AS campaign_game_system_id,
                COUNT(sm.user_id) AS member_count
         FROM sessions s
         JOIN users u ON s.dm_id = u.id
@@ -31,7 +33,8 @@ export default function createSessionsRouter(io) {
   router.get('/:id', (req, res) => {
     const session = db
       .prepare(`
-        SELECT s.*, u.username AS dm_username, c.name AS campaign_name
+        SELECT s.*, u.username AS dm_username, c.name AS campaign_name,
+               c.game_system_id AS campaign_game_system_id
         FROM sessions s
         JOIN users u ON s.dm_id = u.id
         LEFT JOIN campaigns c ON s.campaign_id = c.id
@@ -171,6 +174,11 @@ export default function createSessionsRouter(io) {
     if (!isOwner && !isDM) {
       return res.status(403).json({ error: 'Sin permisos para vincular este personaje' });
     }
+
+    // Coherencia de sistema de juego: el personaje debe pertenecer al mismo sistema
+    // que la campaña de la sesión (cuando ambos están definidos).
+    const fit = checkCharacterFitsSession(session.id, character_id);
+    if (!fit.ok) return res.status(422).json({ error: fit.error });
 
     db.prepare('INSERT OR IGNORE INTO session_characters (session_id, character_id) VALUES (?, ?)')
       .run(session.id, character_id);

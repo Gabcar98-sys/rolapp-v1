@@ -81,10 +81,13 @@ beforeEach(() => {
   db.exec(`
     DELETE FROM session_events;
     DELETE FROM session_stats;
+    DELETE FROM session_characters;
+    DELETE FROM characters;
     DELETE FROM session_members;
     DELETE FROM canvas_state;
     DELETE FROM sessions;
     DELETE FROM campaigns;
+    DELETE FROM game_system_templates;
     DELETE FROM users;
   `);
   dmId = db.prepare("INSERT INTO users (username, pin_hash, role) VALUES ('dm', 'x', 'dm')").run().lastInsertRowid;
@@ -187,4 +190,71 @@ test('GET /:id  404 si la sesión no existe', async () => {
   const router = createSessionsRouter(makeFakeIo());
   const res = await invokeWithParams(router, 'get', '/:id', { id: '99999' });
   assert.equal(res.status, 404);
+});
+
+// ── F8a: coherencia de sistema de juego campaña ↔ personaje ──────────────────
+
+// Crea sistema, campaña (con system opcional), sesión (con campaign opcional) y
+// personaje (con system opcional). Devuelve los ids relevantes.
+function setupCoherence({ campaignSystem, charSystem, withCampaign = true } = {}) {
+  const sysA = db.prepare('INSERT INTO game_system_templates (name, dm_id) VALUES (?, ?)').run('Sistema A', dmId).lastInsertRowid;
+  const sysB = db.prepare('INSERT INTO game_system_templates (name, dm_id) VALUES (?, ?)').run('Sistema B', dmId).lastInsertRowid;
+  const systems = { A: sysA, B: sysB };
+
+  let campaignId = null;
+  if (withCampaign) {
+    const campSys = campaignSystem ? systems[campaignSystem] : null;
+    campaignId = db.prepare('INSERT INTO campaigns (name, dm_id, game_system_id) VALUES (?, ?, ?)')
+      .run('Camp', dmId, campSys).lastInsertRowid;
+  }
+  const sessionId = db.prepare('INSERT INTO sessions (name, dm_id, campaign_id) VALUES (?, ?, ?)')
+    .run('Mesa', dmId, campaignId).lastInsertRowid;
+  const charSys = charSystem ? systems[charSystem] : null;
+  const charId = db.prepare('INSERT INTO characters (user_id, name, game_system_template_id) VALUES (?, ?, ?)')
+    .run(playerId, 'Pj', charSys).lastInsertRowid;
+  return { sessionId, charId, systems };
+}
+
+test('POST /:id/characters  vincula si el sistema del personaje coincide con el de la campaña', async () => {
+  const router = createSessionsRouter(makeFakeIo());
+  const { sessionId, charId } = setupCoherence({ campaignSystem: 'A', charSystem: 'A' });
+
+  const res = await invokeWithParams(router, 'post', '/:id/characters', { id: String(sessionId) }, {
+    body: { character_id: charId, user_id: playerId },
+  });
+  assert.equal(res.status, 201);
+});
+
+test('POST /:id/characters  responde 422 si el sistema del personaje NO coincide', async () => {
+  const router = createSessionsRouter(makeFakeIo());
+  const { sessionId, charId } = setupCoherence({ campaignSystem: 'A', charSystem: 'B' });
+
+  const res = await invokeWithParams(router, 'post', '/:id/characters', { id: String(sessionId) }, {
+    body: { character_id: charId, user_id: playerId },
+  });
+  assert.equal(res.status, 422);
+  assert.match(res.data.error, /sistema de juego/i);
+
+  const link = db.prepare('SELECT 1 FROM session_characters WHERE session_id = ? AND character_id = ?').get(sessionId, charId);
+  assert.ok(!link, 'no debe vincular un personaje incompatible');
+});
+
+test('POST /:id/characters  permite cualquier personaje si la campaña no tiene sistema', async () => {
+  const router = createSessionsRouter(makeFakeIo());
+  const { sessionId, charId } = setupCoherence({ campaignSystem: null, charSystem: 'B' });
+
+  const res = await invokeWithParams(router, 'post', '/:id/characters', { id: String(sessionId) }, {
+    body: { character_id: charId, user_id: playerId },
+  });
+  assert.equal(res.status, 201);
+});
+
+test('POST /:id/characters  permite cualquier personaje si la sesión no tiene campaña', async () => {
+  const router = createSessionsRouter(makeFakeIo());
+  const { sessionId, charId } = setupCoherence({ withCampaign: false, charSystem: 'A' });
+
+  const res = await invokeWithParams(router, 'post', '/:id/characters', { id: String(sessionId) }, {
+    body: { character_id: charId, user_id: playerId },
+  });
+  assert.equal(res.status, 201);
 });

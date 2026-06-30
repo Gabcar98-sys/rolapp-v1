@@ -155,7 +155,7 @@ export default function SessionView({ session, user, onLeave }) {
           <div className="flex flex-1 flex-col overflow-hidden">
             {activeTab === 'players' && <ConnectedUsers users={connectedUsers} />}
             {activeTab === 'characters' && (
-              <SessionCharactersPanel sessionId={session.id} user={user} />
+              <SessionCharactersPanel sessionId={session.id} session={session} user={user} />
             )}
             {activeTab === 'chat' && (
               <ChatPanel sessionId={session.id} user={user} connectedUsers={connectedUsers} />

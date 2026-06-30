@@ -24,8 +24,13 @@ export const api = {
   // ── Campañas ────────────────────────────────────────────────────────────────
   listCampaigns: (dmId) => request(`/campaigns?dm_id=${dmId}`),
   getCampaign: (id) => request(`/campaigns/${id}`),
-  createCampaign: (name, dmId, description = '') =>
-    request('/campaigns', { method: 'POST', body: { name, dm_id: dmId, description } }),
+  createCampaign: (name, dmId, description = '', gameSystemId = null) =>
+    request('/campaigns', {
+      method: 'POST',
+      body: { name, dm_id: dmId, description, game_system_id: gameSystemId },
+    }),
+  updateCampaign: (id, dmId, fields) =>
+    request(`/campaigns/${id}`, { method: 'PUT', body: { dm_id: dmId, ...fields } }),
 
   // ── Sesiones ──────────────────────────────────────────────────────────────
   listSessions: (status = 'active') => request(`/sessions?status=${status}`),

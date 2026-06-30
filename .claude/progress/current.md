@@ -12,7 +12,11 @@ Bootstrap del repo v1.0 (founder). Portado el harness de agentes desde la v0 y a
 
 ## Feature en progreso
 
-Ninguna. `F0`, `F1`, `F4`, `F5`, `F2`, `F3`, `F6`, `F7` cerradas y verificadas. Pendiente: `F8` (pulido UI mobile + tldraw + grafo visual de eventos).
+`F8b-visual-planner` (en progreso). F0–F7 + F8a cerradas. Quedan F8b (editor visual del grafo + edición desde la sesión) y F8c (pulido mobile + tldraw).
+
+> Observaciones del founder que motivan F8a/F8b:
+> - Coherencia: un personaje solo debería poder usarse en campañas de su mismo game system. Hoy no se valida.
+> - El planificador perdió la vista visual de la v0 (EventFlowGraph) y se quiere editar el flujo desde la sesión, no solo en el Lobby.
 
 ## Deuda técnica conocida (no bloqueante)
 - Frontend ESLint: 12 warnings falsos `no-unused-vars` sobre componentes JSX por faltar

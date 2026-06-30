@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import db from '../db/index.js';
 import { logEvent } from '../services/events.js';
+import { checkCharacterFitsSession } from '../services/gameSystemCoherence.js';
 
 // ── Lectura de ficha completa ───────────────────────────────────────────────
 // Arma la ficha de un personaje: datos base + valores de atributos (join con la
@@ -409,6 +410,11 @@ export default function createCharactersRouter(io) {
     const isOwner = String(char.user_id) === String(user_id);
     const isDM = String(session.dm_id) === String(user_id);
     if (!isOwner && !isDM) return res.status(403).json({ error: 'Sin permisos para vincular este personaje' });
+
+    // Coherencia de sistema de juego: el personaje debe pertenecer al mismo sistema
+    // que la campaña de la sesión (cuando ambos están definidos).
+    const fit = checkCharacterFitsSession(session.id, char.id);
+    if (!fit.ok) return res.status(422).json({ error: fit.error });
 
     db.prepare('INSERT OR IGNORE INTO session_characters (session_id, character_id) VALUES (?, ?)')
       .run(session.id, char.id);

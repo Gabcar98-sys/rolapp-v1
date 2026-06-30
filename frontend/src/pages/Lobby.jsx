@@ -25,11 +25,16 @@ export default function Lobby({ user, onEnterSession, onLogout }) {
   const isDM = user.role === 'dm';
   const [sessions, setSessions] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
+  const [gameSystems, setGameSystems] = useState([]);
   const [preps, setPreps] = useState([]);
   const [newName, setNewName] = useState('');
   const [newCampaignId, setNewCampaignId] = useState('');
   const [newPrepId, setNewPrepId] = useState('');
+  // Formulario de nueva campaña (solo DM).
+  const [newCampaignName, setNewCampaignName] = useState('');
+  const [newCampaignSystemId, setNewCampaignSystemId] = useState('');
   const [busy, setBusy] = useState(false);
+  const [campaignBusy, setCampaignBusy] = useState(false);
   const [error, setError] = useState('');
   // Vista del lobby: 'sessions' (por defecto) o 'prep' (constructor de preparación, solo DM).
   const [view, setView] = useState('sessions');
@@ -66,18 +71,50 @@ export default function Lobby({ user, onEnterSession, onLogout }) {
     }
   }
 
+  async function loadCampaigns() {
+    try {
+      const { campaigns: list } = await api.listCampaigns(user.id);
+      setCampaigns(list);
+    } catch {
+      // Sin campañas no bloquea el lobby.
+    }
+  }
+
   useEffect(() => {
     loadSessions();
     if (isDM) {
+      loadCampaigns();
       api
-        .listCampaigns(user.id)
-        .then(({ campaigns: list }) => setCampaigns(list))
+        .listGameSystems(user.id)
+        .then(({ systems }) => setGameSystems(systems))
         .catch(() => {});
       loadPreps();
     }
     // Solo recarga al cambiar el usuario.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user.id, isDM]);
+
+  async function createCampaign(e) {
+    e.preventDefault();
+    if (!newCampaignName.trim()) return;
+    setCampaignBusy(true);
+    setError('');
+    try {
+      await api.createCampaign(
+        newCampaignName.trim(),
+        user.id,
+        '',
+        newCampaignSystemId || null
+      );
+      setNewCampaignName('');
+      setNewCampaignSystemId('');
+      await loadCampaigns();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setCampaignBusy(false);
+    }
+  }
 
   async function createSession(e) {
     e.preventDefault();
@@ -323,6 +360,35 @@ export default function Lobby({ user, onEnterSession, onLogout }) {
 
       {isDM && (
         <Card className="p-4">
+          <h2 className="mb-3 text-sm font-semibold text-gray-200">Nueva campaña</h2>
+          <form onSubmit={createCampaign} className="flex flex-col gap-3 md:flex-row">
+            <input
+              value={newCampaignName}
+              onChange={(e) => setNewCampaignName(e.target.value)}
+              placeholder="Nombre de la campaña"
+              className="flex-1 rounded-md border border-ink-line bg-ink-900 px-3 py-2 text-sm text-gray-100 outline-none focus:border-gold"
+            />
+            <select
+              value={newCampaignSystemId}
+              onChange={(e) => setNewCampaignSystemId(e.target.value)}
+              className="rounded-md border border-ink-line bg-ink-900 px-3 py-2 text-sm text-gray-100 outline-none focus:border-gold md:w-56"
+            >
+              <option value="">— Sin sistema de juego —</option>
+              {gameSystems.map((gs) => (
+                <option key={gs.id} value={gs.id}>
+                  {gs.name}
+                </option>
+              ))}
+            </select>
+            <Button type="submit" disabled={campaignBusy}>
+              {campaignBusy ? '…' : 'Crear campaña'}
+            </Button>
+          </form>
+        </Card>
+      )}
+
+      {isDM && (
+        <Card className="p-4">
           <h2 className="mb-3 text-sm font-semibold text-gray-200">Nueva sesión</h2>
           <form onSubmit={createSession} className="flex flex-col gap-3">
             <div className="flex flex-col gap-3 md:flex-row">
@@ -341,6 +407,7 @@ export default function Lobby({ user, onEnterSession, onLogout }) {
                 {campaigns.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
+                    {c.game_system_name ? ` (${c.game_system_name})` : ''}
                   </option>
                 ))}
               </select>
