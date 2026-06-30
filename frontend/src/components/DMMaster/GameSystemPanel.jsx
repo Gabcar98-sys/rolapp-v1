@@ -122,6 +122,7 @@ export default function GameSystemPanel({ user }) {
       { id: 'mechanics', label: 'Mecánicas' },
       { id: 'skills', label: 'Habilidades' },
       { id: 'items', label: 'Objetos' },
+      { id: 'docs', label: 'Documentos' },
     ];
     return (
       <div className="flex flex-col gap-4">
@@ -150,6 +151,7 @@ export default function GameSystemPanel({ user }) {
         )}
         {tab === 'skills' && <SkillsPanel user={user} systemId={system.id} />}
         {tab === 'items' && <ItemsPanel user={user} systemId={system.id} />}
+        {tab === 'docs' && <DocsEditor user={user} systemId={system.id} setError={setError} />}
       </div>
     );
   }
@@ -563,6 +565,158 @@ function MechanicEditor({ user, detail, onChange, setError }) {
           </select>
           <Button size="sm" type="submit">
             + Mecánica
+          </Button>
+        </form>
+      </Card>
+    </div>
+  );
+}
+
+// ── Editor de documentos RAG (.md por sistema de juego) ──────────────────────────
+function DocsEditor({ user, systemId, setError }) {
+  const [docs, setDocs] = useState([]);
+  const [vecEnabled, setVecEnabled] = useState(true);
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+  const [busy, setBusy] = useState(false);
+  const fileRef = useRef(null);
+
+  async function load() {
+    try {
+      const { docs: list, vecEnabled: vec } = await api.listDocs(systemId);
+      setDocs(list);
+      setVecEnabled(vec);
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [systemId]);
+
+  async function ingest(e) {
+    e.preventDefault();
+    if (!title.trim() || !content.trim()) return;
+    setBusy(true);
+    setError('');
+    try {
+      await api.ingestDoc(systemId, user.id, title.trim(), content);
+      setTitle('');
+      setContent('');
+      await load();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function loadFile(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const text = await file.text();
+    setContent(text);
+    if (!title.trim()) setTitle(file.name.replace(/\.md$/i, ''));
+    if (fileRef.current) fileRef.current.value = '';
+  }
+
+  async function reindex(doc) {
+    setError('');
+    try {
+      await api.reindexDoc(systemId, doc.id, user.id);
+      await load();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function remove(doc) {
+    if (!window.confirm(`¿Eliminar el documento "${doc.title}" y sus chunks?`)) return;
+    setError('');
+    try {
+      await api.deleteDoc(systemId, doc.id, user.id);
+      await load();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-xs text-gray-500">
+        Índice vectorial:{' '}
+        {vecEnabled ? (
+          <span className="text-green-400">activo</span>
+        ) : (
+          <span className="text-yellow-400">inactivo (solo keyword/FTS)</span>
+        )}
+      </p>
+
+      <div className="flex flex-col gap-2">
+        {docs.length === 0 ? (
+          <p className="text-center text-sm text-gray-500">Aún no hay documentos indexados.</p>
+        ) : (
+          docs.map((doc) => (
+            <div
+              key={doc.id}
+              className="flex items-center justify-between rounded-md border border-ink-line bg-ink-900 px-3 py-2"
+            >
+              <div className="min-w-0">
+                <span className="text-sm text-gray-100">{doc.title}</span>
+                <span className="ml-2 text-xs text-gray-500">{doc.chunk_count} chunks</span>
+              </div>
+              <div className="ml-3 flex flex-shrink-0 gap-2">
+                <Button size="sm" variant="secondary" onClick={() => reindex(doc)}>
+                  Reindexar
+                </Button>
+                <button
+                  onClick={() => remove(doc)}
+                  className="text-gray-500 hover:text-danger"
+                  aria-label={`Eliminar ${doc.title}`}
+                >
+                  🗑
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      <Card className="p-4">
+        <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
+          Nuevo documento (.md)
+        </h4>
+        <form onSubmit={ingest} className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2 md:flex-row">
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Título del documento"
+              className={`flex-1 ${inputCls}`}
+            />
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".md,text/markdown,text/plain"
+              onChange={loadFile}
+              className="hidden"
+              id="doc-file-input"
+            />
+            <Button variant="secondary" size="sm" type="button" onClick={() => fileRef.current?.click()}>
+              ⬆ Cargar .md
+            </Button>
+          </div>
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="Contenido Markdown (reglas, lore, tablas…)"
+            rows={6}
+            className={inputCls}
+          />
+          <Button size="sm" type="submit" disabled={busy} className="ml-auto">
+            {busy ? 'Indexando…' : '+ Indexar documento'}
           </Button>
         </form>
       </Card>

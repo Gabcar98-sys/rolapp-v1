@@ -45,6 +45,21 @@ if (vecEnabled) {
   }
 }
 
+// ── Índice FTS5 de chunks (keyword/BM25 para retrieval híbrido — §5.3) ───────────
+// Vive aquí (no en schema.sql) por simetría con vec_chunks y porque FTS5 es una
+// tabla virtual; es independiente de sqlite-vec, así que el keyword-search funciona
+// aunque la búsqueda vectorial esté deshabilitada. La sincronización chunk↔FTS la
+// hace services/rag.js con el mismo rowid (= doc_chunks.id). Idempotente.
+export let ftsEnabled = false;
+try {
+  db.exec(
+    "CREATE VIRTUAL TABLE IF NOT EXISTS doc_chunks_fts USING fts5(chunk_text, content='doc_chunks', content_rowid='id')"
+  );
+  ftsEnabled = true;
+} catch (err) {
+  console.warn(`No se pudo crear doc_chunks_fts — keyword search deshabilitado: ${err.message}`);
+}
+
 // ── Migraciones (baseline vacío; se llenan desde F1) ────────────────────────────
 runMigrations();
 

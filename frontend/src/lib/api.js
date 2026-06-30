@@ -263,4 +263,34 @@ export const api = {
     request(`/base-characters/${id}/skill-links/${skillId}`, { method: 'DELETE', body: { dm_id: dmId } }),
   adoptBaseCharacter: (id, userId, name = null) =>
     request(`/base-characters/${id}/adopt`, { method: 'POST', body: { user_id: userId, name } }),
+
+  // ── RAG / IA (F6) ─────────────────────────────────────────────────────────────
+  // Documentos de juego por sistema (alimentan el RAG).
+  listDocs: (systemId) => request(`/game-systems/${systemId}/docs`),
+  ingestDoc: (systemId, dmId, title, content) =>
+    request(`/game-systems/${systemId}/docs`, {
+      method: 'POST',
+      body: { dm_id: dmId, title, content },
+    }),
+  reindexDoc: (systemId, docId, dmId) =>
+    request(`/game-systems/${systemId}/docs/${docId}/reindex`, {
+      method: 'POST',
+      body: { dm_id: dmId },
+    }),
+  deleteDoc: (systemId, docId, dmId) =>
+    request(`/game-systems/${systemId}/docs/${docId}`, { method: 'DELETE', body: { dm_id: dmId } }),
+
+  // Búsqueda híbrida directa + asistente de IA.
+  ragSearch: (query, gameSystemId, k = 5) =>
+    request('/rag/search', { method: 'POST', body: { query, game_system_id: gameSystemId, k } }),
+  aiAsk: (query, gameSystemId, sessionId = null) =>
+    request('/ai/ask', {
+      method: 'POST',
+      body: { query, game_system_id: gameSystemId, session_id: sessionId },
+    }),
+
+  // Resumen de sesión.
+  getSessionSummary: (sessionId) => request(`/sessions/${sessionId}/summary`),
+  generateSessionSummary: (sessionId, dmId) =>
+    request(`/sessions/${sessionId}/summary`, { method: 'POST', body: { dm_id: dmId } }),
 };

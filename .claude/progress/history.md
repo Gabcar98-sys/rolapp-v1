@@ -68,3 +68,13 @@ Personajes con ficha dinámica por game system. Implementer → Reviewer APROBAD
 - **Frontend:** `MyCharacters.jsx` con ficha dinámica (atributos por category/is_core/has_max), paneles de ficha reutilizables, `BaseCharactersPanel`, paneles en `SessionView`, selector de personaje al unirse. Cableado en Lobby/SessionView.
 - **Verificación:** 32 tests (11 de F3), frontend build OK, smoke e2e completo.
 - Próxima: F6-rag-ai.
+
+## 2026-06-29 — F6-rag-ai (DONE)
+
+RAG/IA rehecho. Implementer → Reviewer APROBADO (sin rondas extra).
+
+- **Backend:** `services/embeddings.js` (proveedor inyectable: Ollama nomic-embed-text / stub), `services/rag.js` (ingesta + chunking jerárquico por headings con heading_path/section_type/token_count, reindex idempotente por content_hash, retrieval híbrido sqlite-vec KNN + FTS5 fusionados con RRF, scoping por game_system_id), `services/ai.js` (LLM inyectable, ensamblado de contexto citado, resumen de sesión, asistencia de planificación), routers de docs/rag/ai/summary. FTS5 (`doc_chunks_fts`) sincronizada con doc_chunks. Degradación elegante (503/422) si Ollama/vec no disponible.
+- **Frontend:** `AIPanel` (tab 🤖 en SessionView: Q&A de reglas con citas + resumen de sesión), gestión de docs en `GameSystemPanel` (añadir/listar/eliminar/reindexar .md, estado del índice). Cableado, Tailwind, lint 0.
+- **Verificación:** 44 tests (pipeline ingesta→retrieval con stub determinista sin red, RRF, reindex, degradación), frontend build OK, health vecEnabled:true, degradación confirmada con Ollama apagado.
+- **Nota:** la IA real requiere `docker compose --profile ai up` + `ollama pull nomic-embed-text`.
+- Próxima: F7-stats.

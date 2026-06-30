@@ -7,6 +7,7 @@ import ConnectedUsers from '../components/Session/ConnectedUsers.jsx';
 import ChatPanel from '../components/Chat/ChatPanel.jsx';
 import PlanningPanel from '../components/Session/PlanningPanel.jsx';
 import SessionCharactersPanel from '../components/Session/SessionCharactersPanel.jsx';
+import AIPanel from '../components/AI/AIPanel.jsx';
 
 export default function SessionView({ session, user, onLeave }) {
   const isDM = user.role === 'dm';
@@ -70,6 +71,7 @@ export default function SessionView({ session, user, onLeave }) {
     { id: 'players', label: '👥' },
     { id: 'characters', label: '⚔️' },
     { id: 'chat', label: '💬' },
+    { id: 'ai', label: '🤖' },
     ...(isDM ? [{ id: 'planning', label: '📋' }] : []),
   ];
 
@@ -158,6 +160,7 @@ export default function SessionView({ session, user, onLeave }) {
             {activeTab === 'chat' && (
               <ChatPanel sessionId={session.id} user={user} connectedUsers={connectedUsers} />
             )}
+            {activeTab === 'ai' && <AIPanel sessionId={session.id} user={user} />}
             {activeTab === 'planning' && isDM && (
               <PlanningPanel sessionId={session.id} user={user} session={session} />
             )}

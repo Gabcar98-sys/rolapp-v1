@@ -52,8 +52,8 @@
     "phase": "F6 — RAG / IA",
     "title": "sqlite-vec, ingesta/chunking, retrieval híbrido, contexto/tools, resumen de sesión",
     "priority": 6,
-    "status": "pending",
-    "description": "Reescribir el RAG: vectores en sqlite-vec con scoping por game system, chunking jerárquico, retrieval híbrido (vector+FTS5), contexto estructurado/tools para el modelo, resumen de sesión al cerrar."
+    "status": "done",
+    "description": "Reescribir el RAG: vectores en sqlite-vec con scoping por game system, chunking jerárquico, retrieval híbrido (vector+FTS5), contexto estructurado/tools para el modelo, resumen de sesión al cerrar. VERIFICADO 2026-06-29: 44 tests (pipeline ingesta→retrieval con stub determinista, RRF, reindex idempotente, degradación), embeddings/LLM inyectables, citas por heading_path, AIPanel + gestión de docs cableados, degradación 503/422 con Ollama apagado. Reviewer APROBADO."
   },
   {
     "id": "F7-stats",
