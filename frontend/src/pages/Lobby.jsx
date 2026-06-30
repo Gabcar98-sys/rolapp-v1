@@ -4,6 +4,7 @@ import Button from '../components/ui/Button.jsx';
 import Card from '../components/ui/Card.jsx';
 import SessionPrepPanel from '../components/DMMaster/SessionPrepPanel.jsx';
 import EventTemplatePanel from '../components/DMMaster/EventTemplatePanel.jsx';
+import GameSystemPanel from '../components/DMMaster/GameSystemPanel.jsx';
 
 // Agrupa sesiones por campaña; las que no tienen campaña van bajo "Sin campaña".
 function groupByCampaign(sessions) {
@@ -127,6 +128,25 @@ export default function Lobby({ user, onEnterSession, onLogout }) {
     );
   }
 
+  // ── Vista del builder de sistemas de juego (solo DM) ────────────────────────
+  if (isDM && view === 'systems') {
+    return (
+      <div className="mx-auto flex min-h-full max-w-4xl flex-col gap-6 p-4 md:p-6">
+        <header className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gold">Sistemas de juego</h1>
+            <p className="text-sm text-gray-400">Builder de atributos, habilidades, objetos y packs</p>
+          </div>
+          <Button variant="secondary" size="sm" onClick={() => setView('sessions')}>
+            ← Lobby
+          </Button>
+        </header>
+
+        <GameSystemPanel user={user} />
+      </div>
+    );
+  }
+
   // ── Vista de sesiones (por defecto) ─────────────────────────────────────────
   return (
     <div className="mx-auto flex min-h-full max-w-4xl flex-col gap-6 p-4 md:p-6">
@@ -139,9 +159,14 @@ export default function Lobby({ user, onEnterSession, onLogout }) {
         </div>
         <div className="flex items-center gap-2">
           {isDM && (
-            <Button variant="secondary" size="sm" onClick={() => setView('prep')}>
-              📋 Preparar sesión
-            </Button>
+            <>
+              <Button variant="secondary" size="sm" onClick={() => setView('systems')}>
+                🎲 Sistemas de juego
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => setView('prep')}>
+                📋 Preparar sesión
+              </Button>
+            </>
           )}
           <Button variant="secondary" size="sm" onClick={onLogout}>
             Salir

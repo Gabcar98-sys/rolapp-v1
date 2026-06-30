@@ -7,6 +7,10 @@ import { Server } from 'socket.io';
 import { vecEnabled } from './db/index.js';
 import authRouter from './routes/auth.js';
 import campaignsRouter from './routes/campaigns.js';
+import gameSystemsRouter from './routes/gameSystems.js';
+import skillsRouter from './routes/skills.js';
+import itemsRouter from './routes/items.js';
+import gamePacksRouter from './routes/gamePacks.js';
 import createSessionsRouter from './routes/sessions.js';
 import createCanvasRouter from './routes/canvas.js';
 import sessionPrepsRouter from './routes/sessionPreps.js';
@@ -31,6 +35,11 @@ app.get('/api/health', (_req, res) => {
 
 app.use('/api/auth', authRouter);
 app.use('/api/campaigns', campaignsRouter);
+// Sistemas de juego data-driven (F2): CRUD + import/export de packs JSON (sin socket).
+app.use('/api/game-systems', gameSystemsRouter);
+app.use('/api/skills', skillsRouter);
+app.use('/api/items', itemsRouter);
+app.use('/api/game-packs', gamePacksRouter);
 // sessions y canvas necesitan io para emitir cambios por socket desde REST.
 app.use('/api/sessions', createSessionsRouter(io));
 app.use('/api/canvas', createCanvasRouter(io));

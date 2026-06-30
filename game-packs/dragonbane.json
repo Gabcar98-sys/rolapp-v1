@@ -1,0 +1,64 @@
+{
+  "pack_version": "1.0",
+  "name": "Dragonbane",
+  "description": "Pack reducido de Dragonbane (Drakar och Demoner): 6 atributos core, recursos de Hit Points y Willpower Points, y una muestra de habilidades gobernadas por atributo. Apto como punto de partida para un sistema d20-bajo-stat.",
+  "attributes": [
+    { "name": "Fuerza", "type": "number", "category": "core", "sort_order": 0, "is_core": true, "has_max": false, "formula": "" },
+    { "name": "Destreza", "type": "number", "category": "core", "sort_order": 1, "is_core": true, "has_max": false, "formula": "" },
+    { "name": "Constitucion", "type": "number", "category": "core", "sort_order": 2, "is_core": true, "has_max": false, "formula": "" },
+    { "name": "Inteligencia", "type": "number", "category": "core", "sort_order": 3, "is_core": true, "has_max": false, "formula": "" },
+    { "name": "Voluntad", "type": "number", "category": "core", "sort_order": 4, "is_core": true, "has_max": false, "formula": "" },
+    { "name": "Carisma", "type": "number", "category": "core", "sort_order": 5, "is_core": true, "has_max": false, "formula": "" },
+    { "name": "Hit Points", "type": "number", "category": "resources", "sort_order": 6, "is_core": false, "has_max": true, "formula": "Constitucion" },
+    { "name": "Willpower Points", "type": "number", "category": "resources", "sort_order": 7, "is_core": false, "has_max": true, "formula": "Voluntad" }
+  ],
+  "skill_formats": [
+    {
+      "name": "Habilidades",
+      "description": "Habilidades de Dragonbane. Cada una se prueba contra su atributo gobernante (tirada igual o menor en d20).",
+      "fields": [
+        { "name": "attribute", "type": "text" },
+        { "name": "category", "type": "text" }
+      ],
+      "skills": [
+        { "name": "Acrobacias", "description": "Saltos, equilibrio y movimiento agil.", "values": { "attribute": "Destreza", "category": "general" } },
+        { "name": "Sigilo", "description": "Moverse sin ser detectado.", "values": { "attribute": "Destreza", "category": "general" } },
+        { "name": "Fuerza Bruta", "description": "Esfuerzo fisico y forcejeo.", "values": { "attribute": "Fuerza", "category": "general" } },
+        { "name": "Conocimiento de Bestias", "description": "Identificar y tratar animales y monstruos.", "values": { "attribute": "Inteligencia", "category": "general" } },
+        { "name": "Persuasion", "description": "Convencer y negociar.", "values": { "attribute": "Carisma", "category": "general" } },
+        { "name": "Concentracion", "description": "Mantener foco y resistir el miedo.", "values": { "attribute": "Voluntad", "category": "general" } }
+      ]
+    }
+  ],
+  "item_formats": [
+    {
+      "name": "Equipo",
+      "description": "Objetos basicos con peso para la mecanica de carga.",
+      "fields": [
+        { "name": "weight", "type": "number" },
+        { "name": "cost", "type": "text" }
+      ],
+      "items": [
+        { "name": "Espada", "description": "Arma de filo de una mano.", "equippable": true, "values": { "weight": "1", "cost": "10 monedas de plata" } },
+        { "name": "Antorcha", "description": "Fuente de luz.", "equippable": false, "values": { "weight": "1", "cost": "1 moneda de cobre" } }
+      ]
+    }
+  ],
+  "equipment_slots": [
+    { "name": "Mano", "slot_key": "hand", "max_items": 2, "sort_order": 0 },
+    { "name": "Cuerpo", "slot_key": "body", "max_items": 1, "sort_order": 1 }
+  ],
+  "mechanics": [
+    {
+      "name": "Carga",
+      "type": "inventory_weight",
+      "affects": "inventory",
+      "description": "El personaje puede cargar un numero de objetos igual a su Fuerza antes de sobrecargarse.",
+      "params": [
+        { "param_name": "formula_max", "param_type": "text", "param_value": "Fuerza", "sort_order": 0 }
+      ]
+    }
+  ],
+  "base_characters": [],
+  "docs": []
+}

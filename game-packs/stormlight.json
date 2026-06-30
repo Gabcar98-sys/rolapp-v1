@@ -1,0 +1,94 @@
+{
+  "pack_version": "1.0",
+  "name": "Stormlight RPG",
+  "description": "Sistema de juego del Stormlight RPG (Stormlight Handbook Playtest Edition). 6 atributos core en tres categorias (Fisico, Cognitivo, Espiritual), recursos derivados, defensas, combate y las 15 habilidades documentadas. Portado del seed M021 de la v0.",
+  "attributes": [
+    { "name": "Strength", "type": "number", "category": "physical", "sort_order": 0, "is_core": true, "has_max": false, "formula": "" },
+    { "name": "Speed", "type": "number", "category": "physical", "sort_order": 1, "is_core": true, "has_max": false, "formula": "" },
+    { "name": "Intellect", "type": "number", "category": "cognitive", "sort_order": 2, "is_core": true, "has_max": false, "formula": "" },
+    { "name": "Willpower", "type": "number", "category": "cognitive", "sort_order": 3, "is_core": true, "has_max": false, "formula": "" },
+    { "name": "Awareness", "type": "number", "category": "spiritual", "sort_order": 4, "is_core": true, "has_max": false, "formula": "" },
+    { "name": "Presence", "type": "number", "category": "spiritual", "sort_order": 5, "is_core": true, "has_max": false, "formula": "" },
+    { "name": "Health", "type": "number", "category": "resources", "sort_order": 6, "is_core": false, "has_max": true, "formula": "10 + Strength" },
+    { "name": "Focus", "type": "number", "category": "resources", "sort_order": 7, "is_core": false, "has_max": true, "formula": "2 + Willpower" },
+    { "name": "Investiture", "type": "number", "category": "resources", "sort_order": 8, "is_core": false, "has_max": true, "formula": "" },
+    { "name": "Physical Defense", "type": "number", "category": "defenses", "sort_order": 9, "is_core": false, "has_max": false, "formula": "" },
+    { "name": "Cognitive Defense", "type": "number", "category": "defenses", "sort_order": 10, "is_core": false, "has_max": false, "formula": "" },
+    { "name": "Spiritual Defense", "type": "number", "category": "defenses", "sort_order": 11, "is_core": false, "has_max": false, "formula": "" },
+    { "name": "Deflect", "type": "number", "category": "combat", "sort_order": 12, "is_core": false, "has_max": false, "formula": "" }
+  ],
+  "skill_formats": [
+    {
+      "name": "Stormlight Skills",
+      "description": "Las 15 habilidades documentadas del Stormlight RPG. Cada habilidad declara su atributo gobernante y las tareas que cubre.",
+      "fields": [
+        { "name": "attribute", "type": "text" },
+        { "name": "tasks", "type": "text" }
+      ],
+      "skills": [
+        { "name": "Athletics", "description": "Proeza fisica.", "values": { "attribute": "Strength", "tasks": "Levantar, empujar, escalar, saltar, jalar. Salto horizontal gratis = tamano propio. DC 10 para mas. DC 30 para abismo de 40 pies." } },
+        { "name": "Agility", "description": "Reflejos y movilidad.", "values": { "attribute": "Speed", "tasks": "Moverse por el entorno, acrobacias, pilotar vehiculos. Se prueba cuando reflejos o movilidad estan en juego." } },
+        { "name": "Light Weaponry", "description": "Combate con armas ligeras.", "values": { "attribute": "Speed", "tasks": "Ataques con armas ligeras en combate." } },
+        { "name": "Stealth", "description": "Sigilo y ocultamiento.", "values": { "attribute": "Speed", "tasks": "Moverse sin ser detectado. Usado en iniciativa Sorpresa vs Perception." } },
+        { "name": "Trickery", "description": "Engano fisico.", "values": { "attribute": "Speed", "tasks": "Engano fisico, prestidigitacion, robar bolsillos." } },
+        { "name": "Lore", "description": "Conocimiento especializado.", "values": { "attribute": "Intellect", "tasks": "Conocimiento historico, cultural y arcano." } },
+        { "name": "Medicine", "description": "Medicina y sanacion.", "values": { "attribute": "Intellect", "tasks": "Tratar heridas y enfermedades. Ventaja con Suministros Quirurgicos." } },
+        { "name": "Thievery", "description": "Robo y mecanismos.", "values": { "attribute": "Intellect", "tasks": "Abrir cerraduras. Esferas DC 15, Candados DC 20, Esposas DC 20. Ganzua da ventaja." } },
+        { "name": "Discipline", "description": "Control mental.", "values": { "attribute": "Willpower", "tasks": "Resistencia mental, concentracion, autocontrol. Usado para instrumentos de teclado." } },
+        { "name": "Survival", "description": "Supervivencia.", "values": { "attribute": "Willpower", "tasks": "Encontrar recursos en la naturaleza. Forrajear durante descanso corto." } },
+        { "name": "Insight", "description": "Intuicion social.", "values": { "attribute": "Awareness", "tasks": "Detectar enganos, leer emociones. Usado vs Deception en iniciativa Sorpresa." } },
+        { "name": "Perception", "description": "Percepcion sensorial.", "values": { "attribute": "Awareness", "tasks": "Detectar cosas ocultas o a distancia. Usado vs Stealth en iniciativa Sorpresa." } },
+        { "name": "Deception", "description": "Engano verbal.", "values": { "attribute": "Presence", "tasks": "Enganar verbalmente. Usado en Sorpresa vs Insight." } },
+        { "name": "Influence", "description": "Influencia social.", "values": { "attribute": "Presence", "tasks": "Persuadir, negociar, intimidar." } },
+        { "name": "Performance", "description": "Artes escenicas.", "values": { "attribute": "Presence", "tasks": "Actuacion, musica, expresion artistica. Agility para cuerdas, Athletics para percusion, Discipline para teclados." } }
+      ]
+    }
+  ],
+  "item_formats": [
+    {
+      "name": "Armas",
+      "description": "Catalogo de armas del Stormlight RPG.",
+      "fields": [
+        { "name": "category", "type": "text" },
+        { "name": "governing_skill", "type": "text" },
+        { "name": "damage", "type": "text" },
+        { "name": "traits", "type": "text" }
+      ],
+      "items": [
+        { "name": "Espada larga", "description": "Arma marcial de filo.", "equippable": true, "values": { "category": "light", "governing_skill": "Light Weaponry", "damage": "1d8", "traits": "Versatil" } },
+        { "name": "Maza pesada", "description": "Arma contundente de dos manos.", "equippable": true, "values": { "category": "heavy", "governing_skill": "Heavy Weaponry", "damage": "1d10", "traits": "Pesada" } }
+      ]
+    }
+  ],
+  "equipment_slots": [
+    { "name": "Mano derecha", "slot_key": "right_hand", "max_items": 1, "sort_order": 0 },
+    { "name": "Mano izquierda", "slot_key": "left_hand", "max_items": 1, "sort_order": 1 },
+    { "name": "Armadura", "slot_key": "armor", "max_items": 1, "sort_order": 2 }
+  ],
+  "mechanics": [
+    {
+      "name": "Defensas",
+      "type": "custom",
+      "affects": "combat",
+      "description": "Tres defensas (Fisica, Cognitiva, Espiritual) contra las que se resuelven ataques y efectos.",
+      "params": [
+        { "param_name": "tipos", "param_type": "list", "param_value": "Physical Defense,Cognitive Defense,Spiritual Defense", "sort_order": 0 }
+      ]
+    },
+    {
+      "name": "Foco",
+      "type": "custom",
+      "affects": "attributes",
+      "description": "Recurso gastado para activar talentos y posturas. Maximo derivado de Willpower.",
+      "params": [
+        { "param_name": "recurso", "param_type": "text", "param_value": "Focus", "sort_order": 0 }
+      ]
+    }
+  ],
+  "base_characters": [],
+  "docs": [
+    { "title": "Mecanicas core", "path": "stormlight/01-mecanicas-core.md" },
+    { "title": "Talentos y paths", "path": "stormlight/03-talentos-y-paths.md" },
+    { "title": "Armas y armaduras", "path": "stormlight/04-armas-armaduras.md" }
+  ]
+}

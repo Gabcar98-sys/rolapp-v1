@@ -115,4 +115,81 @@ export const api = {
       body: { dm_id: dmId, name, description, avatar_icon: avatarIcon },
     }),
   deleteNpc: (id, dmId) => request(`/npcs/${id}`, { method: 'DELETE', body: { dm_id: dmId } }),
+
+  // ── Sistemas de juego (F2) ──────────────────────────────────────────────────
+  listGameSystems: (dmId) => request(`/game-systems?dm_id=${dmId}`),
+  getGameSystem: (id) => request(`/game-systems/${id}`),
+  createGameSystem: (dmId, name, description = '') =>
+    request('/game-systems', { method: 'POST', body: { dm_id: dmId, name, description } }),
+  updateGameSystem: (id, dmId, fields) =>
+    request(`/game-systems/${id}`, { method: 'PUT', body: { dm_id: dmId, ...fields } }),
+  deleteGameSystem: (id, dmId) =>
+    request(`/game-systems/${id}`, { method: 'DELETE', body: { dm_id: dmId } }),
+
+  // Atributos
+  createAttribute: (systemId, dmId, attr) =>
+    request(`/game-systems/${systemId}/attributes`, { method: 'POST', body: { dm_id: dmId, ...attr } }),
+  updateAttribute: (systemId, attrId, dmId, fields) =>
+    request(`/game-systems/${systemId}/attributes/${attrId}`, { method: 'PUT', body: { dm_id: dmId, ...fields } }),
+  deleteAttribute: (systemId, attrId, dmId) =>
+    request(`/game-systems/${systemId}/attributes/${attrId}`, { method: 'DELETE', body: { dm_id: dmId } }),
+
+  // Slots de equipo
+  createEquipmentSlot: (systemId, dmId, slot) =>
+    request(`/game-systems/${systemId}/equipment-slots`, { method: 'POST', body: { dm_id: dmId, ...slot } }),
+  deleteEquipmentSlot: (systemId, slotId, dmId) =>
+    request(`/game-systems/${systemId}/equipment-slots/${slotId}`, { method: 'DELETE', body: { dm_id: dmId } }),
+
+  // Mecánicas (+ params)
+  createMechanic: (systemId, dmId, mech) =>
+    request(`/game-systems/${systemId}/mechanics`, { method: 'POST', body: { dm_id: dmId, ...mech } }),
+  deleteMechanic: (systemId, mechId, dmId) =>
+    request(`/game-systems/${systemId}/mechanics/${mechId}`, { method: 'DELETE', body: { dm_id: dmId } }),
+  createMechanicParam: (systemId, mechId, dmId, param) =>
+    request(`/game-systems/${systemId}/mechanics/${mechId}/params`, { method: 'POST', body: { dm_id: dmId, ...param } }),
+  deleteMechanicParam: (systemId, mechId, paramId, dmId) =>
+    request(`/game-systems/${systemId}/mechanics/${mechId}/params/${paramId}`, { method: 'DELETE', body: { dm_id: dmId } }),
+
+  // ── Formatos de habilidad + habilidades ───────────────────────────────────────
+  listSkillFormats: (dmId, gameSystemId = null) => {
+    const params = new URLSearchParams({ dm_id: dmId });
+    if (gameSystemId) params.set('game_system_id', gameSystemId);
+    return request(`/skills/formats?${params.toString()}`);
+  },
+  getSkillFormat: (id) => request(`/skills/formats/${id}`),
+  createSkillFormat: (dmId, name, gameSystemId = null, description = '') =>
+    request('/skills/formats', { method: 'POST', body: { dm_id: dmId, name, game_system_id: gameSystemId, description } }),
+  deleteSkillFormat: (id, dmId) =>
+    request(`/skills/formats/${id}`, { method: 'DELETE', body: { dm_id: dmId } }),
+  createSkillField: (formatId, dmId, field) =>
+    request(`/skills/formats/${formatId}/fields`, { method: 'POST', body: { dm_id: dmId, ...field } }),
+  deleteSkillField: (formatId, fieldId, dmId) =>
+    request(`/skills/formats/${formatId}/fields/${fieldId}`, { method: 'DELETE', body: { dm_id: dmId } }),
+  createSkill: (dmId, formatId, name, description = '', values = {}) =>
+    request('/skills', { method: 'POST', body: { dm_id: dmId, format_id: formatId, name, description, values } }),
+  deleteSkill: (id, dmId) => request(`/skills/${id}`, { method: 'DELETE', body: { dm_id: dmId } }),
+
+  // ── Formatos de objeto + objetos ──────────────────────────────────────────────
+  listItemFormats: (dmId, gameSystemId = null) => {
+    const params = new URLSearchParams({ dm_id: dmId });
+    if (gameSystemId) params.set('game_system_id', gameSystemId);
+    return request(`/items/formats?${params.toString()}`);
+  },
+  getItemFormat: (id) => request(`/items/formats/${id}`),
+  createItemFormat: (dmId, name, gameSystemId = null, description = '') =>
+    request('/items/formats', { method: 'POST', body: { dm_id: dmId, name, game_system_id: gameSystemId, description } }),
+  deleteItemFormat: (id, dmId) =>
+    request(`/items/formats/${id}`, { method: 'DELETE', body: { dm_id: dmId } }),
+  createItemField: (formatId, dmId, field) =>
+    request(`/items/formats/${formatId}/fields`, { method: 'POST', body: { dm_id: dmId, ...field } }),
+  deleteItemField: (formatId, fieldId, dmId) =>
+    request(`/items/formats/${formatId}/fields/${fieldId}`, { method: 'DELETE', body: { dm_id: dmId } }),
+  createItem: (dmId, formatId, name, description = '', equippable = true, values = {}) =>
+    request('/items', { method: 'POST', body: { dm_id: dmId, format_id: formatId, name, description, equippable, values } }),
+  deleteItem: (id, dmId) => request(`/items/${id}`, { method: 'DELETE', body: { dm_id: dmId } }),
+
+  // ── Import / Export de packs ────────────────────────────────────────────────
+  importGamePack: (dmId, pack) =>
+    request('/game-packs/import', { method: 'POST', body: { dm_id: dmId, pack } }),
+  exportGameSystem: (id) => request(`/game-systems/${id}/export`),
 };

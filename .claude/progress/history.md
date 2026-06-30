@@ -49,3 +49,13 @@ Motor de planificación portado. Implementer → RECHAZADO (lint + componentes h
 - **Diferido a F8:** editor visual del grafo (EventFlowGraph drag&drop) — por ahora enlaces vía formularios/listas.
 - Lecciones: componentes huérfanos = falso completado; eslint-disable a plugin no registrado = error fatal.
 - Próxima: F2-game-systems.
+
+## 2026-06-29 — F2-game-systems (DONE)
+
+Sistemas de juego configurables ("cualquier juego"). Implementer → Reviewer APROBADO (sin rondas extra).
+
+- **Backend:** `routes/gameSystems.js` (CRUD + atributos is_core/has_max/formula, slots, mecánicas), `routes/skills.js`, `routes/items.js`, `services/gamePack.js` (import transaccional + export round-trip), `routes/gamePacks.js`. Autorización DM, prepared statements, síncrono.
+- **Packs como ARCHIVOS:** `game-packs/stormlight.json` (13 atributos, 15 skills), `game-packs/dragonbane.json`, `game-packs/README.md`. Nada sembrado en migraciones.
+- **Frontend:** `GameSystemPanel`, `SkillsPanel`, `ItemsPanel` + UI import/export, cableados desde `Lobby.jsx` ("🎲 Sistemas de juego", solo DM).
+- **Verificación:** 21/21 tests (round-trip, transaccionalidad, pack inválido rechazado), frontend build OK, smoke import/export vía proxy. Sin deps nuevas.
+- Próxima: F3-characters.

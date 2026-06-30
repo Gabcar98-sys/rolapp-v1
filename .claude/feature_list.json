@@ -20,8 +20,8 @@
     "phase": "F2 — Game systems data-driven",
     "title": "Builder in-app de sistemas de juego + import/export de packs JSON",
     "priority": 2,
-    "status": "in_progress",
-    "description": "Editor visual (atributos, formatos de skill/item, slots, mecánicas, docs) + importar/exportar game pack JSON versionado. Packs de ejemplo (Stormlight, Dragonbane) como archivos en game-packs/, no seeds en código."
+    "status": "done",
+    "description": "Editor visual (atributos, formatos de skill/item, slots, mecánicas, docs) + importar/exportar game pack JSON versionado. Packs de ejemplo (Stormlight, Dragonbane) como archivos en game-packs/, no seeds en código. VERIFICADO 2026-06-29: 21/21 tests (round-trip import/export, import transaccional, pack inválido rechazado), builder cableado en Lobby (solo DM), packs importados vía proxy. Reviewer APROBADO."
   },
   {
     "id": "F4-session-engine",
@@ -44,7 +44,7 @@
     "phase": "F3 — Personajes",
     "title": "Mis personajes, pregens/base characters, fichas dinámicas por game system, inventario/equipo/skills",
     "priority": 5,
-    "status": "pending",
+    "status": "in_progress",
     "description": "Personajes desacoplados de sesión, plantillas base/pregens, fichas dinámicas según el game system, inventario, equipo y skills."
   },
   {
