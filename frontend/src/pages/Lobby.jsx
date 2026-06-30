@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { api } from '../lib/api.js';
 import Button from '../components/ui/Button.jsx';
 import Card from '../components/ui/Card.jsx';
+import SessionPrepPanel from '../components/DMMaster/SessionPrepPanel.jsx';
+import EventTemplatePanel from '../components/DMMaster/EventTemplatePanel.jsx';
 
 // Agrupa sesiones por campaña; las que no tienen campaña van bajo "Sin campaña".
 function groupByCampaign(sessions) {
@@ -18,10 +20,15 @@ export default function Lobby({ user, onEnterSession, onLogout }) {
   const isDM = user.role === 'dm';
   const [sessions, setSessions] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
+  const [preps, setPreps] = useState([]);
   const [newName, setNewName] = useState('');
   const [newCampaignId, setNewCampaignId] = useState('');
+  const [newPrepId, setNewPrepId] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  // Vista del lobby: 'sessions' (por defecto) o 'prep' (constructor de preparación, solo DM).
+  const [view, setView] = useState('sessions');
+  const [editingPrep, setEditingPrep] = useState(null);
 
   async function loadSessions() {
     try {
@@ -32,6 +39,15 @@ export default function Lobby({ user, onEnterSession, onLogout }) {
     }
   }
 
+  async function loadPreps() {
+    try {
+      const { preps: list } = await api.listPreps(user.id);
+      setPreps(list);
+    } catch {
+      // Sin preps no bloquea el lobby; el selector queda vacío.
+    }
+  }
+
   useEffect(() => {
     loadSessions();
     if (isDM) {
@@ -39,7 +55,10 @@ export default function Lobby({ user, onEnterSession, onLogout }) {
         .listCampaigns(user.id)
         .then(({ campaigns: list }) => setCampaigns(list))
         .catch(() => {});
+      loadPreps();
     }
+    // Solo recarga al cambiar el usuario.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user.id, isDM]);
 
   async function createSession(e) {
@@ -51,10 +70,12 @@ export default function Lobby({ user, onEnterSession, onLogout }) {
       const { session } = await api.createSession(
         newName.trim(),
         user.id,
-        newCampaignId || null
+        newCampaignId || null,
+        newPrepId || null
       );
       setNewName('');
       setNewCampaignId('');
+      setNewPrepId('');
       onEnterSession(session);
     } catch (err) {
       setError(err.message);
@@ -75,6 +96,38 @@ export default function Lobby({ user, onEnterSession, onLogout }) {
 
   const grouped = groupByCampaign(sessions);
 
+  // ── Vista del constructor de preparación (solo DM) ──────────────────────────
+  if (isDM && view === 'prep') {
+    return (
+      <div className="mx-auto flex min-h-full max-w-4xl flex-col gap-6 p-4 md:p-6">
+        <header className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gold">Preparar sesión</h1>
+            <p className="text-sm text-gray-400">Constructor de eventos y enlaces</p>
+          </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              setView('sessions');
+              setEditingPrep(null);
+              loadPreps();
+            }}
+          >
+            ← Lobby
+          </Button>
+        </header>
+
+        {editingPrep ? (
+          <EventTemplatePanel user={user} prep={editingPrep} onBack={() => setEditingPrep(null)} />
+        ) : (
+          <SessionPrepPanel user={user} onEditPrep={setEditingPrep} />
+        )}
+      </div>
+    );
+  }
+
+  // ── Vista de sesiones (por defecto) ─────────────────────────────────────────
   return (
     <div className="mx-auto flex min-h-full max-w-4xl flex-col gap-6 p-4 md:p-6">
       <header className="flex items-center justify-between">
@@ -84,9 +137,16 @@ export default function Lobby({ user, onEnterSession, onLogout }) {
             {user.username} · {isDM ? '🎲 DM' : '⚔️ Jugador'}
           </p>
         </div>
-        <Button variant="secondary" size="sm" onClick={onLogout}>
-          Salir
-        </Button>
+        <div className="flex items-center gap-2">
+          {isDM && (
+            <Button variant="secondary" size="sm" onClick={() => setView('prep')}>
+              📋 Preparar sesión
+            </Button>
+          )}
+          <Button variant="secondary" size="sm" onClick={onLogout}>
+            Salir
+          </Button>
+        </div>
       </header>
 
       {error && (
@@ -96,28 +156,44 @@ export default function Lobby({ user, onEnterSession, onLogout }) {
       {isDM && (
         <Card className="p-4">
           <h2 className="mb-3 text-sm font-semibold text-gray-200">Nueva sesión</h2>
-          <form onSubmit={createSession} className="flex flex-col gap-3 md:flex-row">
-            <input
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              placeholder="Nombre de la sesión"
-              className="flex-1 rounded-md border border-ink-line bg-ink-900 px-3 py-2 text-sm text-gray-100 outline-none focus:border-gold"
-            />
-            <select
-              value={newCampaignId}
-              onChange={(e) => setNewCampaignId(e.target.value)}
-              className="rounded-md border border-ink-line bg-ink-900 px-3 py-2 text-sm text-gray-100 outline-none focus:border-gold md:w-56"
-            >
-              <option value="">— Sin campaña —</option>
-              {campaigns.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-            <Button type="submit" disabled={busy}>
-              {busy ? '…' : 'Crear'}
-            </Button>
+          <form onSubmit={createSession} className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3 md:flex-row">
+              <input
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="Nombre de la sesión"
+                className="flex-1 rounded-md border border-ink-line bg-ink-900 px-3 py-2 text-sm text-gray-100 outline-none focus:border-gold"
+              />
+              <select
+                value={newCampaignId}
+                onChange={(e) => setNewCampaignId(e.target.value)}
+                className="rounded-md border border-ink-line bg-ink-900 px-3 py-2 text-sm text-gray-100 outline-none focus:border-gold md:w-56"
+              >
+                <option value="">— Sin campaña —</option>
+                {campaigns.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-3 md:flex-row">
+              <select
+                value={newPrepId}
+                onChange={(e) => setNewPrepId(e.target.value)}
+                className="flex-1 rounded-md border border-ink-line bg-ink-900 px-3 py-2 text-sm text-gray-100 outline-none focus:border-gold"
+              >
+                <option value="">— Sin preparación —</option>
+                {preps.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    📋 {p.name} ({p.event_count})
+                  </option>
+                ))}
+              </select>
+              <Button type="submit" disabled={busy}>
+                {busy ? '…' : 'Crear'}
+              </Button>
+            </div>
           </form>
         </Card>
       )}

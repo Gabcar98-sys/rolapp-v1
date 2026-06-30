@@ -5,6 +5,7 @@ import Button from '../components/ui/Button.jsx';
 import Tabs from '../components/ui/Tabs.jsx';
 import ConnectedUsers from '../components/Session/ConnectedUsers.jsx';
 import ChatPanel from '../components/Chat/ChatPanel.jsx';
+import PlanningPanel from '../components/Session/PlanningPanel.jsx';
 
 export default function SessionView({ session, user, onLeave }) {
   const isDM = user.role === 'dm';
@@ -44,6 +45,8 @@ export default function SessionView({ session, user, onLeave }) {
       socket.off('session:closed', onClosed);
       socket.disconnect();
     };
+    // El efecto se reinicia solo al cambiar de sesión; user/onLeave son estables aquí.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session.id]);
 
   function setCanvasImage(e) {
@@ -61,9 +64,11 @@ export default function SessionView({ session, user, onLeave }) {
     await api.closeSession(session.id, user.id);
   }
 
+  // La pestaña de Planificación es exclusiva del DM (motor de prep en sesión).
   const tabs = [
     { id: 'players', label: '👥' },
     { id: 'chat', label: '💬' },
+    ...(isDM ? [{ id: 'planning', label: '📋' }] : []),
   ];
 
   return (
@@ -147,6 +152,9 @@ export default function SessionView({ session, user, onLeave }) {
             {activeTab === 'players' && <ConnectedUsers users={connectedUsers} />}
             {activeTab === 'chat' && (
               <ChatPanel sessionId={session.id} user={user} connectedUsers={connectedUsers} />
+            )}
+            {activeTab === 'planning' && isDM && (
+              <PlanningPanel sessionId={session.id} user={user} session={session} />
             )}
           </div>
         </aside>

@@ -20,7 +20,7 @@
     "phase": "F2 — Game systems data-driven",
     "title": "Builder in-app de sistemas de juego + import/export de packs JSON",
     "priority": 2,
-    "status": "pending",
+    "status": "in_progress",
     "description": "Editor visual (atributos, formatos de skill/item, slots, mecánicas, docs) + importar/exportar game pack JSON versionado. Packs de ejemplo (Stormlight, Dragonbane) como archivos en game-packs/, no seeds en código."
   },
   {
@@ -36,8 +36,8 @@
     "phase": "F5 — Planificación",
     "title": "Preps, ubicaciones/sub-ubicaciones, grafo de eventos con ramas/enlaces, disparo con participantes, NPCs",
     "priority": 4,
-    "status": "pending",
-    "description": "Portar el motor de planificación (el activo de la app): session_preps → locations → sub_locations → event_templates + event_links, disparo de eventos con participantes, eventos de NPC."
+    "status": "done",
+    "description": "Portar el motor de planificación (el activo de la app): session_preps → locations → sub_locations → event_templates + event_links, disparo de eventos con participantes, eventos de NPC. VERIFICADO 2026-06-29 (tras 2 rondas: tooling lint + cableado UI): backend 14/14 tests, frontend build 0/0, smoke e2e prep→sesión→disparo en log append-only. Constructor de prep en Lobby (DM), pestaña Planificación en SessionView. Reviewer APROBADO. Grafo visual drag&drop diferido a F8."
   },
   {
     "id": "F3-characters",

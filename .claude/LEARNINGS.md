@@ -92,6 +92,16 @@ Las lecciones se agrupan por categoría. Cada entrada tiene:
 - **Lección:** Estilos solo con clases Tailwind + tokens definidos en `tailwind.config.js`. Responsive con breakpoints (`md:`, `lg:`), no midiendo el ancho en JS.
 - **Por qué importa:** Los estilos inline duplicados eran el principal dolor de mantenimiento de la v0; medir el ancho en JS re-renderiza de más y no es responsive real.
 
+### Una feature de frontend no está terminada hasta que sus componentes estén cableados y accesibles
+- **Contexto:** F5, primera ronda: `PlanningPanel`/`SessionPrepPanel`/`EventTemplatePanel` quedaron definidos pero nunca importados; `SessionView` no se modificó → la planificación era inaccesible desde la UI.
+- **Lección:** Crear un componente no es "implementarlo". El implementer debe montarlo en la jerarquía (importado, renderizado, con ruta/tab/acceso navegable) y dejar el flujo de usuario alcanzable. El reviewer hace `grep` de imports para detectar componentes huérfanos.
+- **Por qué importa:** Componentes huérfanos pasan lint/build pero la feature no existe para el usuario; es un falso "completado".
+
+### Directiva eslint-disable que referencia un plugin no registrado = error fatal en ESLint 9
+- **Contexto:** F5, `eslint-disable-next-line react-hooks/exhaustive-deps` sin tener `eslint-plugin-react-hooks` registrado.
+- **Lección:** En ESLint 9 (flat config), una directiva que apunta a una regla de un plugin no registrado es ERROR fatal, no warning, y rompe el build. Para proyectos React, registra `eslint-plugin-react-hooks` con sus reglas en `'warn'` (no rompe el build y aporta valor). No uses disables hacia reglas que el config no conoce.
+- **Por qué importa:** Un disable "inofensivo" tumba `docker compose build frontend` entero.
+
 ### El flat config de ESLint del frontend necesita eslint-plugin-react (jsx-uses-vars)
 - **Contexto:** F4, el lint del frontend emitió 12 warnings falsos `no-unused-vars` sobre imports usados solo como componentes JSX.
 - **Lección:** Con flat config de ESLint 9 + JSX, `no-unused-vars` marca como sin usar los componentes que solo aparecen en JSX. Falta la regla `react/jsx-uses-vars` de `eslint-plugin-react`. La próxima feature que toque frontend debe añadir `eslint-plugin-react` y habilitar `react/jsx-uses-vars` (o usar su config recomendada) para eliminar los falsos positivos.
@@ -147,3 +157,4 @@ Las lecciones se agrupan por categoría. Cada entrada tiene:
 - 2026-06-29 — founder sembró lecciones iniciales del stack al portar el harness desde la v0.
 - 2026-06-29 — líder agregó "La tabla virtual vec0 no puede vivir en schema.sql" (RAG/sqlite-vec) y "Verificar migraciones consolidadas con PRAGMA" (SQLite) tras cerrar F1.
 - 2026-06-29 — líder agregó tras cerrar F4: "Routers que emiten por socket → factory" (Backend), "El lint/test debe poder correr en Docker" (Docker/infra), "ESLint frontend necesita eslint-plugin-react" (Frontend), "No declarar un checkpoint en verde sin ejecutarlo" (Proceso).
+- 2026-06-29 — líder agregó tras cerrar F5: "Una feature de frontend no está terminada hasta que sus componentes estén cableados" (Frontend) y "Directiva eslint-disable a plugin no registrado = error fatal en ESLint 9" (Frontend).

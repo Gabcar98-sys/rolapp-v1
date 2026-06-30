@@ -62,9 +62,9 @@ export default function createSessionsRouter(io) {
     res.json({ session, members, characters });
   });
 
-  // POST /api/sessions  { name, dm_id, campaign_id? }  → crea sesión activa.
+  // POST /api/sessions  { name, dm_id, campaign_id?, prep_id? }  → crea sesión activa.
   router.post('/', (req, res) => {
-    const { name, dm_id, campaign_id = null } = req.body ?? {};
+    const { name, dm_id, campaign_id = null, prep_id = null } = req.body ?? {};
     if (!name || !dm_id) {
       return res.status(400).json({ error: 'name y dm_id son requeridos' });
     }
@@ -74,8 +74,8 @@ export default function createSessionsRouter(io) {
 
     const create = db.transaction(() => {
       const info = db
-        .prepare('INSERT INTO sessions (name, dm_id, campaign_id) VALUES (?, ?, ?)')
-        .run(name, dm_id, campaign_id);
+        .prepare('INSERT INTO sessions (name, dm_id, campaign_id, prep_id) VALUES (?, ?, ?, ?)')
+        .run(name, dm_id, campaign_id, prep_id);
       const sessionId = info.lastInsertRowid;
       // El DM es miembro de su propia sesión desde el arranque.
       db.prepare('INSERT OR IGNORE INTO session_members (session_id, user_id) VALUES (?, ?)')
@@ -151,17 +151,68 @@ export default function createSessionsRouter(io) {
     res.json({ events: listEvents(session.id) });
   });
 
-  // POST /api/sessions/:id/events  { actor_id, type, payload }  → inserta y emite por socket.
+  // POST /api/sessions/:id/events  → inserta en el log append-only y emite por socket.
+  //
+  // Acepta dos formas (ambas terminan en un INSERT en session_events):
+  //  1) Genérica (F4): { actor_id, type, payload }.
+  //  2) Disparo de planificación / NPC (F5): { dm_id, title, category, description,
+  //     participant_type, participants[], location, sub_location, branch_label,
+  //     template_id, actor_type:'dm'|'npc', npc_id, npc_name }.
+  //     El `type` del evento = `category` (como en la v0) y el resto va al payload,
+  //     de modo que el PlanningPanel reconstruye el estado "disparado" desde el log.
   router.post('/:id/events', (req, res) => {
-    const { actor_id = null, type, payload = {} } = req.body ?? {};
-    if (!type) return res.status(400).json({ error: 'type es requerido' });
+    const body = req.body ?? {};
 
-    const session = db.prepare('SELECT id FROM sessions WHERE id = ?').get(req.params.id);
+    const session = db.prepare('SELECT * FROM sessions WHERE id = ?').get(req.params.id);
     if (!session) return res.status(404).json({ error: 'Sesión no encontrada' });
+
+    // Forma de planificación/NPC: se reconoce por la presencia de `title`.
+    if (body.title !== undefined) {
+      const {
+        dm_id,
+        title,
+        category = 'general',
+        description = '',
+        participant_type = 'all',
+        participants = [],
+        location = '',
+        sub_location = '',
+        branch_label = '',
+        template_id = null,
+        actor_type = 'dm',
+        npc_id = null,
+        npc_name = '',
+      } = body;
+      if (!dm_id || !title) {
+        return res.status(400).json({ error: 'dm_id y title son requeridos' });
+      }
+      if (String(session.dm_id) !== String(dm_id)) {
+        return res.status(403).json({ error: 'Solo el DM puede disparar eventos' });
+      }
+
+      const event = logEvent(session.id, category, dm_id, {
+        title,
+        description,
+        participant_type,
+        participants,
+        location,
+        sub_location,
+        branch_label,
+        template_id,
+        actor_type,
+        npc_id,
+        npc_name,
+      });
+      io.to(`session:${session.id}`).emit('session:event_fired', { event });
+      return res.status(201).json({ event });
+    }
+
+    // Forma genérica (F4).
+    const { actor_id = null, type, payload = {} } = body;
+    if (!type) return res.status(400).json({ error: 'type es requerido' });
 
     const event = logEvent(session.id, type, actor_id, payload);
     io.to(`session:${session.id}`).emit('session:event_fired', { event });
-
     res.status(201).json({ event });
   });
 

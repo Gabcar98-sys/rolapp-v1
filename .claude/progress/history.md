@@ -38,3 +38,14 @@ Motor de sesión portado de la v0. Implementer → Reviewer RECHAZADO (tooling l
 - **Alcance:** canvas = imagen compartida con sync; dibujo libre (tldraw) postergado a F8.
 - Deuda: 12 warnings falsos de eslint frontend (falta eslint-plugin-react) → arreglar en F5.
 - Próxima: F5-planning.
+
+## 2026-06-29 — F5-planning (DONE)
+
+Motor de planificación portado. Implementer → RECHAZADO (lint + componentes huérfanos) → corrección → APROBADO. (El implementer se quedó sin sesión antes del 1er reporte; el reviewer revisó el working tree directo.)
+
+- **Backend:** `routes/sessionPreps.js`, `locations.js`, `subLocations.js`, `eventTemplates.js` (+ event_links), `npcs.js`; `services/planning.js`; disparo de eventos extendido en `sessions.js` (template_id, branch, participantes, NPC). Autorización DM, append-only, prepared statements. 14/14 tests (8 planning + 6 sessions).
+- **Frontend:** `PlanningPanel.jsx` (flujo: inicio/próximos por links disparados, modal participantes, tab disparados, evento NPC), `SessionPrepPanel.jsx` + `EventTemplatePanel.jsx` (constructor de prep en Lobby para DM), pestaña 📋 Planificación solo-DM en `SessionView`, selector de prep al crear sesión. `lib/planning.js`, `lib/api.js` ampliado.
+- **Deudas resueltas:** eslint-plugin-react + eslint-plugin-react-hooks registrados; frontend lint 0/0.
+- **Diferido a F8:** editor visual del grafo (EventFlowGraph drag&drop) — por ahora enlaces vía formularios/listas.
+- Lecciones: componentes huérfanos = falso completado; eslint-disable a plugin no registrado = error fatal.
+- Próxima: F2-game-systems.

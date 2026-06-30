@@ -12,7 +12,7 @@ Bootstrap del repo v1.0 (founder). Portado el harness de agentes desde la v0 y a
 
 ## Feature en progreso
 
-`F5-planning` (próxima a lanzar). `F0`, `F1`, `F4` cerradas y verificadas.
+`F2-game-systems` (próxima a lanzar). `F0`, `F1`, `F4`, `F5` cerradas y verificadas.
 
 ## Deuda técnica conocida (no bloqueante)
 - Frontend ESLint: 12 warnings falsos `no-unused-vars` sobre componentes JSX por faltar

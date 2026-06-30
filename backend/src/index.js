@@ -9,6 +9,11 @@ import authRouter from './routes/auth.js';
 import campaignsRouter from './routes/campaigns.js';
 import createSessionsRouter from './routes/sessions.js';
 import createCanvasRouter from './routes/canvas.js';
+import sessionPrepsRouter from './routes/sessionPreps.js';
+import locationsRouter from './routes/locations.js';
+import subLocationsRouter from './routes/subLocations.js';
+import eventTemplatesRouter from './routes/eventTemplates.js';
+import npcsRouter from './routes/npcs.js';
 import { initSockets } from './sockets/index.js';
 
 const PORT = process.env.PORT || 3001;
@@ -29,6 +34,12 @@ app.use('/api/campaigns', campaignsRouter);
 // sessions y canvas necesitan io para emitir cambios por socket desde REST.
 app.use('/api/sessions', createSessionsRouter(io));
 app.use('/api/canvas', createCanvasRouter(io));
+// Motor de planificación (F5): routers REST sin socket (CRUD puro).
+app.use('/api/session-preps', sessionPrepsRouter);
+app.use('/api/locations', locationsRouter);
+app.use('/api/sub-locations', subLocationsRouter);
+app.use('/api/event-templates', eventTemplatesRouter);
+app.use('/api/npcs', npcsRouter);
 
 initSockets(io);
 
