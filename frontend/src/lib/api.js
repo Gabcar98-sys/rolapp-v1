@@ -192,4 +192,75 @@ export const api = {
   importGamePack: (dmId, pack) =>
     request('/game-packs/import', { method: 'POST', body: { dm_id: dmId, pack } }),
   exportGameSystem: (id) => request(`/game-systems/${id}/export`),
+
+  // ── Personajes (F3) ───────────────────────────────────────────────────────
+  listMyCharacters: (userId) => request(`/characters?user_id=${userId}`),
+  listSessionCharacters: (sessionId) => request(`/characters/session/${sessionId}`),
+  getCharacter: (id) => request(`/characters/${id}`),
+  createCharacter: (userId, name, gameSystemTemplateId = null) =>
+    request('/characters', {
+      method: 'POST',
+      body: { user_id: userId, name, game_system_template_id: gameSystemTemplateId },
+    }),
+  updateCharacter: (id, userId, fields) =>
+    request(`/characters/${id}`, { method: 'PATCH', body: { user_id: userId, ...fields } }),
+  deleteCharacter: (id, userId) =>
+    request(`/characters/${id}`, { method: 'DELETE', body: { user_id: userId } }),
+  setCharacterAttributes: (id, userId, values) =>
+    request(`/characters/${id}/attributes`, { method: 'PUT', body: { user_id: userId, values } }),
+  // Skills del catálogo (enlace con rank)
+  linkCharacterSkill: (id, userId, skillId, rank = 0) =>
+    request(`/characters/${id}/skill-links`, { method: 'POST', body: { user_id: userId, skill_id: skillId, rank } }),
+  unlinkCharacterSkill: (id, userId, skillId) =>
+    request(`/characters/${id}/skill-links/${skillId}`, { method: 'DELETE', body: { user_id: userId } }),
+  // Skills manuales
+  addCharacterSkill: (id, userId, skill) =>
+    request(`/characters/${id}/skills`, { method: 'POST', body: { user_id: userId, ...skill } }),
+  deleteCharacterSkill: (id, userId, skillId) =>
+    request(`/characters/${id}/skills/${skillId}`, { method: 'DELETE', body: { user_id: userId } }),
+  // Inventario
+  addCharacterItem: (id, userId, item) =>
+    request(`/characters/${id}/inventory`, { method: 'POST', body: { user_id: userId, ...item } }),
+  updateCharacterItem: (id, userId, itemId, fields) =>
+    request(`/characters/${id}/inventory/${itemId}`, { method: 'PUT', body: { user_id: userId, ...fields } }),
+  deleteCharacterItem: (id, userId, itemId) =>
+    request(`/characters/${id}/inventory/${itemId}`, { method: 'DELETE', body: { user_id: userId } }),
+  // Equipo
+  equipItem: (id, userId, slotId, itemId, notes = '') =>
+    request(`/characters/${id}/equipment`, { method: 'POST', body: { user_id: userId, slot_id: slotId, item_id: itemId, notes } }),
+  unequipItem: (id, userId, equipId) =>
+    request(`/characters/${id}/equipment/${equipId}`, { method: 'DELETE', body: { user_id: userId } }),
+  // Vínculo a sesión
+  linkCharacterToSession: (id, userId, sessionId) =>
+    request(`/characters/${id}/sessions/${sessionId}`, { method: 'POST', body: { user_id: userId } }),
+  addCharacterToSession: (sessionId, characterId, userId) =>
+    request(`/sessions/${sessionId}/characters`, { method: 'POST', body: { character_id: characterId, user_id: userId } }),
+
+  // ── Personajes base (pregens del DM) ────────────────────────────────────────
+  listBaseCharacters: (dmId = null, gameSystemId = null) => {
+    const params = new URLSearchParams();
+    if (dmId) params.set('dm_id', dmId);
+    if (gameSystemId) params.set('game_system_id', gameSystemId);
+    const qs = params.toString();
+    return request(`/base-characters${qs ? `?${qs}` : ''}`);
+  },
+  getBaseCharacter: (id) => request(`/base-characters/${id}`),
+  createBaseCharacter: (dmId, fields) =>
+    request('/base-characters', { method: 'POST', body: { dm_id: dmId, ...fields } }),
+  updateBaseCharacter: (id, dmId, fields) =>
+    request(`/base-characters/${id}`, { method: 'PUT', body: { dm_id: dmId, ...fields } }),
+  deleteBaseCharacter: (id, dmId) =>
+    request(`/base-characters/${id}`, { method: 'DELETE', body: { dm_id: dmId } }),
+  setBaseCharacterAttrs: (id, dmId, attrs) =>
+    request(`/base-characters/${id}/attrs`, { method: 'PUT', body: { dm_id: dmId, attrs } }),
+  addBaseCharacterItem: (id, dmId, item) =>
+    request(`/base-characters/${id}/inventory`, { method: 'POST', body: { dm_id: dmId, ...item } }),
+  deleteBaseCharacterItem: (id, dmId, itemId) =>
+    request(`/base-characters/${id}/inventory/${itemId}`, { method: 'DELETE', body: { dm_id: dmId } }),
+  linkBaseCharacterSkill: (id, dmId, skillId, rank = 0) =>
+    request(`/base-characters/${id}/skill-links`, { method: 'POST', body: { dm_id: dmId, skill_id: skillId, rank } }),
+  unlinkBaseCharacterSkill: (id, dmId, skillId) =>
+    request(`/base-characters/${id}/skill-links/${skillId}`, { method: 'DELETE', body: { dm_id: dmId } }),
+  adoptBaseCharacter: (id, userId, name = null) =>
+    request(`/base-characters/${id}/adopt`, { method: 'POST', body: { user_id: userId, name } }),
 };

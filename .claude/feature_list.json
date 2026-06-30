@@ -44,8 +44,8 @@
     "phase": "F3 — Personajes",
     "title": "Mis personajes, pregens/base characters, fichas dinámicas por game system, inventario/equipo/skills",
     "priority": 5,
-    "status": "in_progress",
-    "description": "Personajes desacoplados de sesión, plantillas base/pregens, fichas dinámicas según el game system, inventario, equipo y skills."
+    "status": "done",
+    "description": "Personajes desacoplados de sesión, plantillas base/pregens, fichas dinámicas según el game system, inventario, equipo y skills. VERIFICADO 2026-06-29: 32 tests (11 de F3), ficha dinámica por game system, equipar con rechazo de slot lleno, crear-desde-pregen transaccional, vínculo a sesión, fix FK de borrado con session_characters. Reviewer APROBADO."
   },
   {
     "id": "F6-rag-ai",

@@ -59,3 +59,12 @@ Sistemas de juego configurables ("cualquier juego"). Implementer → Reviewer AP
 - **Frontend:** `GameSystemPanel`, `SkillsPanel`, `ItemsPanel` + UI import/export, cableados desde `Lobby.jsx` ("🎲 Sistemas de juego", solo DM).
 - **Verificación:** 21/21 tests (round-trip, transaccionalidad, pack inválido rechazado), frontend build OK, smoke import/export vía proxy. Sin deps nuevas.
 - Próxima: F3-characters.
+
+## 2026-06-29 — F3-characters (DONE)
+
+Personajes con ficha dinámica por game system. Implementer → Reviewer APROBADO (sin rondas extra).
+
+- **Backend:** `routes/characters.js` (factory con io; ficha completa: atributos+skills+inventario+equipo, equipar/desequipar con rechazo de slot lleno, vínculo a sesión), `routes/baseCharacters.js` (pregens + crear-desde-pregen transaccional). Fix: borrado de personaje vinculado limpia `session_characters` en transacción (FK).
+- **Frontend:** `MyCharacters.jsx` con ficha dinámica (atributos por category/is_core/has_max), paneles de ficha reutilizables, `BaseCharactersPanel`, paneles en `SessionView`, selector de personaje al unirse. Cableado en Lobby/SessionView.
+- **Verificación:** 32 tests (11 de F3), frontend build OK, smoke e2e completo.
+- Próxima: F6-rag-ai.

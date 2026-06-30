@@ -12,7 +12,7 @@ Bootstrap del repo v1.0 (founder). Portado el harness de agentes desde la v0 y a
 
 ## Feature en progreso
 
-`F3-characters` (próxima a lanzar). `F0`, `F1`, `F4`, `F5`, `F2` cerradas y verificadas.
+Ninguna. `F0`, `F1`, `F4`, `F5`, `F2`, `F3` cerradas y verificadas. Pendientes: `F6` (RAG/IA), `F7` (estadísticas), `F8` (pulido + tldraw + grafo visual).
 
 ## Deuda técnica conocida (no bloqueante)
 - Frontend ESLint: 12 warnings falsos `no-unused-vars` sobre componentes JSX por faltar

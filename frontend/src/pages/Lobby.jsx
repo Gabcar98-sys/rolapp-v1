@@ -5,6 +5,8 @@ import Card from '../components/ui/Card.jsx';
 import SessionPrepPanel from '../components/DMMaster/SessionPrepPanel.jsx';
 import EventTemplatePanel from '../components/DMMaster/EventTemplatePanel.jsx';
 import GameSystemPanel from '../components/DMMaster/GameSystemPanel.jsx';
+import BaseCharactersPanel from '../components/DMMaster/BaseCharactersPanel.jsx';
+import MyCharacters from './MyCharacters.jsx';
 
 // Agrupa sesiones por campaña; las que no tienen campaña van bajo "Sin campaña".
 function groupByCampaign(sessions) {
@@ -147,6 +149,33 @@ export default function Lobby({ user, onEnterSession, onLogout }) {
     );
   }
 
+  // ── Vista "Mis personajes" (todos los usuarios) ────────────────────────────
+  if (view === 'characters') {
+    return (
+      <div className="min-h-full">
+        <MyCharacters user={user} onBack={() => setView('sessions')} />
+      </div>
+    );
+  }
+
+  // ── Vista de personajes base / pregens (solo DM) ────────────────────────────
+  if (isDM && view === 'base-characters') {
+    return (
+      <div className="mx-auto flex min-h-full max-w-4xl flex-col gap-6 p-4 md:p-6">
+        <header className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gold">Personajes base</h1>
+            <p className="text-sm text-gray-400">Pregens reutilizables por sistema de juego</p>
+          </div>
+          <Button variant="secondary" size="sm" onClick={() => setView('sessions')}>
+            ← Lobby
+          </Button>
+        </header>
+        <BaseCharactersPanel user={user} />
+      </div>
+    );
+  }
+
   // ── Vista de sesiones (por defecto) ─────────────────────────────────────────
   return (
     <div className="mx-auto flex min-h-full max-w-4xl flex-col gap-6 p-4 md:p-6">
@@ -157,9 +186,15 @@ export default function Lobby({ user, onEnterSession, onLogout }) {
             {user.username} · {isDM ? '🎲 DM' : '⚔️ Jugador'}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="secondary" size="sm" onClick={() => setView('characters')}>
+            ⚔️ Mis personajes
+          </Button>
           {isDM && (
             <>
+              <Button variant="secondary" size="sm" onClick={() => setView('base-characters')}>
+                🧙 Personajes base
+              </Button>
               <Button variant="secondary" size="sm" onClick={() => setView('systems')}>
                 🎲 Sistemas de juego
               </Button>

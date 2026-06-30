@@ -13,6 +13,8 @@ import itemsRouter from './routes/items.js';
 import gamePacksRouter from './routes/gamePacks.js';
 import createSessionsRouter from './routes/sessions.js';
 import createCanvasRouter from './routes/canvas.js';
+import createCharactersRouter from './routes/characters.js';
+import baseCharactersRouter from './routes/baseCharacters.js';
 import sessionPrepsRouter from './routes/sessionPreps.js';
 import locationsRouter from './routes/locations.js';
 import subLocationsRouter from './routes/subLocations.js';
@@ -43,6 +45,10 @@ app.use('/api/game-packs', gamePacksRouter);
 // sessions y canvas necesitan io para emitir cambios por socket desde REST.
 app.use('/api/sessions', createSessionsRouter(io));
 app.use('/api/canvas', createCanvasRouter(io));
+// Personajes (F3): ficha completa, atributos, skills, inventario, equipo.
+// characters emite por socket al editar fichas en sesión, por eso es factory.
+app.use('/api/characters', createCharactersRouter(io));
+app.use('/api/base-characters', baseCharactersRouter);
 // Motor de planificación (F5): routers REST sin socket (CRUD puro).
 app.use('/api/session-preps', sessionPrepsRouter);
 app.use('/api/locations', locationsRouter);

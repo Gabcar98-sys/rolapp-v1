@@ -144,6 +144,40 @@ export default function createSessionsRouter(io) {
     res.status(201).json({ ok: true });
   });
 
+  // POST /api/sessions/:id/characters  { character_id, user_id }  → vincula un
+  // personaje a la sesión (session_characters). Dueño del personaje o DM de la sesión.
+  router.post('/:id/characters', (req, res) => {
+    const { character_id, user_id } = req.body ?? {};
+    if (!character_id) return res.status(400).json({ error: 'character_id es requerido' });
+
+    const session = db.prepare('SELECT * FROM sessions WHERE id = ?').get(req.params.id);
+    if (!session) return res.status(404).json({ error: 'Sesión no encontrada' });
+
+    const character = db.prepare('SELECT * FROM characters WHERE id = ?').get(character_id);
+    if (!character) return res.status(404).json({ error: 'Personaje no encontrado' });
+
+    const isOwner = String(character.user_id) === String(user_id);
+    const isDM = String(session.dm_id) === String(user_id);
+    if (!isOwner && !isDM) {
+      return res.status(403).json({ error: 'Sin permisos para vincular este personaje' });
+    }
+
+    db.prepare('INSERT OR IGNORE INTO session_characters (session_id, character_id) VALUES (?, ?)')
+      .run(session.id, character_id);
+    logEvent(session.id, 'character_joined', user_id ?? null, { character_id, name: character.name });
+
+    const characters = db.prepare(`
+      SELECT c.id, c.user_id, c.name, sc.joined_at
+      FROM session_characters sc
+      JOIN characters c ON sc.character_id = c.id
+      WHERE sc.session_id = ?
+      ORDER BY sc.joined_at ASC, c.id ASC
+    `).all(session.id);
+    io.to(`session:${session.id}`).emit('characters:list_updated', { characters });
+
+    res.status(201).json({ ok: true, characters });
+  });
+
   // GET /api/sessions/:id/events  → lista session_events (append-only) en orden cronológico.
   router.get('/:id/events', (req, res) => {
     const session = db.prepare('SELECT id FROM sessions WHERE id = ?').get(req.params.id);

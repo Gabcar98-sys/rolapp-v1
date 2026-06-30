@@ -6,6 +6,7 @@ import Tabs from '../components/ui/Tabs.jsx';
 import ConnectedUsers from '../components/Session/ConnectedUsers.jsx';
 import ChatPanel from '../components/Chat/ChatPanel.jsx';
 import PlanningPanel from '../components/Session/PlanningPanel.jsx';
+import SessionCharactersPanel from '../components/Session/SessionCharactersPanel.jsx';
 
 export default function SessionView({ session, user, onLeave }) {
   const isDM = user.role === 'dm';
@@ -67,6 +68,7 @@ export default function SessionView({ session, user, onLeave }) {
   // La pestaña de Planificación es exclusiva del DM (motor de prep en sesión).
   const tabs = [
     { id: 'players', label: '👥' },
+    { id: 'characters', label: '⚔️' },
     { id: 'chat', label: '💬' },
     ...(isDM ? [{ id: 'planning', label: '📋' }] : []),
   ];
@@ -150,6 +152,9 @@ export default function SessionView({ session, user, onLeave }) {
           <Tabs tabs={tabs} activeId={activeTab} onChange={setActiveTab} className="flex-shrink-0" />
           <div className="flex flex-1 flex-col overflow-hidden">
             {activeTab === 'players' && <ConnectedUsers users={connectedUsers} />}
+            {activeTab === 'characters' && (
+              <SessionCharactersPanel sessionId={session.id} user={user} />
+            )}
             {activeTab === 'chat' && (
               <ChatPanel sessionId={session.id} user={user} connectedUsers={connectedUsers} />
             )}
