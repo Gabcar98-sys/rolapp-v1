@@ -15,6 +15,7 @@ RUN npm install
 
 COPY eslint.config.js ./
 COPY src ./src
+COPY scripts ./scripts
 
 ENV PORT=3001
 EXPOSE 3001

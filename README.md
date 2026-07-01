@@ -59,6 +59,21 @@ curl -s http://localhost:3000/api/ai/status        # sondea si LLM y embeddings 
 Sin IA levantada, el panel 🤖 muestra "IA no disponible" y los endpoints degradan con
 un error claro (503) — la app no se cae.
 
+## Sembrar sistemas de ejemplo + contenido para la IA
+
+Deja el entorno listo con dos sistemas (Stormlight RPG con los 6 pregens de Bridge Nine y
+Dragonbane con 2 pregens) y la guía de Stormlight ingerida para el RAG. Es **idempotente**:
+
+```bash
+docker compose up -d --build
+docker compose exec backend node scripts/seed-examples.js --dm dm
+```
+
+- Crea (si falta) un DM `dm` con **PIN por defecto `0000`** — cámbialo desde la app.
+- La ingesta de la guía es **resiliente sin Ollama** (deja doc + chunks + FTS; los vectores
+  se generan luego con el endpoint de reindex). Detalles y comando de reindex en
+  [`game-packs/README.md`](game-packs/README.md).
+
 ## Desarrollo con Node local (opcional)
 
 ```bash

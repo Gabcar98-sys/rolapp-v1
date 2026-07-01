@@ -17,6 +17,9 @@ services:
       - EMBED_API_URL=${EMBED_API_URL:-}
     volumes:
       - ./data:/app/data
+      # game-packs se monta como DATOS (no se hornea en la imagen): el seed de ejemplos
+      # (scripts/seed-examples.js) los lee desde aquí, incluidos los .md de docs/ para RAG.
+      - ./game-packs:/app/game-packs:ro
     expose:
       - "3001"
     restart: unless-stopped

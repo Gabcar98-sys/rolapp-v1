@@ -59,6 +59,55 @@
       ]
     }
   ],
-  "base_characters": [],
+  "base_characters": [
+    {
+      "name": "Brakka",
+      "description": "Guerrera mercenaria de las tierras del norte. Directa, leal y de pocas palabras. Prefiere resolver los problemas con el filo de su espada.",
+      "avatar_icon": "⚔️",
+      "is_public": true,
+      "attrs": [
+        { "attr_name": "Fuerza", "attr_type": "number", "attr_category": "core", "value": "15" },
+        { "attr_name": "Destreza", "attr_type": "number", "attr_category": "core", "value": "12" },
+        { "attr_name": "Constitucion", "attr_type": "number", "attr_category": "core", "value": "14" },
+        { "attr_name": "Inteligencia", "attr_type": "number", "attr_category": "core", "value": "8" },
+        { "attr_name": "Voluntad", "attr_type": "number", "attr_category": "core", "value": "10" },
+        { "attr_name": "Carisma", "attr_type": "number", "attr_category": "core", "value": "9" },
+        { "attr_name": "Hit Points", "attr_type": "number", "attr_category": "resources", "value": "14" },
+        { "attr_name": "Willpower Points", "attr_type": "number", "attr_category": "resources", "value": "10" }
+      ],
+      "inventory": [
+        { "item_name": "Espada", "quantity": 1 },
+        { "item_name": "Antorcha", "quantity": 2 }
+      ],
+      "skill_links": [
+        { "skill_name": "Fuerza Bruta", "rank": 2 },
+        { "skill_name": "Acrobacias", "rank": 1 }
+      ]
+    },
+    {
+      "name": "Sella",
+      "description": "Exploradora y rastreadora de los bosques del sur. Astuta y observadora, se mueve sin ser vista y conoce las bestias del yermo.",
+      "avatar_icon": "🏹",
+      "is_public": true,
+      "attrs": [
+        { "attr_name": "Fuerza", "attr_type": "number", "attr_category": "core", "value": "10" },
+        { "attr_name": "Destreza", "attr_type": "number", "attr_category": "core", "value": "15" },
+        { "attr_name": "Constitucion", "attr_type": "number", "attr_category": "core", "value": "11" },
+        { "attr_name": "Inteligencia", "attr_type": "number", "attr_category": "core", "value": "13" },
+        { "attr_name": "Voluntad", "attr_type": "number", "attr_category": "core", "value": "12" },
+        { "attr_name": "Carisma", "attr_type": "number", "attr_category": "core", "value": "10" },
+        { "attr_name": "Hit Points", "attr_type": "number", "attr_category": "resources", "value": "11" },
+        { "attr_name": "Willpower Points", "attr_type": "number", "attr_category": "resources", "value": "12" }
+      ],
+      "inventory": [
+        { "item_name": "Antorcha", "quantity": 3 }
+      ],
+      "skill_links": [
+        { "skill_name": "Sigilo", "rank": 2 },
+        { "skill_name": "Conocimiento de Bestias", "rank": 2 },
+        { "skill_name": "Acrobacias", "rank": 1 }
+      ]
+    }
+  ],
   "docs": []
 }

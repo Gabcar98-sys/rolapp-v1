@@ -100,7 +100,7 @@
     "phase": "F10 — Sembrar juegos + pregens + guías",
     "title": "Importar sistemas de ejemplo, crear personajes base y ingerir guías .md para el RAG",
     "priority": 12,
-    "status": "in_progress",
-    "description": "Que existan sistemas de juego listos para usar y contenido para la IA. Script/CLI de import (respetando el principio: son datos importables, no seeds en código) que: (1) importe game-packs/stormlight.json y dragonbane.json para un DM; (2) cree personajes base (pregens) — portar los de Bridge Nine de la v0 (Abena, Jomari, Palinor, Talani, Vedd, Zvynda) para Stormlight, y algún pregen para Dragonbane; (3) ingiera la guía STORMLIGHT_RPG_GUIDE.md (de la v0) como game_doc del sistema Stormlight para que el RAG tenga contenido. Documentar cómo correrlo. Los pregens pueden venir embebidos en los packs JSON (base_characters)."
+    "status": "done",
+    "description": "VERIFICADO 2026-07-01: script backend/scripts/seed-examples.js idempotente (importa Stormlight+Dragonbane, 6 pregens Bridge Nine + 2 Dragonbane, ingiere guía con 62 chunks+FTS resiliente sin Ollama); baseline de migraciones sigue vacío (no seeds en código); 82 tests, RAG keyword 200 sin Ollama. Reviewer APROBADO. Que existan sistemas de juego listos para usar y contenido para la IA. Script/CLI de import (respetando el principio: son datos importables, no seeds en código) que: (1) importe game-packs/stormlight.json y dragonbane.json para un DM; (2) cree personajes base (pregens) — portar los de Bridge Nine de la v0 (Abena, Jomari, Palinor, Talani, Vedd, Zvynda) para Stormlight, y algún pregen para Dragonbane; (3) ingiera la guía STORMLIGHT_RPG_GUIDE.md (de la v0) como game_doc del sistema Stormlight para que el RAG tenga contenido. Documentar cómo correrlo. Los pregens pueden venir embebidos en los packs JSON (base_characters)."
   }
 ]

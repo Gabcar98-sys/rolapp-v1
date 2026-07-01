@@ -27,19 +27,25 @@
       ],
       "skills": [
         { "name": "Athletics", "description": "Proeza fisica.", "values": { "attribute": "Strength", "tasks": "Levantar, empujar, escalar, saltar, jalar. Salto horizontal gratis = tamano propio. DC 10 para mas. DC 30 para abismo de 40 pies." } },
+        { "name": "Heavy Weaponry", "description": "Combate con armas pesadas.", "values": { "attribute": "Strength", "tasks": "Ataques con armas de dos manos, pesadas o de alcance en combate." } },
         { "name": "Agility", "description": "Reflejos y movilidad.", "values": { "attribute": "Speed", "tasks": "Moverse por el entorno, acrobacias, pilotar vehiculos. Se prueba cuando reflejos o movilidad estan en juego." } },
         { "name": "Light Weaponry", "description": "Combate con armas ligeras.", "values": { "attribute": "Speed", "tasks": "Ataques con armas ligeras en combate." } },
         { "name": "Stealth", "description": "Sigilo y ocultamiento.", "values": { "attribute": "Speed", "tasks": "Moverse sin ser detectado. Usado en iniciativa Sorpresa vs Perception." } },
         { "name": "Trickery", "description": "Engano fisico.", "values": { "attribute": "Speed", "tasks": "Engano fisico, prestidigitacion, robar bolsillos." } },
         { "name": "Lore", "description": "Conocimiento especializado.", "values": { "attribute": "Intellect", "tasks": "Conocimiento historico, cultural y arcano." } },
+        { "name": "Crafting", "description": "Fabricacion y construccion.", "values": { "attribute": "Intellect", "tasks": "Fabricar, reparar o modificar objetos y dispositivos." } },
+        { "name": "Deduction", "description": "Razonamiento logico.", "values": { "attribute": "Intellect", "tasks": "Analizar evidencia, resolver acertijos, deducir informacion oculta." } },
         { "name": "Medicine", "description": "Medicina y sanacion.", "values": { "attribute": "Intellect", "tasks": "Tratar heridas y enfermedades. Ventaja con Suministros Quirurgicos." } },
         { "name": "Thievery", "description": "Robo y mecanismos.", "values": { "attribute": "Intellect", "tasks": "Abrir cerraduras. Esferas DC 15, Candados DC 20, Esposas DC 20. Ganzua da ventaja." } },
         { "name": "Discipline", "description": "Control mental.", "values": { "attribute": "Willpower", "tasks": "Resistencia mental, concentracion, autocontrol. Usado para instrumentos de teclado." } },
+        { "name": "Intimidation", "description": "Amedrentar a otros.", "values": { "attribute": "Willpower", "tasks": "Intimidar, amenazar o infundir miedo para obtener un resultado." } },
         { "name": "Survival", "description": "Supervivencia.", "values": { "attribute": "Willpower", "tasks": "Encontrar recursos en la naturaleza. Forrajear durante descanso corto." } },
         { "name": "Insight", "description": "Intuicion social.", "values": { "attribute": "Awareness", "tasks": "Detectar enganos, leer emociones. Usado vs Deception en iniciativa Sorpresa." } },
         { "name": "Perception", "description": "Percepcion sensorial.", "values": { "attribute": "Awareness", "tasks": "Detectar cosas ocultas o a distancia. Usado vs Stealth en iniciativa Sorpresa." } },
         { "name": "Deception", "description": "Engano verbal.", "values": { "attribute": "Presence", "tasks": "Enganar verbalmente. Usado en Sorpresa vs Insight." } },
         { "name": "Influence", "description": "Influencia social.", "values": { "attribute": "Presence", "tasks": "Persuadir, negociar, intimidar." } },
+        { "name": "Leadership", "description": "Liderazgo y mando.", "values": { "attribute": "Presence", "tasks": "Dirigir, inspirar o coordinar a un grupo hacia un objetivo." } },
+        { "name": "Persuasion", "description": "Persuasion y negociacion.", "values": { "attribute": "Presence", "tasks": "Convencer a otros mediante argumentos logicos o apelaciones emocionales." } },
         { "name": "Performance", "description": "Artes escenicas.", "values": { "attribute": "Presence", "tasks": "Actuacion, musica, expresion artistica. Agility para cuerdas, Athletics para percusion, Discipline para teclados." } }
       ]
     }
@@ -85,10 +91,222 @@
       ]
     }
   ],
-  "base_characters": [],
+  "base_characters": [
+    {
+      "name": "Abena",
+      "description": "Cazadora y arquera de Azir, capturada y asignada al Puente Nueve. Proposito: proteger a quienes no pueden protegerse. Meta: encontrar a su hermano desaparecido. Obstaculo: actua antes de pensar.",
+      "avatar_icon": "🏹",
+      "is_public": true,
+      "attrs": [
+        { "attr_name": "Strength", "attr_type": "number", "attr_category": "physical", "value": "2" },
+        { "attr_name": "Speed", "attr_type": "number", "attr_category": "physical", "value": "3" },
+        { "attr_name": "Intellect", "attr_type": "number", "attr_category": "cognitive", "value": "2" },
+        { "attr_name": "Willpower", "attr_type": "number", "attr_category": "cognitive", "value": "1" },
+        { "attr_name": "Awareness", "attr_type": "number", "attr_category": "spiritual", "value": "3" },
+        { "attr_name": "Presence", "attr_type": "number", "attr_category": "spiritual", "value": "1" },
+        { "attr_name": "Health", "attr_type": "number", "attr_category": "resources", "value": "12" },
+        { "attr_name": "Focus", "attr_type": "number", "attr_category": "resources", "value": "3" },
+        { "attr_name": "Investiture", "attr_type": "number", "attr_category": "resources", "value": "0" },
+        { "attr_name": "Physical Defense", "attr_type": "number", "attr_category": "defenses", "value": "15" },
+        { "attr_name": "Cognitive Defense", "attr_type": "number", "attr_category": "defenses", "value": "13" },
+        { "attr_name": "Spiritual Defense", "attr_type": "number", "attr_category": "defenses", "value": "14" },
+        { "attr_name": "Deflect", "attr_type": "number", "attr_category": "combat", "value": "0" }
+      ],
+      "inventory": [
+        { "item_name": "Shortbow", "quantity": 1 },
+        { "item_name": "Arrows", "quantity": 20 },
+        { "item_name": "Hunting knife", "quantity": 1 },
+        { "item_name": "Leather vest (Deflect 1)", "quantity": 1 },
+        { "item_name": "Waterskin", "quantity": 1 },
+        { "item_name": "Rations", "quantity": 3 },
+        { "item_name": "Rope, 50 ft.", "quantity": 1 },
+        { "item_name": "Spheres (4 marks)", "quantity": 1 }
+      ],
+      "skill_links": [
+        { "skill_name": "Light Weaponry", "rank": 2 },
+        { "skill_name": "Perception", "rank": 2 },
+        { "skill_name": "Survival", "rank": 1 }
+      ]
+    },
+    {
+      "name": "Jomari",
+      "description": "Ladron y agente de Kharbranth, asignado al Puente Nueve. Proposito: acumular riqueza para comprar su libertad. Meta: robar algo al Altoprincipe Sadeas. Obstaculo: la codicia nubla su juicio.",
+      "avatar_icon": "🗡️",
+      "is_public": true,
+      "attrs": [
+        { "attr_name": "Strength", "attr_type": "number", "attr_category": "physical", "value": "1" },
+        { "attr_name": "Speed", "attr_type": "number", "attr_category": "physical", "value": "3" },
+        { "attr_name": "Intellect", "attr_type": "number", "attr_category": "cognitive", "value": "1" },
+        { "attr_name": "Willpower", "attr_type": "number", "attr_category": "cognitive", "value": "2" },
+        { "attr_name": "Awareness", "attr_type": "number", "attr_category": "spiritual", "value": "2" },
+        { "attr_name": "Presence", "attr_type": "number", "attr_category": "spiritual", "value": "3" },
+        { "attr_name": "Health", "attr_type": "number", "attr_category": "resources", "value": "11" },
+        { "attr_name": "Focus", "attr_type": "number", "attr_category": "resources", "value": "4" },
+        { "attr_name": "Investiture", "attr_type": "number", "attr_category": "resources", "value": "0" },
+        { "attr_name": "Physical Defense", "attr_type": "number", "attr_category": "defenses", "value": "14" },
+        { "attr_name": "Cognitive Defense", "attr_type": "number", "attr_category": "defenses", "value": "13" },
+        { "attr_name": "Spiritual Defense", "attr_type": "number", "attr_category": "defenses", "value": "15" },
+        { "attr_name": "Deflect", "attr_type": "number", "attr_category": "combat", "value": "1" }
+      ],
+      "inventory": [
+        { "item_name": "Dagger", "quantity": 2 },
+        { "item_name": "Thieves' tools", "quantity": 1 },
+        { "item_name": "Dark clothing", "quantity": 1 },
+        { "item_name": "Forged documents", "quantity": 1 },
+        { "item_name": "Pouch of spheres (5 marks)", "quantity": 1 }
+      ],
+      "skill_links": [
+        { "skill_name": "Agility", "rank": 1 },
+        { "skill_name": "Light Weaponry", "rank": 1 },
+        { "skill_name": "Thievery", "rank": 1 },
+        { "skill_name": "Deception", "rank": 1 },
+        { "skill_name": "Insight", "rank": 1 }
+      ]
+    },
+    {
+      "name": "Palinor",
+      "description": "Soldado alethi despojado de su rango, ahora lider del Puente Nueve. Proposito: demostrar que los equipos de puente merecen respeto. Meta: mantener a todos los miembros del Puente Nueve con vida. Obstaculo: el orgullo le impide pedir ayuda.",
+      "avatar_icon": "🛡️",
+      "is_public": true,
+      "attrs": [
+        { "attr_name": "Strength", "attr_type": "number", "attr_category": "physical", "value": "3" },
+        { "attr_name": "Speed", "attr_type": "number", "attr_category": "physical", "value": "2" },
+        { "attr_name": "Intellect", "attr_type": "number", "attr_category": "cognitive", "value": "1" },
+        { "attr_name": "Willpower", "attr_type": "number", "attr_category": "cognitive", "value": "2" },
+        { "attr_name": "Awareness", "attr_type": "number", "attr_category": "spiritual", "value": "1" },
+        { "attr_name": "Presence", "attr_type": "number", "attr_category": "spiritual", "value": "3" },
+        { "attr_name": "Health", "attr_type": "number", "attr_category": "resources", "value": "13" },
+        { "attr_name": "Focus", "attr_type": "number", "attr_category": "resources", "value": "4" },
+        { "attr_name": "Investiture", "attr_type": "number", "attr_category": "resources", "value": "0" },
+        { "attr_name": "Physical Defense", "attr_type": "number", "attr_category": "defenses", "value": "15" },
+        { "attr_name": "Cognitive Defense", "attr_type": "number", "attr_category": "defenses", "value": "13" },
+        { "attr_name": "Spiritual Defense", "attr_type": "number", "attr_category": "defenses", "value": "14" },
+        { "attr_name": "Deflect", "attr_type": "number", "attr_category": "combat", "value": "2" }
+      ],
+      "inventory": [
+        { "item_name": "Spear", "quantity": 1 },
+        { "item_name": "Shield (Deflect 2)", "quantity": 1 },
+        { "item_name": "Leather vest (Deflect 1)", "quantity": 1 },
+        { "item_name": "Rations", "quantity": 3 },
+        { "item_name": "Waterskin", "quantity": 1 },
+        { "item_name": "Spheres (5 marks)", "quantity": 1 }
+      ],
+      "skill_links": [
+        { "skill_name": "Athletics", "rank": 1 },
+        { "skill_name": "Heavy Weaponry", "rank": 2 },
+        { "skill_name": "Leadership", "rank": 2 }
+      ]
+    },
+    {
+      "name": "Talani",
+      "description": "Escriba y diplomatica que termino en el Puente Nueve por intrigas politicas. Proposito: usar palabras para evitar la violencia. Meta: negociar mejores condiciones para el equipo de puente. Obstaculo: confia demasiado en los demas.",
+      "avatar_icon": "📜",
+      "is_public": true,
+      "attrs": [
+        { "attr_name": "Strength", "attr_type": "number", "attr_category": "physical", "value": "3" },
+        { "attr_name": "Speed", "attr_type": "number", "attr_category": "physical", "value": "1" },
+        { "attr_name": "Intellect", "attr_type": "number", "attr_category": "cognitive", "value": "2" },
+        { "attr_name": "Willpower", "attr_type": "number", "attr_category": "cognitive", "value": "2" },
+        { "attr_name": "Awareness", "attr_type": "number", "attr_category": "spiritual", "value": "2" },
+        { "attr_name": "Presence", "attr_type": "number", "attr_category": "spiritual", "value": "2" },
+        { "attr_name": "Health", "attr_type": "number", "attr_category": "resources", "value": "13" },
+        { "attr_name": "Focus", "attr_type": "number", "attr_category": "resources", "value": "4" },
+        { "attr_name": "Investiture", "attr_type": "number", "attr_category": "resources", "value": "0" },
+        { "attr_name": "Physical Defense", "attr_type": "number", "attr_category": "defenses", "value": "14" },
+        { "attr_name": "Cognitive Defense", "attr_type": "number", "attr_category": "defenses", "value": "14" },
+        { "attr_name": "Spiritual Defense", "attr_type": "number", "attr_category": "defenses", "value": "14" },
+        { "attr_name": "Deflect", "attr_type": "number", "attr_category": "combat", "value": "0" }
+      ],
+      "inventory": [
+        { "item_name": "Fine clothing", "quantity": 1 },
+        { "item_name": "Writing supplies", "quantity": 1 },
+        { "item_name": "Spheres (10 marks)", "quantity": 1 },
+        { "item_name": "Light knife", "quantity": 1 }
+      ],
+      "skill_links": [
+        { "skill_name": "Discipline", "rank": 2 },
+        { "skill_name": "Lore", "rank": 1 },
+        { "skill_name": "Leadership", "rank": 1 },
+        { "skill_name": "Persuasion", "rank": 1 }
+      ]
+    },
+    {
+      "name": "Vedd",
+      "description": "Soldado alethi caido en desgracia, ahora en el Puente Nueve. Proposito: encontrar significado ayudando a los menos afortunados. Meta: ayudar a los companeros del equipo. Obstaculo: tarda en enfadarse, pero pierde el control. Nota: ha sido notado por un extrano spren (rayo de luz).",
+      "avatar_icon": "⚔️",
+      "is_public": true,
+      "attrs": [
+        { "attr_name": "Strength", "attr_type": "number", "attr_category": "physical", "value": "3" },
+        { "attr_name": "Speed", "attr_type": "number", "attr_category": "physical", "value": "2" },
+        { "attr_name": "Intellect", "attr_type": "number", "attr_category": "cognitive", "value": "1" },
+        { "attr_name": "Willpower", "attr_type": "number", "attr_category": "cognitive", "value": "3" },
+        { "attr_name": "Awareness", "attr_type": "number", "attr_category": "spiritual", "value": "2" },
+        { "attr_name": "Presence", "attr_type": "number", "attr_category": "spiritual", "value": "1" },
+        { "attr_name": "Health", "attr_type": "number", "attr_category": "resources", "value": "13" },
+        { "attr_name": "Focus", "attr_type": "number", "attr_category": "resources", "value": "5" },
+        { "attr_name": "Investiture", "attr_type": "number", "attr_category": "resources", "value": "0" },
+        { "attr_name": "Physical Defense", "attr_type": "number", "attr_category": "defenses", "value": "15" },
+        { "attr_name": "Cognitive Defense", "attr_type": "number", "attr_category": "defenses", "value": "14" },
+        { "attr_name": "Spiritual Defense", "attr_type": "number", "attr_category": "defenses", "value": "13" },
+        { "attr_name": "Deflect", "attr_type": "number", "attr_category": "combat", "value": "1" }
+      ],
+      "inventory": [
+        { "item_name": "Leather bridge crew vest (Deflect 1)", "quantity": 1 },
+        { "item_name": "Flask of Horneater white", "quantity": 1 },
+        { "item_name": "Hand-drawn map of Sadeas's warcamp", "quantity": 1 },
+        { "item_name": "Spheres (3 marks)", "quantity": 1 }
+      ],
+      "skill_links": [
+        { "skill_name": "Athletics", "rank": 1 },
+        { "skill_name": "Heavy Weaponry", "rank": 2 },
+        { "skill_name": "Intimidation", "rank": 1 },
+        { "skill_name": "Perception", "rank": 1 }
+      ]
+    },
+    {
+      "name": "Zvynda",
+      "description": "Cientifica de Thaylenah, aprendiza del Gremio Vriztl y pupila del estudioso alethi Eliah Matal. Proposito: expresar creatividad a traves de la invencion. Meta: investigar tecnologia fabrial antigua. Obstaculo: la curiosidad intensa se convierte en distraccion.",
+      "avatar_icon": "🔬",
+      "is_public": true,
+      "attrs": [
+        { "attr_name": "Strength", "attr_type": "number", "attr_category": "physical", "value": "1" },
+        { "attr_name": "Speed", "attr_type": "number", "attr_category": "physical", "value": "2" },
+        { "attr_name": "Intellect", "attr_type": "number", "attr_category": "cognitive", "value": "3" },
+        { "attr_name": "Willpower", "attr_type": "number", "attr_category": "cognitive", "value": "3" },
+        { "attr_name": "Awareness", "attr_type": "number", "attr_category": "spiritual", "value": "2" },
+        { "attr_name": "Presence", "attr_type": "number", "attr_category": "spiritual", "value": "1" },
+        { "attr_name": "Health", "attr_type": "number", "attr_category": "resources", "value": "11" },
+        { "attr_name": "Focus", "attr_type": "number", "attr_category": "resources", "value": "5" },
+        { "attr_name": "Investiture", "attr_type": "number", "attr_category": "resources", "value": "0" },
+        { "attr_name": "Physical Defense", "attr_type": "number", "attr_category": "defenses", "value": "13" },
+        { "attr_name": "Cognitive Defense", "attr_type": "number", "attr_category": "defenses", "value": "16" },
+        { "attr_name": "Spiritual Defense", "attr_type": "number", "attr_category": "defenses", "value": "13" },
+        { "attr_name": "Deflect", "attr_type": "number", "attr_category": "combat", "value": "0" }
+      ],
+      "inventory": [
+        { "item_name": "Painrial (prestamo de ardente Rushu — si destruido, debe 750 esferas)", "quantity": 1 },
+        { "item_name": "Folding knife", "quantity": 1 },
+        { "item_name": "Small hammer", "quantity": 1 },
+        { "item_name": "Chisels (various sizes)", "quantity": 1 },
+        { "item_name": "Tongs and pliers", "quantity": 1 },
+        { "item_name": "Tuning fork", "quantity": 1 },
+        { "item_name": "Writing reeds", "quantity": 1 },
+        { "item_name": "Bottle of ink", "quantity": 1 },
+        { "item_name": "Paper", "quantity": 10 },
+        { "item_name": "Fabrial reference book", "quantity": 1 },
+        { "item_name": "Vial of acid", "quantity": 1 },
+        { "item_name": "Spheres (6 marks)", "quantity": 1 }
+      ],
+      "skill_links": [
+        { "skill_name": "Light Weaponry", "rank": 1 },
+        { "skill_name": "Crafting", "rank": 1 },
+        { "skill_name": "Deduction", "rank": 1 },
+        { "skill_name": "Lore", "rank": 3 },
+        { "skill_name": "Medicine", "rank": 1 }
+      ]
+    }
+  ],
   "docs": [
-    { "title": "Mecanicas core", "path": "stormlight/01-mecanicas-core.md" },
-    { "title": "Talentos y paths", "path": "stormlight/03-talentos-y-paths.md" },
-    { "title": "Armas y armaduras", "path": "stormlight/04-armas-armaduras.md" }
+    { "title": "Stormlight RPG — Guia Completa", "path": "stormlight/STORMLIGHT_RPG_GUIDE.md" }
   ]
 }

@@ -80,6 +80,14 @@ export function exportGameSystem(db, gameSystemId) {
     inventory: db.prepare(
       'SELECT item_name, quantity, description FROM base_character_inventory WHERE base_character_id = ?'
     ).all(bc.id),
+    // Skills enlazadas por NOMBRE (no por id) para que el pack sea portable.
+    skill_links: db.prepare(
+      `SELECT s.name AS skill_name, bcsl.rank
+       FROM base_character_skill_links bcsl
+       JOIN skills s ON s.id = bcsl.skill_id
+       WHERE bcsl.base_character_id = ?
+       ORDER BY s.name ASC`
+    ).all(bc.id),
   }));
 
   // Solo metadatos de docs; el contenido .md se ingiere en F6 (RAG).
@@ -235,15 +243,42 @@ export function importGamePack(db, dmId, pack) {
       INSERT INTO base_characters (dm_id, game_system_id, name, description, avatar_icon, is_public)
       VALUES (?, ?, ?, ?, ?, ?)
     `);
+    // Los pregens referencian atributos por NOMBRE; los ligamos al attribute_template_id
+    // del sistema para que "adopt" pueda copiar sus valores a un personaje de jugador.
     const insertBaseAttr = db.prepare(`
       INSERT INTO base_character_attrs
-        (base_character_id, attr_name, attr_type, attr_category, value, sort_order)
-      VALUES (?, ?, ?, ?, ?, ?)
+        (base_character_id, attribute_template_id, attr_name, attr_type, attr_category, value, sort_order)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
     const insertBaseInv = db.prepare(`
       INSERT INTO base_character_inventory (base_character_id, item_name, quantity, description)
       VALUES (?, ?, ?, ?)
     `);
+    const insertBaseSkillLink = db.prepare(`
+      INSERT OR IGNORE INTO base_character_skill_links (base_character_id, skill_id, rank)
+      VALUES (?, ?, ?)
+    `);
+
+    // Mapas nombre→id dentro de este sistema (los atributos y skills ya se insertaron
+    // arriba en la misma transacción). category::name evita colisiones de nombres iguales
+    // en categorías distintas; también dejamos un fallback solo por nombre.
+    const attrIdByKey = new Map();
+    const attrIdByName = new Map();
+    for (const row of db.prepare(
+      'SELECT id, name, category FROM attribute_templates WHERE game_system_id = ?'
+    ).all(gameSystemId)) {
+      attrIdByKey.set(`${row.category}::${row.name}`, row.id);
+      if (!attrIdByName.has(row.name)) attrIdByName.set(row.name, row.id);
+    }
+    const skillIdByName = new Map();
+    for (const row of db.prepare(
+      `SELECT sk.id, sk.name FROM skills sk
+       JOIN skill_formats sf ON sf.id = sk.format_id
+       WHERE sf.game_system_id = ?`
+    ).all(gameSystemId)) {
+      if (!skillIdByName.has(row.name)) skillIdByName.set(row.name, row.id);
+    }
+
     for (const bc of pack.base_characters ?? []) {
       if (!bc.name) throw new Error('Cada base_character requiere un name');
       const bcId = insertBase.run(
@@ -251,13 +286,26 @@ export function importGamePack(db, dmId, pack) {
         bc.avatar_icon ?? '🧙', bc.is_public === false ? 0 : 1
       ).lastInsertRowid;
       (bc.attrs ?? []).forEach((a, idx) => {
+        const category = a.attr_category ?? 'general';
+        const templateId = attrIdByKey.get(`${category}::${a.attr_name}`)
+          ?? attrIdByName.get(a.attr_name)
+          ?? null;
         insertBaseAttr.run(
-          bcId, a.attr_name, a.attr_type ?? 'text', a.attr_category ?? 'general',
+          bcId, templateId, a.attr_name, a.attr_type ?? 'text', category,
           a.value ?? '', a.sort_order ?? idx
         );
       });
       for (const inv of bc.inventory ?? []) {
         insertBaseInv.run(bcId, inv.item_name, inv.quantity ?? 1, inv.description ?? '');
+      }
+      for (const link of bc.skill_links ?? []) {
+        const skillId = skillIdByName.get(link.skill_name);
+        if (skillId === undefined) {
+          throw new Error(
+            `El skill_link "${link.skill_name}" del pregen "${bc.name}" no corresponde a ninguna habilidad del pack`
+          );
+        }
+        insertBaseSkillLink.run(bcId, skillId, Number(link.rank) || 0);
       }
     }
 

@@ -171,8 +171,17 @@ function purgeChunks(docId) {
 // Crea (o reusa) la fila game_docs, chunkea, embebe y persiste en doc_chunks + vec +
 // fts. Idempotente por content_hash: si el doc no cambió, no reingiere.
 //
-// Devuelve { docId, chunks, reindexed }.
-export async function ingestDoc({ gameSystemId, title, content, sourcePath = null, docId = null }) {
+// embedMode:
+//   'strict'    (default) → si vec está activo pero los embeddings fallan (Ollama caído),
+//                LANZA sin dejar un game_docs huérfano. Es el contrato del endpoint REST.
+//   'resilient' → embebe si puede; si el proveedor no responde, persiste doc + chunks +
+//                FTS SIN vectores (quedan para reindex). Lo usa el seed para no romper
+//                cuando no hay Ollama; la búsqueda por keyword/BM25 ya funciona.
+//
+// Devuelve { docId, chunks, reindexed, embedded }.
+export async function ingestDoc({
+  gameSystemId, title, content, sourcePath = null, docId = null, embedMode = 'strict',
+}) {
   if (!content || !content.trim()) {
     throw new Error('El documento no tiene contenido');
   }
@@ -182,7 +191,7 @@ export async function ingestDoc({ gameSystemId, title, content, sourcePath = nul
   if (doc && doc.content_hash === hash) {
     // Sin cambios: no reingiere (idempotencia por hash).
     const n = db.prepare('SELECT COUNT(*) AS n FROM doc_chunks WHERE doc_id = ?').get(doc.id).n;
-    return { docId: doc.id, chunks: n, reindexed: false };
+    return { docId: doc.id, chunks: n, reindexed: false, embedded: false };
   }
 
   const chunks = chunkMarkdown(content);
@@ -191,10 +200,20 @@ export async function ingestDoc({ gameSystemId, title, content, sourcePath = nul
   }
 
   // Embeddings ANTES de tocar la DB (es la única parte async / con red). Si Ollama está
-  // caído, esto lanza aquí y NO dejamos una fila game_docs huérfana sin chunks.
+  // caído en modo 'strict', esto lanza aquí y NO dejamos un game_docs huérfano sin chunks.
+  // En modo 'resilient' toleramos el fallo: seguimos sin vectores (quedan para reindex).
   let vectors = null;
   if (vecEnabled) {
-    vectors = await embedTexts(chunks.map((c) => c.chunkText));
+    try {
+      vectors = await embedTexts(chunks.map((c) => c.chunkText));
+    } catch (err) {
+      if (embedMode !== 'resilient') throw err;
+      console.warn(
+        `Ingesta sin vectores (proveedor de embeddings no disponible): ${err.message}. ` +
+        'El doc queda con chunks + FTS; reindexa cuando Ollama esté arriba.'
+      );
+      vectors = null;
+    }
   }
 
   // Persistencia atómica: crea/reusa el doc, purga lo viejo e inserta en las 3 tablas.
@@ -227,7 +246,7 @@ export async function ingestDoc({ gameSystemId, title, content, sourcePath = nul
   });
   persist();
 
-  return { docId: doc.id, chunks: chunks.length, reindexed: true };
+  return { docId: doc.id, chunks: chunks.length, reindexed: true, embedded: !!vectors };
 }
 
 // Reindexa un doc existente RE-EMBEBIENDO sus chunks en sitio (p. ej. tras cambiar de
@@ -357,8 +376,15 @@ export async function hybridSearch({ query, gameSystemId, k = 5 }) {
 
   let vectorHits = [];
   if (vecEnabled) {
-    const queryVector = await embedText(query);
-    vectorHits = vectorSearch(queryVector, gameSystemId, k);
+    try {
+      const queryVector = await embedText(query);
+      vectorHits = vectorSearch(queryVector, gameSystemId, k);
+    } catch (err) {
+      // Si el proveedor de embeddings no responde (Ollama caído) pero hay FTS, degradamos
+      // a solo-keyword en vez de fallar: el BM25 ya cubre docs ingeridos sin vectores.
+      if (!ftsEnabled) throw err;
+      console.warn(`Búsqueda vectorial no disponible, degradando a FTS: ${err.message}`);
+    }
   }
   const keywordHits = keywordSearch(query, gameSystemId, k);
 

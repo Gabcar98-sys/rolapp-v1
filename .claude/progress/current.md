@@ -12,7 +12,11 @@ Bootstrap del repo v1.0 (founder). Portado el harness de agentes desde la v0 y a
 
 ## Feature en progreso
 
-`F10-seed-systems` (en progreso). F0–F9 cerradas. Docker recuperado; caché podada. Tras F10: optimización de IA (petición del founder, "todo en auto").
+Ninguna en progreso. **F0–F10 todas cerradas y verificadas.** El founder pidió parar tras F10.
+
+## Pendiente (cuando el founder lo pida)
+- **Optimización de IA a fondo** (fase solicitada, en pausa por decisión del founder).
+- Deuda menor: vectores del RAG quedan pendientes de reindex hasta que Ollama esté arriba (`docker compose --profile ai up` + bootstrap + reindex).
 
 ## ⚠️ BLOQUEO DE ENTORNO (2026-06-30)
 - **C: al 98%** (14 GB libres en 466 GB). El disco estuvo al 100% (752 MB) y dejó el daemon de Docker Desktop en **solo-lectura / corrupto**. `docker version` → server vacío; listar contenedores → 500. **Docker no usable.**

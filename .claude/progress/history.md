@@ -107,6 +107,13 @@ Editor visual del grafo de eventos + edición del flujo desde la sesión. Implem
 - Lección: cada servicio dockerizado necesita .dockerignore.
 - Próxima: F8c (última).
 
+## 2026-06-30/07-01 — F8c, F9, F10 (DONE)
+
+- **F8c** (mobile + tldraw): APROBADO. tldraw lazy + snapshot por socket, bottom-sheet móvil, accesibilidad. 71 tests.
+- **F9** (activar/optimizar IA): APROBADO. Turnkey híbrido Ollama/API, ai-bootstrap, /api/ai/status, streaming por socket con fallback, contrato answer+sources, prompts ES, AIPanel con badge+citas, degradación elegante. (Verificación se atrasó por bloqueo de disco/Docker; recuperado podando 6.4 GB de caché y quitando el stack v0.)
+- **F10** (seed): APROBADO. `backend/scripts/seed-examples.js` idempotente importa Stormlight+Dragonbane, crea 6 pregens Bridge Nine + 2 Dragonbane, ingiere STORMLIGHT_RPG_GUIDE.md (62 chunks+FTS, resiliente sin Ollama). Migraciones siguen vacías (no seeds en código). 82 tests.
+- Founder pidió PARAR tras F10. Pendiente: optimización de IA a fondo.
+
 ## 2026-06-29 — F8c-ui-polish (DONE)
 
 Pulido mobile-first + tldraw. Implementer → Reviewer APROBADO. **Roadmap base F0–F8 completo.**
