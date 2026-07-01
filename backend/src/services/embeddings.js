@@ -103,6 +103,47 @@ export async function embedText(text) {
   return vector;
 }
 
+// ── Caché de embeddings de queries ────────────────────────────────────────────────
+// Las mismas preguntas se repiten en mesa (el DM reconsulta, varios jugadores preguntan
+// lo mismo). Cachear el vector de la query evita recomputarlo (una llamada de red / al
+// stub por query repetida). LRU simple en memoria: un Map conserva orden de inserción,
+// así que "tocar" una clave = borrarla y reinsertarla; al exceder el tope se descarta la
+// entrada más antigua (primera del Map). En memoria basta (§6 de F11); no persistimos.
+const QUERY_CACHE_MAX = Math.max(1, Number(process.env.RAG_QUERY_CACHE_SIZE) || 256);
+const queryCache = new Map(); // normalizedQuery -> number[] (vector)
+
+// Normaliza la query para que variaciones triviales (espacios, mayúsculas) compartan
+// entrada de caché sin afectar la semántica del embedding subyacente.
+function cacheKey(text) {
+  return text.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+// Embebe una query con caché LRU. Solo llama al provider en un miss; en un hit devuelve
+// el vector memorizado sin recomputar. Ideal para el retrieval, que embebe la misma
+// query repetidamente en una mesa activa.
+export async function embedQueryCached(text) {
+  const key = cacheKey(text);
+  if (queryCache.has(key)) {
+    // Hit: refresca la posición (LRU) y devuelve el vector cacheado.
+    const cached = queryCache.get(key);
+    queryCache.delete(key);
+    queryCache.set(key, cached);
+    return cached;
+  }
+  const vector = await embedText(text);
+  queryCache.set(key, vector);
+  if (queryCache.size > QUERY_CACHE_MAX) {
+    // Descarta la entrada más antigua (primera clave insertada).
+    queryCache.delete(queryCache.keys().next().value);
+  }
+  return vector;
+}
+
+// Vacía la caché de queries (útil para tests y para forzar recomputo tras reindex).
+export function clearQueryCache() {
+  queryCache.clear();
+}
+
 // Sondeo de disponibilidad para /api/ai/status. Intenta embeber un texto mínimo y
 // reporta si el proveedor responde, sin lanzar (la UX necesita un estado, no un crash).
 // Devuelve { ok, provider, model, error? }.

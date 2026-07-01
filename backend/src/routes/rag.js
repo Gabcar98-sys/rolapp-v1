@@ -109,14 +109,20 @@ export default function createRagRouter(io) {
 
   // ── Búsqueda híbrida directa (debug / UI de reglas) ────────────────────────────
 
-  // POST /api/rag/search  { query, game_system_id, k? }
+  // POST /api/rag/search  { query, game_system_id, k?, section_type?, doc_id? }
   router.post('/rag/search', async (req, res) => {
-    const { query, game_system_id, k } = req.body ?? {};
+    const { query, game_system_id, k, section_type, doc_id } = req.body ?? {};
     if (!query || !game_system_id) {
       return res.status(422).json({ error: 'query y game_system_id son requeridos' });
     }
     try {
-      const results = await hybridSearch({ query, gameSystemId: game_system_id, k: k || 5 });
+      const results = await hybridSearch({
+        query,
+        gameSystemId: game_system_id,
+        k: k || 5,
+        sectionType: section_type || null,
+        docId: doc_id ?? null,
+      });
       res.json({ results });
     } catch (err) {
       fail(res, err);

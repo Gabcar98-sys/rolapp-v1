@@ -114,6 +114,14 @@ Editor visual del grafo de eventos + edición del flujo desde la sesión. Implem
 - **F10** (seed): APROBADO. `backend/scripts/seed-examples.js` idempotente importa Stormlight+Dragonbane, crea 6 pregens Bridge Nine + 2 Dragonbane, ingiere STORMLIGHT_RPG_GUIDE.md (62 chunks+FTS, resiliente sin Ollama). Migraciones siguen vacías (no seeds en código). 82 tests.
 - Founder pidió PARAR tras F10. Pendiente: optimización de IA a fondo.
 
+## 2026-07-01 — F11-ai-retrieval-opt (DONE)
+
+Optimización del RAG (retrieval + contexto). Implementer → Reviewer APROBADO.
+
+- Chunking afinado (no parte tablas/encabezados, configurable), fusión híbrida normalizada + ponderada (envs de peso vector/keyword), MMR/dedup por heading_path, empaquetado de contexto por presupuesto de tokens, caché de embeddings de queries.
+- Test de eval anti-regresión (`rag.eval.test.js`): hit-rate@3 = 100% (umbral 0.8). 93 tests totales. Degradación solo-FTS sin Ollama. Contrato {answer,sources} intacto.
+- Founder pidió PARAR en F11. Pendiente: F12 (generación + tools + UX).
+
 ## 2026-06-29 — F8c-ui-polish (DONE)
 
 Pulido mobile-first + tldraw. Implementer → Reviewer APROBADO. **Roadmap base F0–F8 completo.**

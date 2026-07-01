@@ -217,9 +217,40 @@ const PLANNING_SYSTEM =
   'el estado actual de la sesión. Cita las reglas relevantes entre corchetes. No inventes ' +
   'reglas; si algo no está en el contexto, propónlo como idea abierta, no como regla del juego.';
 
-// ── Tool-like: recuperar reglas citadas ──────────────────────────────────────────
-async function retrieveRules({ query, gameSystemId, k = 5 }) {
-  return hybridSearch({ query, gameSystemId, k });
+// Presupuesto de tokens para el contexto de reglas que se manda al LLM (F11 §5).
+// Estimación simple ~= chars/4 (misma heurística que el chunker). Configurable por env.
+const CONTEXT_TOKEN_BUDGET = Math.max(200, Number(process.env.RAG_CONTEXT_TOKEN_BUDGET) || 1500);
+// Recuperamos un poco más de chunks de los que probablemente entren, para que el
+// empaquetado por presupuesto tenga de dónde elegir tras dedup/MMR.
+const RETRIEVE_K = Math.max(5, Number(process.env.RAG_RETRIEVE_K) || 8);
+
+function estimateChunkTokens(text) {
+  return Math.max(1, Math.ceil((text?.length || 0) / 4));
+}
+
+// Empaqueta los chunks recuperados (ya ordenados por relevancia) hasta agotar el
+// presupuesto de tokens. Los más relevantes van primero; se detiene al no caber el
+// siguiente. Garantiza al menos un chunk si hay alguno (aunque exceda el presupuesto),
+// para no dejar al LLM sin contexto. Devuelve solo los chunks efectivamente usados.
+function packWithinBudget(chunks, budget = CONTEXT_TOKEN_BUDGET) {
+  const packed = [];
+  let used = 0;
+  for (const c of chunks) {
+    const cost = c.token_count || estimateChunkTokens(c.text);
+    if (packed.length && used + cost > budget) break;
+    packed.push(c);
+    used += cost;
+  }
+  return packed;
+}
+
+// ── Tool-like: recuperar reglas citadas (con empaquetado por presupuesto) ─────────
+// Recupera un pool amplio con el retrieval híbrido optimizado y lo empaqueta hasta el
+// presupuesto de tokens, priorizando relevancia. Solo los chunks empaquetados llegan al
+// prompt y se reportan como `sources`.
+async function retrieveRules({ query, gameSystemId, k = RETRIEVE_K, budget = CONTEXT_TOKEN_BUDGET }) {
+  const chunks = await hybridSearch({ query, gameSystemId, k });
+  return packWithinBudget(chunks, budget);
 }
 
 // ── Tool-like: estado estructurado de la sesión (personajes + atributos) ─────────

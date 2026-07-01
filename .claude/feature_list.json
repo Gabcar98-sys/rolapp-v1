@@ -102,5 +102,21 @@
     "priority": 12,
     "status": "done",
     "description": "VERIFICADO 2026-07-01: script backend/scripts/seed-examples.js idempotente (importa Stormlight+Dragonbane, 6 pregens Bridge Nine + 2 Dragonbane, ingiere guía con 62 chunks+FTS resiliente sin Ollama); baseline de migraciones sigue vacío (no seeds en código); 82 tests, RAG keyword 200 sin Ollama. Reviewer APROBADO. Que existan sistemas de juego listos para usar y contenido para la IA. Script/CLI de import (respetando el principio: son datos importables, no seeds en código) que: (1) importe game-packs/stormlight.json y dragonbane.json para un DM; (2) cree personajes base (pregens) — portar los de Bridge Nine de la v0 (Abena, Jomari, Palinor, Talani, Vedd, Zvynda) para Stormlight, y algún pregen para Dragonbane; (3) ingiera la guía STORMLIGHT_RPG_GUIDE.md (de la v0) como game_doc del sistema Stormlight para que el RAG tenga contenido. Documentar cómo correrlo. Los pregens pueden venir embebidos en los packs JSON (base_characters)."
+  },
+  {
+    "id": "F11-ai-retrieval-opt",
+    "phase": "F11 — Optimización IA (retrieval + contexto)",
+    "title": "Afinar retrieval híbrido, diversidad/re-rank, filtros, dedup, empaquetado por presupuesto de tokens, caché de embeddings + eval",
+    "priority": 13,
+    "status": "done",
+    "description": "VERIFICADO 2026-07-01: 93 tests (fusión ponderada+normalizada, MMR/dedup por heading_path, presupuesto de tokens, caché de embeddings), eval anti-regresión hit-rate@3=100% (umbral 0.8), degradación solo-FTS sin Ollama, contrato {answer,sources} intacto. Reviewer APROBADO. Optimización profunda del RAG (petición del founder, en auto). Backend, verificable con stubs sin Ollama: (1) afinar chunking (tamaño/solape, no partir tablas/encabezados); (2) mejorar fusión híbrida (pesos vector vs FTS, normalización de scores) y añadir diversidad (MMR) o un re-rank ligero; (3) filtros por metadato (section_type, doc) y dedup de chunks por heading_path; (4) empaquetado de contexto consciente del presupuesto de tokens (top-K que quepa en un límite configurable, con las citas más relevantes primero); (5) caché de embeddings de queries repetidas; (6) test de evaluación con dataset stub que mida hit-rate del retrieval para prevenir regresiones. Mantener degradación elegante y proveedor inyectable."
+  },
+  {
+    "id": "F12-ai-generation-opt",
+    "phase": "F12 — Optimización IA (generación + tools + UX)",
+    "title": "Tool-use real con fallback, prompts endurecidos (citar-o-abstenerse), config por tarea, follow-ups y UX de fuentes",
+    "priority": 14,
+    "status": "pending",
+    "description": "Segunda mitad de la optimización de IA: (1) tool-use / function-calling real para modelos capaces (retrieve_rules, get_character, get_session_state, get_event_history, get_stats) con fallback a inyección de contexto para modelos locales; (2) endurecer system prompts (citar fuentes o abstenerse, cero alucinación, ES consistente) para reglas/resumen/planeación; (3) config por tarea (modelo/temperatura/top-k/máx-contexto por env); (4) follow-ups conversacionales (memoria corta de la conversación en el AIPanel); (5) UX: fuentes con score, botón regenerar, panel de depuración de retrieval opcional. Verificable con stubs; degradación elegante."
   }
 ]
