@@ -96,3 +96,13 @@ Coherencia de sistema de juego campaña↔personaje. Implementer → Reviewer AP
 - Validación al vincular personaje a sesión: si la campaña tiene game_system_id, el personaje debe coincidir → 422 si no. Aplicada en todos los endpoints de vínculo. Sin campaña/sin sistema → permite (compat. hacia atrás).
 - Frontend: selector de personaje filtra por compatibilidad; maneja 422.
 - 63/64 tests (1 skip RAG pre-existente). Próxima: F8b.
+
+## 2026-06-29 — F8b-visual-planner (DONE)
+
+Editor visual del grafo de eventos + edición del flujo desde la sesión. Implementer → Reviewer (1º se cayó por reinicio del proceso, relanzado) → RECHAZO por higiene de build → fix del líder → APROBADO.
+
+- **Frontend:** `EventFlowGraph.jsx` (nodos=eventos por ubicación/sub, aristas=event_links con label; crear/enlazar/eliminar, SVG+Tailwind, sin deps nuevas), usado en el constructor (EventTemplatePanel) y en la sesión. `PlanningPanel.jsx` permite al DM editar el flujo en vivo (añadir evento, crear/eliminar enlace, editar evento) manteniendo disparo + inicio/próximos. `lib/planning.js` + tests.
+- **Backend:** `PUT /event-templates/:id` (editar evento) con autorización DM (403/404). 66 pass, vitest 4/4.
+- **Fix del líder:** node_modules residual rompía `docker compose build frontend`; añadidos `frontend/.dockerignore` y `backend/.dockerignore` + limpieza. Build OK.
+- Lección: cada servicio dockerizado necesita .dockerignore.
+- Próxima: F8c (última).

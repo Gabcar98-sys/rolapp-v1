@@ -4,14 +4,17 @@ import { categoryClasses, EVENT_CATEGORIES } from '../../lib/planning.js';
 import Button from '../ui/Button.jsx';
 import Card from '../ui/Card.jsx';
 import Modal from '../ui/Modal.jsx';
+import EventFlowGraph from './EventFlowGraph.jsx';
 
 // Editor de una preparación: ubicaciones → sub-ubicaciones → eventos (con categoría,
-// descripción y rama) y enlaces from→to entre eventos. Versión funcional basada en
-// listas/selects; el editor visual tipo grafo (drag&drop) se pospone a F8.
+// descripción y rama) y enlaces from→to entre eventos. Dos modos: vista visual de
+// grafo (F8b, por defecto) y vista de listas como alternativa.
 export default function EventTemplatePanel({ user, prep, onBack }) {
   const [hierarchy, setHierarchy] = useState(null); // { locations, freeEvents }
   const [eventLinks, setEventLinks] = useState([]);
   const [error, setError] = useState('');
+  // Modo de edición: 'graph' (visual) o 'list' (listas/selects).
+  const [mode, setMode] = useState('graph');
 
   // Formularios ligeros (drafts) por sección.
   const [locName, setLocName] = useState('');
@@ -230,17 +233,59 @@ export default function EventTemplatePanel({ user, prep, onBack }) {
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
           <h2 className="truncate text-lg font-bold text-gold">{prep.name}</h2>
-          <p className="text-xs text-gray-500">
-            Constructor de preparación · grafo visual drag&amp;drop pospuesto a F8
-          </p>
+          <p className="text-xs text-gray-500">Constructor de preparación · grafo de eventos</p>
         </div>
-        <Button variant="secondary" size="sm" onClick={onBack}>
-          ← Volver
-        </Button>
+        <div className="flex flex-shrink-0 items-center gap-2">
+          <Button
+            variant={mode === 'graph' ? 'primary' : 'secondary'}
+            size="sm"
+            onClick={() => setMode('graph')}
+          >
+            🕸 Grafo
+          </Button>
+          <Button
+            variant={mode === 'list' ? 'primary' : 'secondary'}
+            size="sm"
+            onClick={() => setMode('list')}
+          >
+            ☰ Lista
+          </Button>
+          <Button variant="secondary" size="sm" onClick={onBack}>
+            ← Volver
+          </Button>
+        </div>
       </div>
 
       {error && <p className="rounded-md bg-danger/20 px-3 py-2 text-sm text-red-300">{error}</p>}
 
+      {/* Vista visual del grafo (recupera la experiencia de la v0). La edición de
+          ubicaciones/sub-ubicaciones/ramas sigue en la vista de lista. */}
+      {mode === 'graph' && hierarchy && (
+        <div className="h-[70vh] min-h-[420px]">
+          <EventFlowGraph
+            locations={hierarchy.locations}
+            freeEvents={hierarchy.freeEvents}
+            eventLinks={eventLinks}
+            dmId={user.id}
+            prepId={prep.id}
+            onChange={load}
+          />
+        </div>
+      )}
+
+      {/* La gestión de ubicaciones/sub-ubicaciones/ramas vive en la vista de lista. */}
+      {mode === 'graph' && (
+        <p className="text-xs text-gray-500">
+          ¿Necesitas ubicaciones, sub-ubicaciones o ramas? Cambia a la vista{' '}
+          <button className="text-gold underline hover:text-gold-soft" onClick={() => setMode('list')}>
+            ☰ Lista
+          </button>
+          .
+        </p>
+      )}
+
+      {mode === 'list' && (
+        <>
       <Card className="p-4">
         <form onSubmit={addLocation} className="flex flex-col gap-2 md:flex-row">
           <input
@@ -351,6 +396,8 @@ export default function EventTemplatePanel({ user, prep, onBack }) {
           ))
         )}
       </Card>
+        </>
+      )}
 
       {/* Modal: nuevo evento / rama */}
       <Modal

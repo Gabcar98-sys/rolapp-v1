@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import socket from '../../lib/socket.js';
 import { api } from '../../lib/api.js';
 import { categoryClasses, isPlanningEvent, EVENT_CATEGORIES } from '../../lib/planning.js';
 import Button from '../ui/Button.jsx';
 import Modal from '../ui/Modal.jsx';
 import Tabs from '../ui/Tabs.jsx';
+import EventFlowGraph from '../DMMaster/EventFlowGraph.jsx';
 
 // Panel de planificación en sesión (solo DM). Carga la jerarquía del prep de la sesión
 // (o event_templates sueltos) y permite disparar eventos al log append-only de la sesión.
@@ -35,6 +36,36 @@ export default function PlanningPanel({ sessionId, user, session }) {
   const [npcForm, setNpcForm] = useState({ npc_id: '', category: 'general', title: '', description: '' });
   const [npcFiring, setNpcFiring] = useState(false);
 
+  // Recarga la jerarquía del prep (o las plantillas sueltas) y reconstruye el mapa
+  // de eventos. Se usa al montar y tras editar el flujo desde el editor visual, para
+  // que las vistas de inicio/próximos reflejen los cambios al instante.
+  const reloadPrep = useCallback(async () => {
+    if (session?.prep_id) {
+      const data = await api.getPrep(session.prep_id);
+      const locs = data.locations ?? [];
+      const free = data.freeEvents ?? [];
+      setHierarchy({ locations: locs, freeEvents: free });
+      setEventLinks(data.eventLinks ?? []);
+
+      // Mapa id → { event, locName, subLocName }, recorriendo ramas.
+      const map = new Map();
+      const recurse = (evts, locName, subLocName) => {
+        for (const e of evts) {
+          map.set(e.id, { event: e, locName, subLocName });
+          if (e.branches?.length) recurse(e.branches, locName, subLocName);
+        }
+      };
+      for (const loc of locs) {
+        for (const sub of loc.sub_locations ?? []) recurse(sub.events ?? [], loc.name, sub.name);
+      }
+      recurse(free, '', '');
+      setAllEventsMap(map);
+    } else {
+      const data = await api.listEventTemplates(user.id, session?.campaign_id ?? null);
+      setTemplates(data.templates ?? []);
+    }
+  }, [session?.prep_id, session?.campaign_id, user.id]);
+
   useEffect(() => {
     let active = true;
 
@@ -63,32 +94,7 @@ export default function PlanningPanel({ sessionId, user, session }) {
         setFiredTemplateIds(recoveredTmplIds);
         setFiredIds(recoveredFiredIds);
 
-        if (session?.prep_id) {
-          const data = await api.getPrep(session.prep_id);
-          if (!active) return;
-          const locs = data.locations ?? [];
-          const free = data.freeEvents ?? [];
-          setHierarchy({ locations: locs, freeEvents: free });
-          setEventLinks(data.eventLinks ?? []);
-
-          // Mapa id → { event, locName, subLocName }, recorriendo ramas.
-          const map = new Map();
-          const recurse = (evts, locName, subLocName) => {
-            for (const e of evts) {
-              map.set(e.id, { event: e, locName, subLocName });
-              if (e.branches?.length) recurse(e.branches, locName, subLocName);
-            }
-          };
-          for (const loc of locs) {
-            for (const sub of loc.sub_locations ?? []) recurse(sub.events ?? [], loc.name, sub.name);
-          }
-          recurse(free, '', '');
-          setAllEventsMap(map);
-        } else {
-          const data = await api.listEventTemplates(user.id, session?.campaign_id ?? null);
-          if (!active) return;
-          setTemplates(data.templates ?? []);
-        }
+        await reloadPrep();
       } catch (err) {
         if (active) setError(err.message);
       } finally {
@@ -121,7 +127,7 @@ export default function PlanningPanel({ sessionId, user, session }) {
       active = false;
       socket.off('session:event_fired', onEvent);
     };
-  }, [sessionId, session?.prep_id, session?.campaign_id, user?.id]);
+  }, [sessionId, session?.prep_id, session?.campaign_id, user?.id, reloadPrep]);
 
   function openFire(tmpl, branchLabel = '', locationName = '', subLocationName = '') {
     setPendingFire({ tmpl, branchLabel, locationName, subLocationName });
@@ -303,6 +309,8 @@ export default function PlanningPanel({ sessionId, user, session }) {
   const tabs = [
     { id: 'plan', label: '📋 Prep.' },
     { id: 'fired', label: `⚡ Disparados`, badge: firedEvents.length },
+    // Edición visual del flujo en vivo: requiere un prep asociado a la sesión.
+    ...(session?.prep_id ? [{ id: 'edit', label: '🕸 Editar' }] : []),
   ];
 
   return (
@@ -479,6 +487,21 @@ export default function PlanningPanel({ sessionId, user, session }) {
               );
             })}
           </>
+        )}
+
+        {/* ── Pestaña Editar flujo (grafo visual en vivo, solo DM) ── */}
+        {!loading && tab === 'edit' && hierarchy && (
+          <div className="flex min-h-[60vh] flex-1 flex-col">
+            <EventFlowGraph
+              locations={hierarchy.locations}
+              freeEvents={hierarchy.freeEvents}
+              eventLinks={eventLinks}
+              dmId={user.id}
+              prepId={session.prep_id}
+              onChange={reloadPrep}
+              compact
+            />
+          </div>
         )}
       </div>
 

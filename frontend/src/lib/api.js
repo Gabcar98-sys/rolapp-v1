@@ -98,6 +98,9 @@ export const api = {
   },
   createEventTemplate: (body) =>
     request('/event-templates', { method: 'POST', body }),
+  // Actualiza campos del evento (título/descr/categoría, etc.) desde el editor visual.
+  updateEventTemplate: (id, dmId, fields) =>
+    request(`/event-templates/${id}`, { method: 'PUT', body: { dm_id: dmId, ...fields } }),
   deleteEventTemplate: (id, dmId) =>
     request(`/event-templates/${id}`, { method: 'DELETE', body: { dm_id: dmId } }),
 

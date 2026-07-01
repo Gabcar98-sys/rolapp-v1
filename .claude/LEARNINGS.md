@@ -123,6 +123,11 @@ Las lecciones se agrupan por categoría. Cada entrada tiene:
 
 ## Docker / infraestructura
 
+### Cada servicio con imagen Docker necesita .dockerignore (node_modules del host envenena el build context)
+- **Contexto:** F8b, `docker compose build frontend` falló porque el implementer dejó un `frontend/node_modules` residual (de correr vitest en el dir montado); sin `.dockerignore` entró al build context y un symlink de Windows (`.bin/acorn`) abortó el build con "invalid file request".
+- **Lección:** `backend/` y `frontend/` tienen `.dockerignore` (node_modules, dist, data, .git). No corras `npm install`/`vitest` directamente en el directorio del proyecto montado si vas a buildear la imagen después; usa `docker compose exec`/build stage. Si aparece un node_modules residual, bórralo antes de verificar el build.
+- **Por qué importa:** El build context sin filtrar arrastra artefactos del host; en Windows los symlinks de `.bin` rompen el `COPY . .` del Dockerfile.
+
 ### El lint/test debe poder correr en el entorno canónico (Docker), no "en teoría"
 - **Contexto:** F4, `docker compose exec backend npm run lint` falló con `eslint: not found`.
 - **Lección:** Si la imagen usa `npm install --omit=dev`, las devDependencies (eslint, etc.) no existen en el contenedor. Decisiones de la v1.0: (1) el backend instala TODAS las deps (`npm install` sin `--omit=dev`) y hace `COPY eslint.config.js ./` para que lint/test corran con `docker compose exec backend …`; (2) el frontend (imagen final = nginx, sin Node) fuerza lint y build en su build stage (`RUN npm run lint && RUN npm run build`), así `docker compose build frontend` = lint+build verificados.
@@ -158,3 +163,4 @@ Las lecciones se agrupan por categoría. Cada entrada tiene:
 - 2026-06-29 — líder agregó "La tabla virtual vec0 no puede vivir en schema.sql" (RAG/sqlite-vec) y "Verificar migraciones consolidadas con PRAGMA" (SQLite) tras cerrar F1.
 - 2026-06-29 — líder agregó tras cerrar F4: "Routers que emiten por socket → factory" (Backend), "El lint/test debe poder correr en Docker" (Docker/infra), "ESLint frontend necesita eslint-plugin-react" (Frontend), "No declarar un checkpoint en verde sin ejecutarlo" (Proceso).
 - 2026-06-29 — líder agregó tras cerrar F5: "Una feature de frontend no está terminada hasta que sus componentes estén cableados" (Frontend) y "Directiva eslint-disable a plugin no registrado = error fatal en ESLint 9" (Frontend).
+- 2026-06-29 — líder agregó tras cerrar F8b: "Cada servicio con imagen Docker necesita .dockerignore" (Docker/infra).

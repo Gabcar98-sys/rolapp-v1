@@ -12,7 +12,9 @@ Bootstrap del repo v1.0 (founder). Portado el harness de agentes desde la v0 y a
 
 ## Feature en progreso
 
-`F8b-visual-planner` (en progreso). F0–F7 + F8a cerradas. Quedan F8b (editor visual del grafo + edición desde la sesión) y F8c (pulido mobile + tldraw).
+`F8c-ui-polish` (en progreso, ÚLTIMA). F0–F7 + F8a + F8b cerradas. Solo queda F8c (pulido mobile + tldraw).
+
+> Nota F8b: el reviewer anterior se cayó por reinicio del proceso; relanzado. RECHAZO por node_modules residual (higiene de build), corregido por el líder (.dockerignore + limpieza), build OK → cerrado.
 
 > Observaciones del founder que motivan F8a/F8b:
 > - Coherencia: un personaje solo debería poder usarse en campañas de su mismo game system. Hoy no se valida.

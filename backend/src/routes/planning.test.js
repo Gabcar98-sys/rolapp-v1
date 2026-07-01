@@ -197,6 +197,54 @@ test('DELETE /:id (evento) elimina sus ramas vía cascade', async () => {
   assert.equal(remaining, 0, 'la rama se borró junto al padre');
 });
 
+test('PUT /:id (evento) actualiza título, categoría y descripción (caso feliz)', async () => {
+  const prep = (
+    await invoke(sessionPrepsRouter, 'post', '/', { body: { dm_id: dmId, name: 'P' } })
+  ).data.prep;
+  const evt = (
+    await invoke(eventTemplatesRouter, 'post', '/', {
+      body: { dm_id: dmId, prep_id: prep.id, title: 'Viejo', category: 'general' },
+    })
+  ).data.template;
+
+  const { status, data } = await invoke(eventTemplatesRouter, 'put', '/:id', {
+    params: { id: String(evt.id) },
+    body: { dm_id: dmId, title: 'Nuevo', category: 'combate', description: 'desc' },
+  });
+  assert.equal(status, 200);
+  assert.equal(data.template.title, 'Nuevo');
+  assert.equal(data.template.category, 'combate');
+  assert.equal(data.template.description, 'desc');
+});
+
+test('PUT /:id (evento) responde 403 si el dm_id no es el dueño', async () => {
+  const otherDm = db
+    .prepare("INSERT INTO users (username, pin_hash, role) VALUES ('dm2', 'x', 'dm')")
+    .run().lastInsertRowid;
+  const prep = (
+    await invoke(sessionPrepsRouter, 'post', '/', { body: { dm_id: dmId, name: 'P' } })
+  ).data.prep;
+  const evt = (
+    await invoke(eventTemplatesRouter, 'post', '/', {
+      body: { dm_id: dmId, prep_id: prep.id, title: 'X' },
+    })
+  ).data.template;
+
+  const { status } = await invoke(eventTemplatesRouter, 'put', '/:id', {
+    params: { id: String(evt.id) },
+    body: { dm_id: otherDm, title: 'Hackeado' },
+  });
+  assert.equal(status, 403);
+});
+
+test('PUT /:id (evento) responde 404 si el evento no existe', async () => {
+  const { status } = await invoke(eventTemplatesRouter, 'put', '/:id', {
+    params: { id: '99999' },
+    body: { dm_id: dmId, title: 'X' },
+  });
+  assert.equal(status, 404);
+});
+
 test('POST /sessions/:id/events  con template_id queda en el log y se puede reconstruir', async () => {
   const io = makeFakeIo();
   const sessionsRouter = createSessionsRouter(io);

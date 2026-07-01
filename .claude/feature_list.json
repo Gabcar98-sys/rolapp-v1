@@ -76,15 +76,15 @@
     "phase": "F8 — Pulido (b)",
     "title": "Editor visual del grafo de eventos + edición del flujo desde la sesión (DM)",
     "priority": 9,
-    "status": "in_progress",
-    "description": "Recuperar la vista visual tipo EventFlowGraph (nodos = eventos por ubicación/sub-ubicación, aristas = event_links con label; crear/mover/enlazar visualmente). Permitir al DM editar esa serie de acciones/flujo DESDE la ventana de sesión (PlanningPanel), no solo en el constructor del Lobby. Mobile-friendly o al menos tablet+."
+    "status": "done",
+    "description": "VERIFICADO 2026-06-29: grafo visual (EventFlowGraph) con nodos/aristas, edición del flujo desde la sesión (DM), PUT event_template con auth DM; backend 66 pass, vitest 4/4, frontend build OK (tras fix de higiene: .dockerignore + limpieza de node_modules residual). Reviewer APROBADO. Recuperar la vista visual tipo EventFlowGraph (nodos = eventos por ubicación/sub-ubicación, aristas = event_links con label; crear/mover/enlazar visualmente). Permitir al DM editar esa serie de acciones/flujo DESDE la ventana de sesión (PlanningPanel), no solo en el constructor del Lobby. Mobile-friendly o al menos tablet+."
   },
   {
     "id": "F8c-ui-polish",
     "phase": "F8 — Pulido (c)",
     "title": "Pulido mobile-first (layouts jugador/DM, bottom-sheets, gestos) + canvas tldraw",
     "priority": 10,
-    "status": "pending",
+    "status": "in_progress",
     "description": "Pulir la experiencia mobile-first: layouts diferenciados jugador (celular) y DM (escritorio/tablet), bottom-sheets, gestos, accesibilidad. Integrar tldraw para dibujo libre en el canvas (sobre la imagen compartida ya existente, sync por socket)."
   }
 ]
