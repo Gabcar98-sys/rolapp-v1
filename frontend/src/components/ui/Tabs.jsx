@@ -11,7 +11,7 @@ export default function Tabs({ tabs, activeId, onChange, className = '' }) {
             role="tab"
             aria-selected={active}
             onClick={() => onChange(tab.id)}
-            className={`relative flex-1 px-2 py-2 text-base transition-colors ${
+            className={`relative min-h-[44px] flex-1 px-2 py-2 text-base transition-colors focus-visible:outline focus-visible:-outline-offset-2 focus-visible:outline-2 focus-visible:outline-gold ${
               active
                 ? 'border-b-2 border-gold text-gold'
                 : 'text-gray-500 hover:text-gray-300'

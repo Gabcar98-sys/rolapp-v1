@@ -84,7 +84,23 @@
     "phase": "F8 — Pulido (c)",
     "title": "Pulido mobile-first (layouts jugador/DM, bottom-sheets, gestos) + canvas tldraw",
     "priority": 10,
+    "status": "done",
+    "description": "Pulir la experiencia mobile-first: layouts diferenciados jugador (celular) y DM (escritorio/tablet), bottom-sheets, gestos, accesibilidad. Integrar tldraw para dibujo libre en el canvas (sobre la imagen compartida ya existente, sync por socket). VERIFICADO 2026-06-29: 71 tests, tldraw@2.4.4 con carga lazy + sync de snapshot por socket + persistencia, bottom-sheet móvil, accesibilidad básica, frontend build OK, sin node_modules residual. Reviewer APROBADO."
+  },
+  {
+    "id": "F9-ai-activation",
+    "phase": "F9 — IA turnkey + optimización",
+    "title": "Activar y optimizar la IA (híbrido Ollama/API, streaming, prompts/contexto, UX de estado y citas)",
+    "priority": 11,
     "status": "in_progress",
-    "description": "Pulir la experiencia mobile-first: layouts diferenciados jugador (celular) y DM (escritorio/tablet), bottom-sheets, gestos, accesibilidad. Integrar tldraw para dibujo libre en el canvas (sobre la imagen compartida ya existente, sync por socket)."
+    "description": "Decisión founder: HÍBRIDO (Ollama local por defecto, API externa opcional vía AI_PROVIDER, sin tocar código) + optimización profunda. Turnkey: servicio ollama en compose con bootstrap de modelos (embeddings nomic-embed-text + un LLM local pequeño), doc de arranque. Optimizar: ensamblado de contexto con citas (heading_path/doc), prompts afinados para resumen/reglas/planeación en ES, STREAMING de respuestas (socket o SSE), y UX en AIPanel que muestre el motor activo, si la IA está disponible, y las fuentes citadas. Mantener degradación elegante y proveedor inyectable."
+  },
+  {
+    "id": "F10-seed-systems",
+    "phase": "F10 — Sembrar juegos + pregens + guías",
+    "title": "Importar sistemas de ejemplo, crear personajes base y ingerir guías .md para el RAG",
+    "priority": 12,
+    "status": "pending",
+    "description": "Que existan sistemas de juego listos para usar y contenido para la IA. Script/CLI de import (respetando el principio: son datos importables, no seeds en código) que: (1) importe game-packs/stormlight.json y dragonbane.json para un DM; (2) cree personajes base (pregens) — portar los de Bridge Nine de la v0 (Abena, Jomari, Palinor, Talani, Vedd, Zvynda) para Stormlight, y algún pregen para Dragonbane; (3) ingiera la guía STORMLIGHT_RPG_GUIDE.md (de la v0) como game_doc del sistema Stormlight para que el RAG tenga contenido. Documentar cómo correrlo. Los pregens pueden venir embebidos en los packs JSON (base_characters)."
   }
 ]

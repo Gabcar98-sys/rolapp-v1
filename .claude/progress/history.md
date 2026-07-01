@@ -106,3 +106,13 @@ Editor visual del grafo de eventos + edición del flujo desde la sesión. Implem
 - **Fix del líder:** node_modules residual rompía `docker compose build frontend`; añadidos `frontend/.dockerignore` y `backend/.dockerignore` + limpieza. Build OK.
 - Lección: cada servicio dockerizado necesita .dockerignore.
 - Próxima: F8c (última).
+
+## 2026-06-29 — F8c-ui-polish (DONE)
+
+Pulido mobile-first + tldraw. Implementer → Reviewer APROBADO. **Roadmap base F0–F8 completo.**
+
+- **tldraw@2.4.4** integrado en el canvas de sesión con carga lazy (chunk separado), sync del snapshot por socket a la room + persistencia en `canvas_state.tldraw_snapshot`, carga al entrar, debounce, degradación si falla.
+- Mobile-first: bottom-sheet del panel en móvil, targets táctiles, responsive `md:`/`lg:`, accesibilidad básica (aria-labels, foco, roles).
+- 71 tests (5 nuevos del handler de snapshot), frontend build OK, sin node_modules residual.
+- Backlog ampliado por el founder: F9 (activar/optimizar IA) y F10 (sembrar juegos + pregens + guías).
+- Próxima: F9-ai-activation.

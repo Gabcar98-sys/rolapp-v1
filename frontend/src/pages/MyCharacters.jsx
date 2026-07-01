@@ -249,6 +249,7 @@ export default function MyCharacters({ user, onBack }) {
                     <Button
                       variant="secondary"
                       size="sm"
+                      aria-label={`Ver estadísticas de ${char.name}`}
                       onClick={() => {
                         setActiveId(char.id);
                         setView('stats');
@@ -256,7 +257,12 @@ export default function MyCharacters({ user, onBack }) {
                     >
                       📊
                     </Button>
-                    <Button variant="danger" size="sm" onClick={() => remove(char)}>
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      aria-label={`Eliminar ${char.name}`}
+                      onClick={() => remove(char)}
+                    >
                       🗑
                     </Button>
                   </div>

@@ -12,7 +12,12 @@ Bootstrap del repo v1.0 (founder). Portado el harness de agentes desde la v0 y a
 
 ## Feature en progreso
 
-`F8c-ui-polish` (en progreso, ÚLTIMA). F0–F7 + F8a + F8b cerradas. Solo queda F8c (pulido mobile + tldraw).
+`F9-ai-activation` (en progreso). Roadmap base F0–F8 COMPLETO (F8a/F8b/F8c cerradas).
+
+## Backlog ampliado por el founder
+- **F9-ai-activation**: activar+optimizar IA. Decisión: HÍBRIDO (Ollama local default, API por env) + turnkey + optimización profunda (streaming, prompts/contexto con citas, UX de estado/fuentes). La IA está construida (F6) pero no "en uso" porque falta motor conectado y docs ingeridos.
+- **F10-seed-systems**: importar packs Stormlight/Dragonbane, crear personajes base (portar pregens Bridge Nine de la v0), e ingerir la guía STORMLIGHT_RPG_GUIDE.md como doc para el RAG.
+Orden: F8c → F9 → F10.
 
 > Nota F8b: el reviewer anterior se cayó por reinicio del proceso; relanzado. RECHAZO por node_modules residual (higiene de build), corregido por el líder (.dockerignore + limpieza), build OK → cerrado.
 
