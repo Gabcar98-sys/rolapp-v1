@@ -1,27 +1,54 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '../../lib/api.js';
-import socket from '../../lib/socket.js';
+import socket, { streamAiAsk } from '../../lib/socket.js';
 import Button from '../ui/Button.jsx';
 import Card from '../ui/Card.jsx';
 
 const inputCls =
   'rounded-md border border-ink-line bg-ink-900 px-3 py-2 text-sm text-gray-100 outline-none focus:border-gold';
 
-// Panel de IA dentro de la sesión (tab 🤖). Permite consultar reglas con citas y, para
-// el DM, generar/ver el resumen de la sesión. El sistema de juego se deriva de los
-// personajes vinculados a la sesión (el RAG está scoped por game_system_id).
+// Badge del motor de IA activo. Deriva su etiqueta/color del estado de /ai/status.
+function EngineBadge({ status }) {
+  if (!status) {
+    return (
+      <span className="rounded-full bg-ink-600 px-2 py-0.5 text-xs text-gray-400">Comprobando IA…</span>
+    );
+  }
+  if (!status.ready) {
+    return (
+      <span className="rounded-full bg-danger/20 px-2 py-0.5 text-xs text-red-300">IA no disponible</span>
+    );
+  }
+  const label = status.provider === 'api' ? 'API externa' : 'Ollama local';
+  return (
+    <span className="rounded-full bg-success/30 px-2 py-0.5 text-xs text-green-300" title={status.model}>
+      {label} · {status.model}
+    </span>
+  );
+}
+
+// Panel de IA dentro de la sesión (tab 🤖). Consulta reglas con respuesta en STREAMING
+// (tokens vía socket) y citas a la fuente; el DM además genera/ve el resumen de sesión.
+// El sistema de juego se deriva de los personajes vinculados (el RAG está scoped por
+// game_system_id). Muestra el motor activo y degrada con elegancia si la IA está caída.
 export default function AIPanel({ sessionId, user }) {
   const isDM = user.role === 'dm';
   const [systems, setSystems] = useState([]); // [{ id, name }]
   const [gameSystemId, setGameSystemId] = useState('');
   const [query, setQuery] = useState('');
-  const [answer, setAnswer] = useState(null); // { answer, citations }
+  const [answer, setAnswer] = useState(''); // texto acumulado del streaming
+  const [sources, setSources] = useState([]); // [{ doc_title, heading_path, snippet }]
   const [summary, setSummary] = useState(null);
   const [asking, setAsking] = useState(false);
   const [summarizing, setSummarizing] = useState(false);
   const [error, setError] = useState('');
-  // IA deshabilitada (Ollama no responde): mostramos aviso sin romper la UI.
-  const [aiDown, setAiDown] = useState(false);
+  const [aiStatus, setAiStatus] = useState(null); // { provider, model, ready, ... }
+  const cleanupRef = useRef(null);
+
+  // Consulta el estado de la IA para el badge y para decidir la degradación de la UX.
+  useEffect(() => {
+    api.aiStatus().then(setAiStatus).catch(() => setAiStatus({ ready: false }));
+  }, []);
 
   // Deriva los sistemas de juego presentes en la sesión a partir de los personajes.
   useEffect(() => {
@@ -53,7 +80,10 @@ export default function AIPanel({ sessionId, user }) {
     return () => socket.off('session:summary_ready', onSummaryReady);
   }, [sessionId]);
 
-  async function ask(e) {
+  // Limpia el listener de streaming al desmontar.
+  useEffect(() => () => cleanupRef.current?.(), []);
+
+  function ask(e) {
     e.preventDefault();
     if (!query.trim()) return;
     if (!gameSystemId) {
@@ -61,19 +91,27 @@ export default function AIPanel({ sessionId, user }) {
       return;
     }
     setError('');
-    setAnswer(null);
+    setAnswer('');
+    setSources([]);
     setAsking(true);
-    try {
-      const result = await api.aiAsk(query.trim(), gameSystemId, sessionId);
-      setAnswer(result);
-      setAiDown(false);
-    } catch (err) {
-      // 503 = embeddings/LLM no disponibles (Ollama apagado).
-      if (/disponible|Ollama|LLM|embedding/i.test(err.message)) setAiDown(true);
-      setError(err.message);
-    } finally {
-      setAsking(false);
-    }
+    cleanupRef.current?.();
+
+    // Streaming por socket: los tokens llegan a medida que el LLM los produce.
+    cleanupRef.current = streamAiAsk(
+      { query: query.trim(), gameSystemId },
+      {
+        onToken: (token) => setAnswer((prev) => prev + token),
+        onDone: ({ answer: full, sources: srcs }) => {
+          if (full) setAnswer(full);
+          setSources(srcs || []);
+          setAsking(false);
+        },
+        onError: (message) => {
+          setError(message);
+          setAsking(false);
+        },
+      }
+    );
   }
 
   async function generateSummary() {
@@ -82,22 +120,28 @@ export default function AIPanel({ sessionId, user }) {
     try {
       const { summary: s } = await api.generateSessionSummary(sessionId, user.id);
       setSummary(s);
-      setAiDown(false);
     } catch (err) {
-      if (/disponible|Ollama|LLM|embedding/i.test(err.message)) setAiDown(true);
       setError(err.message);
     } finally {
       setSummarizing(false);
     }
   }
 
+  const aiDown = aiStatus && !aiStatus.ready;
+
   return (
     <div className="flex flex-col gap-4 overflow-y-auto p-3">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">Asistente IA</span>
+        <EngineBadge status={aiStatus} />
+      </div>
+
       {aiDown && (
         <p className="rounded-md bg-ink-600 px-3 py-2 text-xs text-gray-400">
-          La IA no está disponible (Ollama apagado). Inícialo con
+          La IA no está disponible. Inícialo con
           <code className="mx-1 text-gold">docker compose --profile ai up</code>
-          para usar estas funciones.
+          y descarga los modelos con
+          <code className="mx-1 text-gold">scripts/ai-bootstrap.sh</code>.
         </p>
       )}
       {error && <p className="rounded-md bg-danger/20 px-3 py-2 text-sm text-red-300">{error}</p>}
@@ -136,21 +180,25 @@ export default function AIPanel({ sessionId, user }) {
           </p>
         )}
 
-        {answer && (
+        {(answer || asking) && (
           <div className="mt-3 flex flex-col gap-2">
             <p className="whitespace-pre-wrap rounded-md bg-ink-900 px-3 py-2 text-sm text-gray-100">
-              {answer.answer}
+              {answer}
+              {asking && <span className="ml-0.5 animate-pulse text-gold">▍</span>}
             </p>
-            {answer.citations?.length > 0 && (
+            {sources.length > 0 && (
               <div className="flex flex-col gap-1">
                 <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">
                   Fuentes
                 </span>
-                {answer.citations.map((c, i) => (
-                  <span key={i} className="text-xs text-gray-400">
-                    📖 {c.doc_title} › {c.heading_path}{' '}
-                    <span className="text-gray-600">({c.section_type})</span>
-                  </span>
+                {sources.map((c, i) => (
+                  <div key={i} className="text-xs text-gray-400">
+                    <span>
+                      📖 {c.doc_title} › {c.heading_path}{' '}
+                      <span className="text-gray-600">({c.section_type})</span>
+                    </span>
+                    {c.snippet && <p className="mt-0.5 pl-4 italic text-gray-600">“{c.snippet}”</p>}
+                  </div>
                 ))}
               </div>
             )}

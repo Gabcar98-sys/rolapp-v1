@@ -1,6 +1,7 @@
 import { registerSessionHandlers } from './session.js';
 import { registerChatHandlers } from './chat.js';
 import { registerCanvasHandlers } from './canvas.js';
+import { registerAiHandlers } from './ai.js';
 
 // Punto de entrada de Socket.io. Cada dominio registra sus handlers por socket.
 export function initSockets(io) {
@@ -8,5 +9,6 @@ export function initSockets(io) {
     registerSessionHandlers(io, socket);
     registerChatHandlers(io, socket);
     registerCanvasHandlers(io, socket);
+    registerAiHandlers(io, socket);
   });
 }

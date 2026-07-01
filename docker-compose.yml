@@ -4,8 +4,17 @@ services:
     environment:
       - PORT=3001
       - DB_PATH=/app/data/rolapp.db
+      # Motor de IA (turnkey): valores por defecto = Ollama local. Para usar una API
+      # externa, define AI_PROVIDER=api / EMBED_PROVIDER=api + API_KEY en un .env (ver
+      # .env.example) — no hay que tocar código.
+      - AI_PROVIDER=${AI_PROVIDER:-ollama}
+      - EMBED_PROVIDER=${EMBED_PROVIDER:-ollama}
       - OLLAMA_BASE_URL=http://ollama:11434
-      - EMBED_MODEL=nomic-embed-text
+      - EMBED_MODEL=${EMBED_MODEL:-nomic-embed-text}
+      - AI_MODEL=${AI_MODEL:-qwen2.5:3b}
+      - API_KEY=${API_KEY:-}
+      - AI_API_BASE_URL=${AI_API_BASE_URL:-}
+      - EMBED_API_URL=${EMBED_API_URL:-}
     volumes:
       - ./data:/app/data
     expose:
@@ -29,6 +38,22 @@ services:
     expose:
       - "11434"
     restart: unless-stopped
+
+  # Bootstrap one-shot de modelos: descarga embeddings + LLM local en el volumen de
+  # ollama. Idempotente. Correr con:  docker compose --profile ai run --rm ai-bootstrap
+  ai-bootstrap:
+    image: ollama/ollama:latest
+    profiles: ["ai"]
+    depends_on:
+      - ollama
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+      - EMBED_MODEL=${EMBED_MODEL:-nomic-embed-text}
+      - AI_MODEL=${AI_MODEL:-qwen2.5:3b}
+    entrypoint: ["/bin/sh", "/scripts/ai-bootstrap.sh"]
+    volumes:
+      - ./scripts:/scripts:ro
+    restart: "no"
 
 volumes:
   ollama-data:

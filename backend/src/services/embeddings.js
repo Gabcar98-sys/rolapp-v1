@@ -13,6 +13,8 @@ const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || 'http://ollama:11434';
 const EMBED_MODEL = process.env.EMBED_MODEL || 'nomic-embed-text';
 const EMBED_PROVIDER = process.env.EMBED_PROVIDER || 'ollama';
 
+export const EMBED_CONFIG = { provider: EMBED_PROVIDER, model: EMBED_MODEL };
+
 // Un provider es: async (texts: string[]) => number[][]  (un vector por texto).
 let activeProvider = null;
 
@@ -99,4 +101,16 @@ export async function embedTexts(texts) {
 export async function embedText(text) {
   const [vector] = await embedTexts([text]);
   return vector;
+}
+
+// Sondeo de disponibilidad para /api/ai/status. Intenta embeber un texto mínimo y
+// reporta si el proveedor responde, sin lanzar (la UX necesita un estado, no un crash).
+// Devuelve { ok, provider, model, error? }.
+export async function probeEmbeddings() {
+  try {
+    const [v] = await embedTexts(['ping']);
+    return { ok: Array.isArray(v) && v.length === EMBEDDING_DIMS, provider: EMBED_PROVIDER, model: EMBED_MODEL };
+  } catch (err) {
+    return { ok: false, provider: EMBED_PROVIDER, model: EMBED_MODEL, error: err.message };
+  }
 }

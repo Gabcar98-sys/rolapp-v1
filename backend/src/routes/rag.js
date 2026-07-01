@@ -7,6 +7,7 @@ import {
   assistPlanning,
   summarizeSession,
   getSessionSummary,
+  getAiStatus,
 } from '../services/ai.js';
 
 // Router de RAG / IA (F6). Factory porque el resumen de sesión emite por Socket.io.
@@ -42,6 +43,20 @@ export default function createRagRouter(io) {
     }
     return system;
   }
+
+  // ── Estado de la IA ──────────────────────────────────────────────────────────
+  // GET /api/ai/status — motor activo, disponibilidad de LLM/embeddings, vec/fts.
+  // ?probe=0 salta las llamadas de red (respuesta inmediata sin tocar Ollama/API).
+  router.get('/ai/status', async (req, res) => {
+    const probe = req.query.probe !== '0' && req.query.probe !== 'false';
+    try {
+      const status = await getAiStatus({ vecEnabled, ftsEnabled, probe });
+      res.json(status);
+    } catch (err) {
+      // getAiStatus no debería lanzar (los probes atrapan sus errores), pero por si acaso.
+      res.status(200).json({ ready: false, error: err.message, vecEnabled, ftsEnabled });
+    }
+  });
 
   // ── Documentos de juego (ligados a un game system) ─────────────────────────────
 

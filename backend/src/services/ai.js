@@ -1,8 +1,9 @@
 import db from '../db/index.js';
 import { hybridSearch } from './rag.js';
+import { probeEmbeddings } from './embeddings.js';
 
 // ════════════════════════════════════════════════════════════════════════════════
-// Cliente LLM INYECTABLE + ensamblado de CONTEXTO ESTRUCTURADO (§5.4 del plan).
+// Cliente LLM INYECTABLE + ensamblado de CONTEXTO ESTRUCTURADO con CITAS (§5.4 del plan).
 //
 // En lugar de un volcado de texto plano, las funciones arman bloques estructurados
 // (reglas recuperadas con cita + estado de sesión/personajes/eventos) y construyen un
@@ -10,15 +11,23 @@ import { hybridSearch } from './rag.js';
 // `getSessionState`, `getEventHistory`) pensados para convertirse en tools más
 // adelante; por ahora se invocan internamente.
 //
-// El LLM se llama vía un cliente mutable que los tests sustituyen (sin red).
+// El LLM se llama vía clientes mutables que los tests sustituyen (sin red). Hay dos:
+// uno no-streaming (`activeLlm`) y uno de streaming (`activeLlmStream`, un async
+// generator de tokens). Si el proveedor no soporta streaming, se degrada al no-stream.
 // ════════════════════════════════════════════════════════════════════════════════
 
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || 'http://ollama:11434';
-const AI_MODEL = process.env.AI_MODEL || process.env.OLLAMA_MODEL || 'llama3.1:8b';
+// LLM local pequeño por defecto (turnkey): qwen2.5:3b es liviano y multilingüe.
+// Se sobreescribe con AI_MODEL / OLLAMA_MODEL sin tocar código.
+const AI_MODEL = process.env.AI_MODEL || process.env.OLLAMA_MODEL || 'qwen2.5:3b';
 const AI_PROVIDER = process.env.AI_PROVIDER || 'ollama';
 
-// Un cliente LLM es: async (prompt: string) => string.
+export const AI_CONFIG = { provider: AI_PROVIDER, model: AI_MODEL };
+
+// Un cliente LLM no-streaming es: async (prompt: string) => string.
 let activeLlm = null;
+// Un cliente LLM de streaming es: async function* (prompt: string) → yield token:string.
+let activeLlmStream = null;
 
 async function ollamaLlm(prompt) {
   const res = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
@@ -34,8 +43,37 @@ async function ollamaLlm(prompt) {
   return data.response;
 }
 
+// Streaming de Ollama: /api/generate con stream:true emite líneas NDJSON, cada una con
+// un fragmento en `.response` y `.done` al final.
+async function* ollamaLlmStream(prompt) {
+  const res = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: AI_MODEL, prompt, stream: true }),
+  });
+  if (!res.ok || !res.body) {
+    const msg = await res.text().catch(() => '');
+    throw new Error(`Ollama LLM error ${res.status}: ${msg}`);
+  }
+  const decoder = new TextDecoder();
+  let buffer = '';
+  for await (const chunk of res.body) {
+    buffer += decoder.decode(chunk, { stream: true });
+    let nl;
+    while ((nl = buffer.indexOf('\n')) >= 0) {
+      const line = buffer.slice(0, nl).trim();
+      buffer = buffer.slice(nl + 1);
+      if (!line) continue;
+      try {
+        const obj = JSON.parse(line);
+        if (obj.response) yield obj.response;
+      } catch { /* línea parcial: se reintenta con el siguiente chunk */ }
+    }
+  }
+}
+
 async function apiLlm(prompt) {
-  const baseUrl = process.env.AI_API_URL || 'https://api.openai.com/v1';
+  const baseUrl = process.env.AI_API_BASE_URL || process.env.AI_API_URL || 'https://api.openai.com/v1';
   const apiKey = process.env.API_KEY || '';
   const res = await fetch(`${baseUrl}/chat/completions`, {
     method: 'POST',
@@ -53,13 +91,65 @@ async function apiLlm(prompt) {
   return data.choices?.[0]?.message?.content ?? '';
 }
 
+// Streaming estilo OpenAI (SSE): líneas `data: {json}` con delta en choices[0].delta.content.
+async function* apiLlmStream(prompt) {
+  const baseUrl = process.env.AI_API_BASE_URL || process.env.AI_API_URL || 'https://api.openai.com/v1';
+  const apiKey = process.env.API_KEY || '';
+  const res = await fetch(`${baseUrl}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+    },
+    body: JSON.stringify({ model: AI_MODEL, messages: [{ role: 'user', content: prompt }], stream: true }),
+  });
+  if (!res.ok || !res.body) {
+    const msg = await res.text().catch(() => '');
+    throw new Error(`LLM API error ${res.status}: ${msg}`);
+  }
+  const decoder = new TextDecoder();
+  let buffer = '';
+  for await (const chunk of res.body) {
+    buffer += decoder.decode(chunk, { stream: true });
+    let nl;
+    while ((nl = buffer.indexOf('\n')) >= 0) {
+      const line = buffer.slice(0, nl).trim();
+      buffer = buffer.slice(nl + 1);
+      if (!line.startsWith('data:')) continue;
+      const payload = line.slice(5).trim();
+      if (payload === '[DONE]') return;
+      try {
+        const obj = JSON.parse(payload);
+        const delta = obj.choices?.[0]?.delta?.content;
+        if (delta) yield delta;
+      } catch { /* fragmento parcial */ }
+    }
+  }
+}
+
 function defaultLlm() {
   return AI_PROVIDER === 'api' ? apiLlm : ollamaLlm;
 }
 
-// Permite a los tests inyectar un stub. Pasar null restaura el default.
+function defaultLlmStream() {
+  return AI_PROVIDER === 'api' ? apiLlmStream : ollamaLlmStream;
+}
+
+// Permite a los tests inyectar stubs. Pasar null restaura los defaults.
 export function setLlmClient(client) {
   activeLlm = client;
+}
+
+export function setLlmStreamClient(client) {
+  activeLlmStream = client;
+}
+
+// Normaliza fallos de red (Ollama/API apagados) a un mensaje claro → 503 en el router.
+function normalizeProviderError(err) {
+  if (/fetch failed|ECONNREFUSED|ENOTFOUND|network/i.test(err.message)) {
+    return new Error(`Proveedor de IA no disponible (${AI_PROVIDER}): ${err.message}`);
+  }
+  return err;
 }
 
 async function callLlm(prompt) {
@@ -67,18 +157,65 @@ async function callLlm(prompt) {
   try {
     return await llm(prompt);
   } catch (err) {
-    // Normaliza fallos de red (Ollama/API apagados) a un mensaje claro → 503 en el router.
-    if (/fetch failed|ECONNREFUSED|ENOTFOUND|network/i.test(err.message)) {
-      throw new Error(`Proveedor de IA no disponible (${AI_PROVIDER}): ${err.message}`);
-    }
-    throw err;
+    throw normalizeProviderError(err);
   }
 }
 
-const SYSTEM_PREAMBLE =
-  'Eres el asistente de una mesa de rol. Responde SIEMPRE en español, de forma directa y ' +
-  'factual. No inventes reglas ni datos que no estén en el contexto. Cuando uses una regla ' +
-  'recuperada, cítala por su sección entre corchetes, p. ej. [Combate > Iniciativa].';
+// Emite la respuesta completa como un único token (usado cuando no hay streaming real).
+async function nonStreamAsSingleToken(prompt, onToken) {
+  const answer = await callLlm(prompt);
+  if (onToken && answer) onToken(answer);
+  return answer;
+}
+
+// Genera tokens del LLM invocando `onToken(token)` por cada fragmento. Devuelve el texto
+// completo acumulado. Degradación elegante:
+//  - Si NO hay cliente de streaming inyectado pero SÍ uno no-streaming (stub/override
+//    explícito), usa el no-streaming directamente (el proveedor "no hace streaming").
+//  - Si el streaming falla por un error que NO es de disponibilidad, cae al no-streaming.
+//  - Si el proveedor está caído, propaga el error claro (el no-streaming también fallaría).
+async function callLlmStream(prompt, onToken) {
+  if (!activeLlmStream && activeLlm) {
+    return nonStreamAsSingleToken(prompt, onToken);
+  }
+  const streamClient = activeLlmStream || defaultLlmStream();
+  let full = '';
+  try {
+    for await (const token of streamClient(prompt)) {
+      full += token;
+      if (onToken) onToken(token);
+    }
+    return full;
+  } catch (err) {
+    const norm = normalizeProviderError(err);
+    if (norm === err && !/no disponible/i.test(norm.message)) {
+      return nonStreamAsSingleToken(prompt, onToken);
+    }
+    throw norm;
+  }
+}
+
+// ── Prompts afinados en español (system prompts explícitos y concisos) ────────────
+const RULES_SYSTEM =
+  'Eres el asistente de reglas de una mesa de rol. Responde SIEMPRE en español, de forma ' +
+  'directa y factual. Usa ÚNICAMENTE las reglas recuperadas del contexto; no inventes ni ' +
+  'completes con conocimiento externo. Cita la sección que respalda cada afirmación entre ' +
+  'corchetes, p. ej. [Combate > Iniciativa]. Si el contexto no contiene la respuesta, dilo ' +
+  'claramente ("No encuentro esa regla en los documentos cargados") en vez de especular.';
+
+const SUMMARY_SYSTEM =
+  'Eres el cronista de una mesa de rol. Resume la sesión en español con esta estructura, ' +
+  'usando SOLO la información del contexto:\n' +
+  '**Qué pasó:** los eventos importantes en orden.\n' +
+  '**Decisiones clave:** qué decidieron los personajes y sus consecuencias.\n' +
+  '**Hilos abiertos:** tramas o preguntas sin resolver para la próxima sesión.\n' +
+  'Sé conciso y concreto; no inventes hechos que no estén en los eventos o notas.';
+
+const PLANNING_SYSTEM =
+  'Eres el asistente de planificación del DM. Responde en español con sugerencias concretas ' +
+  'y accionables (encuentros, eventos, giros, NPCs), apoyadas en las reglas recuperadas y en ' +
+  'el estado actual de la sesión. Cita las reglas relevantes entre corchetes. No inventes ' +
+  'reglas; si algo no está en el contexto, propónlo como idea abierta, no como regla del juego.';
 
 // ── Tool-like: recuperar reglas citadas ──────────────────────────────────────────
 async function retrieveRules({ query, gameSystemId, k = 5 }) {
@@ -180,27 +317,47 @@ function renderEvents(events) {
   return out + '\n';
 }
 
+// Convierte los chunks recuperados en el formato de fuentes citadas de la respuesta.
+// { doc_title, heading_path, section_type, snippet, score }
+function toSources(chunks) {
+  return chunks.map((c) => ({
+    doc_title: c.doc_title,
+    heading_path: c.heading_path,
+    section_type: c.section_type,
+    snippet: c.text ? c.text.slice(0, 240).trim() : '',
+    score: c.score,
+  }));
+}
+
 // ── (a) Consulta de reglas con citas ─────────────────────────────────────────────
+function buildRulesPrompt(query, chunks) {
+  return (
+    `${RULES_SYSTEM}\n\n${renderRules(chunks)}` +
+    `=== PREGUNTA ===\n${query}\n\n` +
+    'Responde la pregunta basándote únicamente en las reglas recuperadas y cita las secciones.'
+  );
+}
+
 export async function answerRulesQuestion({ query, gameSystemId }) {
   if (!query || !query.trim()) throw new Error('La consulta está vacía');
   if (!gameSystemId) throw new Error('game_system_id es requerido');
 
   const chunks = await retrieveRules({ query, gameSystemId });
-  const prompt =
-    `${SYSTEM_PREAMBLE}\n\n${renderRules(chunks)}` +
-    `=== PREGUNTA ===\n${query}\n\n` +
-    'Responde la pregunta basándote únicamente en las reglas recuperadas y cita las secciones.';
+  const answer = await callLlm(buildRulesPrompt(query, chunks));
+  const sources = toSources(chunks);
+  // `citations` se mantiene como alias de compatibilidad; `sources` es el contrato canónico.
+  return { answer, sources, citations: sources };
+}
 
-  const answer = await callLlm(prompt);
-  return {
-    answer,
-    citations: chunks.map((c) => ({
-      doc_title: c.doc_title,
-      heading_path: c.heading_path,
-      section_type: c.section_type,
-      score: c.score,
-    })),
-  };
+// Variante streaming: emite tokens vía onToken y devuelve { answer, sources }.
+export async function streamRulesQuestion({ query, gameSystemId }, onToken) {
+  if (!query || !query.trim()) throw new Error('La consulta está vacía');
+  if (!gameSystemId) throw new Error('game_system_id es requerido');
+
+  const chunks = await retrieveRules({ query, gameSystemId });
+  const answer = await callLlmStream(buildRulesPrompt(query, chunks), onToken);
+  const sources = toSources(chunks);
+  return { answer, sources, citations: sources };
 }
 
 // ── (b) Resumen de sesión (guarda en session_summaries) ──────────────────────────
@@ -220,9 +377,9 @@ export async function summarizeSession(sessionId) {
   }
 
   const prompt =
-    `${SYSTEM_PREAMBLE}\n\n${notesBlock}${renderEvents(events)}${renderSessionState(state)}` +
-    'Haz un resumen de esta sesión en 3-5 párrafos: eventos importantes en orden, decisiones ' +
-    'clave de los personajes y el estado al cierre. Usa solo la información del contexto.';
+    `${SUMMARY_SYSTEM}\n\n${notesBlock}${renderEvents(events)}${renderSessionState(state)}` +
+    'Redacta el resumen siguiendo la estructura indicada (Qué pasó / Decisiones clave / ' +
+    'Hilos abiertos). Usa solo la información del contexto.';
 
   const body = await callLlm(prompt);
 
@@ -240,26 +397,56 @@ export function getSessionSummary(sessionId) {
 }
 
 // ── (c) Asistente de planificación (reglas + estado) ─────────────────────────────
-export async function assistPlanning({ sessionId, gameSystemId, prompt }) {
-  if (!prompt || !prompt.trim()) throw new Error('El prompt está vacío');
-
+async function buildPlanningContext({ sessionId, gameSystemId, prompt }) {
   const chunks = gameSystemId ? await retrieveRules({ query: prompt, gameSystemId }) : [];
   const state = sessionId ? getSessionState(sessionId) : null;
   const events = sessionId ? getEventHistory(sessionId) : [];
-
   const fullPrompt =
-    `${SYSTEM_PREAMBLE}\n\n${renderRules(chunks)}${renderSessionState(state)}${renderEvents(events)}` +
+    `${PLANNING_SYSTEM}\n\n${renderRules(chunks)}${renderSessionState(state)}${renderEvents(events)}` +
     `=== PETICIÓN DEL DM ===\n${prompt}\n\n` +
-    'Propón sugerencias concretas (encuentros, eventos, giros) apoyadas en las reglas y el ' +
-    'estado actual. Sé breve y accionable.';
+    'Propón sugerencias concretas apoyadas en las reglas y el estado actual. Sé breve y accionable.';
+  return { chunks, fullPrompt };
+}
 
+export async function assistPlanning({ sessionId, gameSystemId, prompt }) {
+  if (!prompt || !prompt.trim()) throw new Error('El prompt está vacío');
+  const { chunks, fullPrompt } = await buildPlanningContext({ sessionId, gameSystemId, prompt });
   const suggestion = await callLlm(fullPrompt);
-  return {
-    suggestion,
-    citations: chunks.map((c) => ({
-      doc_title: c.doc_title,
-      heading_path: c.heading_path,
-      section_type: c.section_type,
-    })),
+  const sources = toSources(chunks);
+  return { suggestion, sources, citations: sources };
+}
+
+export async function streamPlanning({ sessionId, gameSystemId, prompt }, onToken) {
+  if (!prompt || !prompt.trim()) throw new Error('El prompt está vacío');
+  const { chunks, fullPrompt } = await buildPlanningContext({ sessionId, gameSystemId, prompt });
+  const suggestion = await callLlmStream(fullPrompt, onToken);
+  const sources = toSources(chunks);
+  return { suggestion, sources, citations: sources };
+}
+
+// ── Estado de la IA (para /api/ai/status y la UX) ─────────────────────────────────
+// Sondea el LLM con un prompt mínimo. No lanza: la UX necesita un estado, no un crash.
+async function probeLlm() {
+  const llm = activeLlm || defaultLlm();
+  try {
+    const out = await llm('ping');
+    return { ok: typeof out === 'string', provider: AI_PROVIDER, model: AI_MODEL };
+  } catch (err) {
+    return { ok: false, provider: AI_PROVIDER, model: AI_MODEL, error: normalizeProviderError(err).message };
+  }
+}
+
+// Reporta el estado completo de la IA: motor activo, disponibilidad de LLM/embeddings y
+// flags de retrieval (vec/fts). `probe:false` evita las llamadas de red (respuesta rápida).
+export async function getAiStatus({ vecEnabled, ftsEnabled, probe = true } = {}) {
+  const status = {
+    provider: AI_PROVIDER,
+    model: AI_MODEL,
+    embedProvider: process.env.EMBED_PROVIDER || 'ollama',
+    vecEnabled: !!vecEnabled,
+    ftsEnabled: !!ftsEnabled,
   };
+  if (!probe) return status;
+  const [llm, embeddings] = await Promise.all([probeLlm(), probeEmbeddings()]);
+  return { ...status, llm, embeddings, ready: llm.ok && embeddings.ok };
 }

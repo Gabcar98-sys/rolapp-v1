@@ -4,7 +4,8 @@ import cors from 'cors';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 
-import { vecEnabled } from './db/index.js';
+import { vecEnabled, ftsEnabled } from './db/index.js';
+import { AI_CONFIG } from './services/ai.js';
 import authRouter from './routes/auth.js';
 import campaignsRouter from './routes/campaigns.js';
 import gameSystemsRouter from './routes/gameSystems.js';
@@ -34,7 +35,14 @@ const server = createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 
 app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', vecEnabled, version: '1.0.0' });
+  // Estado ligero (sin sondear Ollama/API): flags de retrieval + motor de IA configurado.
+  res.json({
+    status: 'ok',
+    version: '1.0.0',
+    vecEnabled,
+    ftsEnabled,
+    ai: { provider: AI_CONFIG.provider, model: AI_CONFIG.model },
+  });
 });
 
 app.use('/api/auth', authRouter);

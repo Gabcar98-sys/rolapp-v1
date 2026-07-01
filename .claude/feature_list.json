@@ -92,15 +92,15 @@
     "phase": "F9 — IA turnkey + optimización",
     "title": "Activar y optimizar la IA (híbrido Ollama/API, streaming, prompts/contexto, UX de estado y citas)",
     "priority": 11,
-    "status": "in_progress",
-    "description": "Decisión founder: HÍBRIDO (Ollama local por defecto, API externa opcional vía AI_PROVIDER, sin tocar código) + optimización profunda. Turnkey: servicio ollama en compose con bootstrap de modelos (embeddings nomic-embed-text + un LLM local pequeño), doc de arranque. Optimizar: ensamblado de contexto con citas (heading_path/doc), prompts afinados para resumen/reglas/planeación en ES, STREAMING de respuestas (socket o SSE), y UX en AIPanel que muestre el motor activo, si la IA está disponible, y las fuentes citadas. Mantener degradación elegante y proveedor inyectable."
+    "status": "done",
+    "description": "VERIFICADO 2026-06-30: turnkey híbrido (compose+ai-bootstrap+.env+README), /api/ai/status + health enriquecido, streaming por socket con fallback, contrato {answer,sources}, prompts ES, AIPanel con badge de motor+citas, degradación elegante, tests con stubs. Reviewer APROBADO. Decisión founder: HÍBRIDO (Ollama local por defecto, API externa opcional vía AI_PROVIDER, sin tocar código) + optimización profunda. Turnkey: servicio ollama en compose con bootstrap de modelos (embeddings nomic-embed-text + un LLM local pequeño), doc de arranque. Optimizar: ensamblado de contexto con citas (heading_path/doc), prompts afinados para resumen/reglas/planeación en ES, STREAMING de respuestas (socket o SSE), y UX en AIPanel que muestre el motor activo, si la IA está disponible, y las fuentes citadas. Mantener degradación elegante y proveedor inyectable."
   },
   {
     "id": "F10-seed-systems",
     "phase": "F10 — Sembrar juegos + pregens + guías",
     "title": "Importar sistemas de ejemplo, crear personajes base y ingerir guías .md para el RAG",
     "priority": 12,
-    "status": "pending",
+    "status": "in_progress",
     "description": "Que existan sistemas de juego listos para usar y contenido para la IA. Script/CLI de import (respetando el principio: son datos importables, no seeds en código) que: (1) importe game-packs/stormlight.json y dragonbane.json para un DM; (2) cree personajes base (pregens) — portar los de Bridge Nine de la v0 (Abena, Jomari, Palinor, Talani, Vedd, Zvynda) para Stormlight, y algún pregen para Dragonbane; (3) ingiera la guía STORMLIGHT_RPG_GUIDE.md (de la v0) como game_doc del sistema Stormlight para que el RAG tenga contenido. Documentar cómo correrlo. Los pregens pueden venir embebidos en los packs JSON (base_characters)."
   }
 ]

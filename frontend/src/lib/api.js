@@ -288,13 +288,22 @@ export const api = {
   deleteDoc: (systemId, docId, dmId) =>
     request(`/game-systems/${systemId}/docs/${docId}`, { method: 'DELETE', body: { dm_id: dmId } }),
 
-  // Búsqueda híbrida directa + asistente de IA.
+  // Estado de la IA: motor activo, disponibilidad de LLM/embeddings, vec/fts.
+  // probe=false salta las llamadas de red (respuesta inmediata para pintar el badge).
+  aiStatus: (probe = true) => request(`/ai/status${probe ? '' : '?probe=0'}`),
+
+  // Búsqueda híbrida directa + asistente de IA (fallback no-streaming; el streaming va por socket).
   ragSearch: (query, gameSystemId, k = 5) =>
     request('/rag/search', { method: 'POST', body: { query, game_system_id: gameSystemId, k } }),
   aiAsk: (query, gameSystemId, sessionId = null) =>
     request('/ai/ask', {
       method: 'POST',
       body: { query, game_system_id: gameSystemId, session_id: sessionId },
+    }),
+  aiAssistPlanning: (prompt, gameSystemId = null, sessionId = null) =>
+    request('/ai/assist-planning', {
+      method: 'POST',
+      body: { prompt, game_system_id: gameSystemId, session_id: sessionId },
     }),
 
   // Resumen de sesión.

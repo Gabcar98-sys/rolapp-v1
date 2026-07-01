@@ -25,12 +25,39 @@ docker compose up --build
 - App: http://localhost:3000
 - API: proxy interno a backend :3001
 
-Con IA local (descarga el modelo de embeddings la primera vez):
+## IA / RAG (opcional, turnkey)
+
+La IA es **híbrida**: por defecto usa **Ollama local**; se puede cambiar a una **API
+externa** solo con variables de entorno, sin tocar código (ver `.env.example`).
+
+### Opción A — IA local con Ollama (por defecto)
 
 ```bash
-docker compose --profile ai up --build
-docker compose exec ollama ollama pull nomic-embed-text
+# 1) Levanta la app + el servicio ollama (perfil "ai")
+docker compose --profile ai up -d --build
+
+# 2) Descarga los modelos (embeddings + LLM local pequeño). Idempotente.
+docker compose --profile ai run --rm ai-bootstrap
+#   (equivalente: sh scripts/ai-bootstrap.sh, o docker compose exec ollama ollama pull …)
 ```
+
+Modelos por defecto: `nomic-embed-text` (embeddings, 768 dims) y `qwen2.5:3b` (LLM).
+Sobreescríbelos con `EMBED_MODEL` / `AI_MODEL` en tu `.env` (sin editar código).
+
+### Opción B — API externa
+
+En `.env`: `AI_PROVIDER=api`, `EMBED_PROVIDER=api`, `API_KEY=…`, y opcionalmente
+`AI_API_BASE_URL` / `AI_MODEL` / `EMBED_MODEL`. Luego `docker compose up -d --build`.
+
+### Verificar el estado de la IA
+
+```bash
+curl -s http://localhost:3000/api/health          # motor configurado + flags vec/fts
+curl -s http://localhost:3000/api/ai/status        # sondea si LLM y embeddings responden
+```
+
+Sin IA levantada, el panel 🤖 muestra "IA no disponible" y los endpoints degradan con
+un error claro (503) — la app no se cae.
 
 ## Desarrollo con Node local (opcional)
 

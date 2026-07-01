@@ -12,7 +12,18 @@ Bootstrap del repo v1.0 (founder). Portado el harness de agentes desde la v0 y a
 
 ## Feature en progreso
 
-`F9-ai-activation` (en progreso). Roadmap base F0–F8 COMPLETO (F8a/F8b/F8c cerradas).
+`F10-seed-systems` (en progreso). F0–F9 cerradas. Docker recuperado; caché podada. Tras F10: optimización de IA (petición del founder, "todo en auto").
+
+## ⚠️ BLOQUEO DE ENTORNO (2026-06-30)
+- **C: al 98%** (14 GB libres en 466 GB). El disco estuvo al 100% (752 MB) y dejó el daemon de Docker Desktop en **solo-lectura / corrupto**. `docker version` → server vacío; listar contenedores → 500. **Docker no usable.**
+- **F9** está en el working tree (backend/frontend/docker-compose/.env.example/scripts/README): ambas imágenes buildearon y la revisión estática pasó, PERO lint/test de backend NO se ejecutaron (no se pueden crear contenedores). **No commiteado.** Reporte: `impl_F9-ai-activation.md`.
+- El stack viejo `rolapp` (v0, desde OneDrive/RolApp) quedó **detenido** pero no se pudo eliminar (`down` falló por daemon read-only). Su `restart: unless-stopped` lo revivía en cada intento.
+
+## Recuperación (requiere al founder)
+1. Liberar espacio real en C: (Disk Cleanup, Papelera, %TEMP%, Descargas) — apuntar a bastante más que 14 GB.
+2. Reiniciar Docker Desktop del todo (Quit desde la bandeja → reabrir). Si el motor no arranca: Troubleshoot → Restart; en último caso Clean/Purge data (⚠️ borra imágenes/volúmenes; el código está en git, los packs son archivos, y `./data/rolapp.db` es bind-mount del host → sobrevive; solo se re-descargan los modelos de ollama).
+3. Ya con Docker sano: `docker compose -f "C:/Users/gabri/OneDrive/Escritorio/RolApp/docker-compose.yml" down` (quita el v0), `docker builder prune -af` + `docker image prune -af` (recupera GB de los ~15 builds de F0–F9).
+4. Reanudar: reviewer de F9 (corre lint/test reales) → cerrar/commitear F9 → F10.
 
 ## Backlog ampliado por el founder
 - **F9-ai-activation**: activar+optimizar IA. Decisión: HÍBRIDO (Ollama local default, API por env) + turnkey + optimización profunda (streaming, prompts/contexto con citas, UX de estado/fuentes). La IA está construida (F6) pero no "en uso" porque falta motor conectado y docs ingeridos.
