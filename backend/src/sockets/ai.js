@@ -19,21 +19,23 @@ export function registerAiHandlers(io, socket) {
     }
   }
 
-  // ai:ask { requestId, query, gameSystemId } → stream de respuesta de reglas citada.
-  socket.on('ai:ask', ({ requestId, query, gameSystemId }) => {
+  // ai:ask { requestId, query, gameSystemId, history? } → stream de respuesta citada.
+  // `history` (opcional) es la memoria corta de la conversación para follow-ups (F12 §4);
+  // el servicio la normaliza y acota (nº de turnos/tokens).
+  socket.on('ai:ask', ({ requestId, query, gameSystemId, history = [] }) => {
     if (!query || !gameSystemId) {
       socket.emit('ai:error', { requestId, error: 'query y gameSystemId son requeridos' });
       return;
     }
-    run(streamRulesQuestion, { query, gameSystemId }, requestId, 'ai:answer_done');
+    run(streamRulesQuestion, { query, gameSystemId, history }, requestId, 'ai:answer_done');
   });
 
-  // ai:assist_planning { requestId, sessionId?, gameSystemId?, prompt } → stream de sugerencias.
-  socket.on('ai:assist_planning', ({ requestId, sessionId = null, gameSystemId = null, prompt }) => {
+  // ai:assist_planning { requestId, sessionId?, gameSystemId?, prompt, history? } → sugerencias.
+  socket.on('ai:assist_planning', ({ requestId, sessionId = null, gameSystemId = null, prompt, history = [] }) => {
     if (!prompt) {
       socket.emit('ai:error', { requestId, error: 'prompt es requerido' });
       return;
     }
-    run(streamPlanning, { sessionId, gameSystemId, prompt }, requestId, 'ai:planning_done');
+    run(streamPlanning, { sessionId, gameSystemId, prompt, history }, requestId, 'ai:planning_done');
   });
 }

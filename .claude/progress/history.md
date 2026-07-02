@@ -122,6 +122,16 @@ Optimización del RAG (retrieval + contexto). Implementer → Reviewer APROBADO.
 - Test de eval anti-regresión (`rag.eval.test.js`): hit-rate@3 = 100% (umbral 0.8). 93 tests totales. Degradación solo-FTS sin Ollama. Contrato {answer,sources} intacto.
 - Founder pidió PARAR en F11. Pendiente: F12 (generación + tools + UX).
 
+## 2026-07-01 — F12-ai-generation-opt (DONE)
+
+Optimización de IA: generación + tools + UX. Implementer → Reviewer APROBADO. **Cierra la fase de optimización de IA.**
+
+- Orquestador de tool-use (`retrieve_rules`, `get_character`, `get_session_state`, `get_event_history`, `get_stats`) con loop cuando el proveedor soporta function-calling (`AI_TOOLS_ENABLED`) y **fallback** a inyección de contexto para modelos locales.
+- Prompts endurecidos (citar-o-abstenerse, cero alucinación, ES) para reglas/resumen/planeación. Config por tarea (modelo/temp/top-k/contexto por env). Follow-ups conversacionales acotados.
+- UX AIPanel: fuentes con score, botón Regenerar, panel de depuración de retrieval; badge de motor + streaming intactos. `/api/ai/status` con `toolsEnabled`.
+- 107 tests (tool-loop + fallback + follow-up con stubs deterministas, sin Ollama). Degradación elegante.
+- Backlog vacío tras F12.
+
 ## 2026-06-29 — F8c-ui-polish (DONE)
 
 Pulido mobile-first + tldraw. Implementer → Reviewer APROBADO. **Roadmap base F0–F8 completo.**

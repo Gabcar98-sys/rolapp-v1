@@ -7,8 +7,11 @@ const socket = io({ autoConnect: false });
 // `ai:answer_done`, `ai:error`) por `requestId` a los callbacks. Devuelve una función
 // de limpieza que quita los listeners (llamar al desmontar / al iniciar otra consulta).
 //
+// `history` (opcional) es la memoria corta de la conversación para follow-ups (F12):
+// [{ role:'user'|'assistant', content }]. El backend la normaliza y acota.
+//
 // callbacks: { onToken(token), onDone({ answer, sources }), onError(message) }
-export function streamAiAsk({ query, gameSystemId }, callbacks) {
+export function streamAiAsk({ query, gameSystemId, history = [] }, callbacks) {
   const requestId = `ask-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
   const onToken = (msg) => {
@@ -25,7 +28,7 @@ export function streamAiAsk({ query, gameSystemId }, callbacks) {
   socket.on('ai:answer_done', onDone);
   socket.on('ai:error', onError);
 
-  socket.emit('ai:ask', { requestId, query, gameSystemId });
+  socket.emit('ai:ask', { requestId, query, gameSystemId, history });
 
   return () => {
     socket.off('ai:token', onToken);

@@ -12,10 +12,11 @@ Bootstrap del repo v1.0 (founder). Portado el harness de agentes desde la v0 y a
 
 ## Feature en progreso
 
-Ninguna en progreso. F0–F11 cerradas y verificadas. El founder pidió parar en F11.
+Ninguna en progreso. **F0–F12 todas cerradas y verificadas.** v1.0 + optimización de IA completas.
 
-## Pendiente (cuando el founder lo pida)
-- **F12-ai-generation-opt**: tool-use real + fallback, prompts endurecidos (citar-o-abstenerse), config por tarea, follow-ups, UX de fuentes con score/regenerar. (Segunda mitad de la optimización de IA.)
+## Deuda menor / pendientes
+- Reindexar vectores del RAG cuando Ollama esté arriba (`docker compose --profile ai up` + bootstrap + reindex).
+- No hay features pendientes en el backlog; a la espera de nuevas peticiones del founder.
 
 ## Deuda menor
 - Vectores del RAG pendientes de reindex hasta que Ollama esté arriba (`docker compose --profile ai up` + bootstrap + reindex).

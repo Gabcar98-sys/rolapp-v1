@@ -187,7 +187,11 @@ test('empaquetado por presupuesto de tokens respeta el límite (vía ai.retrieve
   await ingestDoc({ gameSystemId: systemId, title: 'Grande', content: `# Manual\n\n${body}\n` });
 
   let promptSeen = '';
-  setLlmClient(async (p) => { promptSeen = p; return 'ok'; });
+  // El servicio manda mensajes chat ([{role,content}]); aplanamos a texto para inspeccionar.
+  setLlmClient(async (p) => {
+    promptSeen = Array.isArray(p) ? p.map((m) => m.content).join('\n') : p;
+    return 'ok';
+  });
   const result = await answerRulesQuestion({ query: 'regla sección texto relleno', gameSystemId: systemId });
   setLlmClient(null);
   delete process.env.RAG_CONTEXT_TOKEN_BUDGET;

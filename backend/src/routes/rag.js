@@ -131,29 +131,31 @@ export default function createRagRouter(io) {
 
   // ── Asistente de IA ────────────────────────────────────────────────────────────
 
-  // POST /api/ai/ask  { query, game_system_id, session_id? } → respuesta citada.
+  // POST /api/ai/ask  { query, game_system_id, session_id?, history? } → respuesta citada.
+  // `history` (opcional) es la memoria corta de la conversación (follow-ups, F12 §4).
   router.post('/ai/ask', async (req, res) => {
-    const { query, game_system_id } = req.body ?? {};
+    const { query, game_system_id, history } = req.body ?? {};
     if (!query || !game_system_id) {
       return res.status(422).json({ error: 'query y game_system_id son requeridos' });
     }
     try {
-      const result = await answerRulesQuestion({ query, gameSystemId: game_system_id });
+      const result = await answerRulesQuestion({ query, gameSystemId: game_system_id, history });
       res.json(result);
     } catch (err) {
       fail(res, err);
     }
   });
 
-  // POST /api/ai/assist-planning  { session_id?, game_system_id?, prompt }
+  // POST /api/ai/assist-planning  { session_id?, game_system_id?, prompt, history? }
   router.post('/ai/assist-planning', async (req, res) => {
-    const { session_id, game_system_id, prompt } = req.body ?? {};
+    const { session_id, game_system_id, prompt, history } = req.body ?? {};
     if (!prompt) return res.status(422).json({ error: 'prompt es requerido' });
     try {
       const result = await assistPlanning({
         sessionId: session_id || null,
         gameSystemId: game_system_id || null,
         prompt,
+        history,
       });
       res.json(result);
     } catch (err) {

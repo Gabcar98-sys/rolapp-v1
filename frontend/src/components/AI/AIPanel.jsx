@@ -7,6 +7,10 @@ import Card from '../ui/Card.jsx';
 const inputCls =
   'rounded-md border border-ink-line bg-ink-900 px-3 py-2 text-sm text-gray-100 outline-none focus:border-gold';
 
+// Memoria corta de conversación (follow-ups): nº de turnos que se mandan al backend.
+// El backend re-acota; aquí limitamos para no arrastrar historiales largos por socket.
+const MAX_HISTORY_TURNS = 6;
+
 // Badge del motor de IA activo. Deriva su etiqueta/color del estado de /ai/status.
 function EngineBadge({ status }) {
   if (!status) {
@@ -23,26 +27,39 @@ function EngineBadge({ status }) {
   return (
     <span className="rounded-full bg-success/30 px-2 py-0.5 text-xs text-green-300" title={status.model}>
       {label} · {status.model}
+      {status.toolsEnabled && <span className="ml-1 text-gold" title="Tool-use activo">🛠️</span>}
     </span>
   );
 }
 
+// Formatea un score de fusión a 3 decimales; degrada si no viene.
+function fmtScore(score) {
+  return typeof score === 'number' ? score.toFixed(3) : '—';
+}
+
 // Panel de IA dentro de la sesión (tab 🤖). Consulta reglas con respuesta en STREAMING
-// (tokens vía socket) y citas a la fuente; el DM además genera/ve el resumen de sesión.
-// El sistema de juego se deriva de los personajes vinculados (el RAG está scoped por
-// game_system_id). Muestra el motor activo y degrada con elegancia si la IA está caída.
+// (tokens vía socket) y citas a la fuente con SCORE; permite REGENERAR y ver un panel de
+// depuración de retrieval (chunks recuperados con score/heading_path). Mantiene una
+// memoria corta de la conversación para follow-ups. El sistema de juego se deriva de los
+// personajes vinculados (RAG scoped por game_system_id). Degrada con elegancia si la IA
+// está caída. Muestra el motor activo (badge) y conserva el streaming de F9.
 export default function AIPanel({ sessionId, user }) {
   const isDM = user.role === 'dm';
   const [systems, setSystems] = useState([]); // [{ id, name }]
   const [gameSystemId, setGameSystemId] = useState('');
   const [query, setQuery] = useState('');
+  const [lastQuery, setLastQuery] = useState(''); // última consulta enviada (para regenerar)
   const [answer, setAnswer] = useState(''); // texto acumulado del streaming
-  const [sources, setSources] = useState([]); // [{ doc_title, heading_path, snippet }]
+  const [sources, setSources] = useState([]); // [{ doc_title, heading_path, snippet, score }]
+  const [conversation, setConversation] = useState([]); // [{ role, content }] memoria corta
   const [summary, setSummary] = useState(null);
   const [asking, setAsking] = useState(false);
   const [summarizing, setSummarizing] = useState(false);
   const [error, setError] = useState('');
   const [aiStatus, setAiStatus] = useState(null); // { provider, model, ready, ... }
+  const [showDebug, setShowDebug] = useState(false); // panel de depuración de retrieval
+  const [debugChunks, setDebugChunks] = useState(null); // chunks crudos de /rag/search
+  const [debugLoading, setDebugLoading] = useState(false);
   const cleanupRef = useRef(null);
 
   // Consulta el estado de la IA para el badge y para decidir la degradación de la UX.
@@ -83,9 +100,9 @@ export default function AIPanel({ sessionId, user }) {
   // Limpia el listener de streaming al desmontar.
   useEffect(() => () => cleanupRef.current?.(), []);
 
-  function ask(e) {
-    e.preventDefault();
-    if (!query.trim()) return;
+  // Lanza una consulta por streaming. `queryText` puede diferir del input (regenerar usa
+  // la última consulta). `history` acompaña la consulta para follow-ups conversacionales.
+  function runAsk(queryText, history) {
     if (!gameSystemId) {
       setError('No hay sistema de juego asociado a esta sesión.');
       return;
@@ -94,17 +111,25 @@ export default function AIPanel({ sessionId, user }) {
     setAnswer('');
     setSources([]);
     setAsking(true);
+    setLastQuery(queryText);
     cleanupRef.current?.();
 
-    // Streaming por socket: los tokens llegan a medida que el LLM los produce.
     cleanupRef.current = streamAiAsk(
-      { query: query.trim(), gameSystemId },
+      { query: queryText, gameSystemId, history },
       {
         onToken: (token) => setAnswer((prev) => prev + token),
         onDone: ({ answer: full, sources: srcs }) => {
+          const finalAnswer = full || '';
           if (full) setAnswer(full);
           setSources(srcs || []);
           setAsking(false);
+          // Actualiza la memoria corta: añade el turno del usuario y del asistente,
+          // acotando a los últimos MAX_HISTORY_TURNS turnos.
+          setConversation((prev) =>
+            [...prev, { role: 'user', content: queryText }, { role: 'assistant', content: finalAnswer }].slice(
+              -MAX_HISTORY_TURNS
+            )
+          );
         },
         onError: (message) => {
           setError(message);
@@ -112,6 +137,33 @@ export default function AIPanel({ sessionId, user }) {
         },
       }
     );
+  }
+
+  function ask(e) {
+    e.preventDefault();
+    const q = query.trim();
+    if (!q) return;
+    // Follow-up: manda la conversación previa como memoria corta.
+    runAsk(q, conversation);
+    setQuery('');
+  }
+
+  // Regenera la última respuesta con la MISMA consulta y la conversación previa a ese
+  // turno (sin el último par usuario/asistente, para no duplicarlo).
+  function regenerate() {
+    if (!lastQuery) return;
+    const priorHistory = conversation.slice(0, -2);
+    setConversation(priorHistory);
+    runAsk(lastQuery, priorHistory);
+  }
+
+  // Limpia la conversación (empezar de cero).
+  function resetConversation() {
+    setConversation([]);
+    setAnswer('');
+    setSources([]);
+    setLastQuery('');
+    setError('');
   }
 
   async function generateSummary() {
@@ -125,6 +177,19 @@ export default function AIPanel({ sessionId, user }) {
     } finally {
       setSummarizing(false);
     }
+  }
+
+  // Panel de depuración: recupera los chunks crudos de /rag/search para la última
+  // consulta (o el input actual), mostrando score/heading_path sin pasar por el LLM.
+  function inspectRetrieval() {
+    const q = (lastQuery || query).trim();
+    if (!q || !gameSystemId) return;
+    setDebugLoading(true);
+    api
+      .ragSearch(q, gameSystemId, 10)
+      .then(({ results }) => setDebugChunks(results || []))
+      .catch((err) => setError(err.message))
+      .finally(() => setDebugLoading(false));
   }
 
   const aiDown = aiStatus && !aiStatus.ready;
@@ -147,7 +212,18 @@ export default function AIPanel({ sessionId, user }) {
       {error && <p className="rounded-md bg-danger/20 px-3 py-2 text-sm text-red-300">{error}</p>}
 
       <Card className="p-4">
-        <h3 className="mb-3 text-sm font-semibold text-gray-200">🤖 Preguntar reglas</h3>
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-gray-200">🤖 Preguntar reglas</h3>
+          {conversation.length > 0 && (
+            <button
+              type="button"
+              onClick={resetConversation}
+              className="text-xs text-gray-500 hover:text-gold"
+            >
+              Nueva conversación
+            </button>
+          )}
+        </div>
         {systems.length > 1 && (
           <select
             value={gameSystemId}
@@ -166,13 +242,24 @@ export default function AIPanel({ sessionId, user }) {
           <textarea
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="¿Cómo funciona la iniciativa en combate?"
+            placeholder={
+              conversation.length
+                ? 'Pregunta de seguimiento…'
+                : '¿Cómo funciona la iniciativa en combate?'
+            }
             rows={2}
             className={inputCls}
           />
-          <Button type="submit" size="sm" disabled={asking || !systems.length}>
-            {asking ? 'Consultando…' : 'Preguntar'}
-          </Button>
+          <div className="flex gap-2">
+            <Button type="submit" size="sm" disabled={asking || !systems.length}>
+              {asking ? 'Consultando…' : conversation.length ? 'Seguir' : 'Preguntar'}
+            </Button>
+            {lastQuery && !asking && (
+              <Button type="button" size="sm" variant="secondary" onClick={regenerate}>
+                ↻ Regenerar
+              </Button>
+            )}
+          </div>
         </form>
         {!systems.length && (
           <p className="mt-2 text-xs text-gray-500">
@@ -193,13 +280,66 @@ export default function AIPanel({ sessionId, user }) {
                 </span>
                 {sources.map((c, i) => (
                   <div key={i} className="text-xs text-gray-400">
-                    <span>
-                      📖 {c.doc_title} › {c.heading_path}{' '}
-                      <span className="text-gray-600">({c.section_type})</span>
+                    <span className="flex items-center gap-1">
+                      <span className="flex-1">
+                        📖 {c.doc_title} › {c.heading_path}{' '}
+                        <span className="text-gray-600">({c.section_type})</span>
+                      </span>
+                      <span
+                        className="rounded bg-ink-600 px-1.5 py-0.5 font-mono text-[10px] text-gold"
+                        title="Score de relevancia"
+                      >
+                        {fmtScore(c.score)}
+                      </span>
                     </span>
                     {c.snippet && <p className="mt-0.5 pl-4 italic text-gray-600">“{c.snippet}”</p>}
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Panel de depuración de retrieval (colapsable): chunks crudos con score/heading. */}
+        {systems.length > 0 && (
+          <div className="mt-3 border-t border-ink-line pt-2">
+            <button
+              type="button"
+              onClick={() => {
+                const next = !showDebug;
+                setShowDebug(next);
+                if (next && !debugChunks) inspectRetrieval();
+              }}
+              className="text-xs text-gray-500 hover:text-gold"
+            >
+              {showDebug ? '▾' : '▸'} Depuración de retrieval
+            </button>
+            {showDebug && (
+              <div className="mt-2 flex flex-col gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={inspectRetrieval}
+                  disabled={debugLoading || !(lastQuery || query).trim()}
+                >
+                  {debugLoading ? 'Recuperando…' : 'Recuperar chunks de la última consulta'}
+                </Button>
+                {debugChunks && debugChunks.length === 0 && (
+                  <p className="text-xs text-gray-500">Sin chunks recuperados.</p>
+                )}
+                {debugChunks &&
+                  debugChunks.map((c, i) => (
+                    <div key={i} className="rounded-md bg-ink-900 px-2 py-1.5 text-[11px] text-gray-400">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="truncate text-gray-300">
+                          {c.doc_title} › {c.heading_path}
+                        </span>
+                        <span className="shrink-0 font-mono text-gold">{fmtScore(c.score)}</span>
+                      </div>
+                      <p className="mt-0.5 line-clamp-2 text-gray-600">{c.text}</p>
+                    </div>
+                  ))}
               </div>
             )}
           </div>

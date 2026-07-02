@@ -11,6 +11,7 @@ process.env.DB_PATH = join(tmpDir, 'ai-test.db');
 let db;
 let answerRulesQuestion, summarizeSession, getSessionSummary, getSessionState, setLlmClient;
 let streamRulesQuestion, setLlmStreamClient, getAiStatus;
+let setLlmToolsClient, normalizeHistory, resolveTaskConfig;
 let ingestDoc, setEmbeddingProvider, EMBEDDING_DIMS;
 let dmId, systemId, sessionId;
 
@@ -30,6 +31,7 @@ before(async () => {
   ({
     answerRulesQuestion, summarizeSession, getSessionSummary, getSessionState, setLlmClient,
     streamRulesQuestion, setLlmStreamClient, getAiStatus,
+    setLlmToolsClient, normalizeHistory, resolveTaskConfig,
   } = await import('./ai.js'));
   ({ ingestDoc } = await import('./rag.js'));
   ({ setEmbeddingProvider, EMBEDDING_DIMS } = await import('./embeddings.js'));
@@ -64,10 +66,10 @@ test('answerRulesQuestion devuelve respuesta + citas usando reglas recuperadas',
     content: '# Combate\n\n## Iniciativa\nLa iniciativa se determina con un dado de agilidad.',
   });
 
-  // Stub: el LLM recibe un prompt que YA incluye las reglas; devolvemos texto fijo.
+  // Stub: el LLM recibe mensajes chat que YA incluyen las reglas; devolvemos texto fijo.
   let receivedPrompt = '';
-  setLlmClient(async (prompt) => {
-    receivedPrompt = prompt;
+  setLlmClient(async (messages) => {
+    receivedPrompt = Array.isArray(messages) ? messages.map((m) => m.content).join('\n') : messages;
     return 'La iniciativa se tira con agilidad.';
   });
 
@@ -184,6 +186,167 @@ test('getSessionState arma estado estructurado de personajes', () => {
 
 test('summarizeSession lanza error claro si la sesión no existe', async () => {
   await assert.rejects(() => summarizeSession(999999), /no encontrada/);
+});
+
+// ── F12: tool-use, fallback, prompts, follow-ups ──────────────────────────────────
+
+test('tool-loop: el orquestador ejecuta la tool pedida y produce { answer, sources }', async () => {
+  await ingestDoc({
+    gameSystemId: systemId,
+    title: 'Core',
+    content: '# Combate\n\n## Iniciativa\nLa iniciativa se determina con un dado de agilidad.',
+  });
+
+  // Activa tool-use por env (el default es OFF).
+  process.env.AI_TOOLS_ENABLED = 'true';
+
+  // Stub de tool-use: en la 1ª llamada pide retrieve_rules; en la 2ª (ya con el
+  // resultado de la tool en el historial) responde en texto.
+  let call = 0;
+  const seen = [];
+  setLlmToolsClient(async (messages) => {
+    call += 1;
+    seen.push(messages);
+    if (call === 1) {
+      return {
+        content: '',
+        tool_calls: [
+          { id: 'c1', name: 'retrieve_rules', arguments: { query: 'iniciativa' } },
+        ],
+      };
+    }
+    return { content: 'La iniciativa se tira con agilidad. [Combate > Iniciativa]', tool_calls: [] };
+  });
+
+  const result = await answerRulesQuestion({ query: 'cómo funciona la iniciativa', gameSystemId: systemId });
+
+  assert.equal(call, 2, 'el orquestador hizo dos llamadas: pedir tool y responder');
+  assert.match(result.answer, /agilidad/);
+  assert.ok(result.sources.length > 0, 'las fuentes vienen de la tool retrieve_rules');
+  assert.match(result.sources[0].heading_path, /Iniciativa/);
+  // La 2ª llamada incluyó un mensaje role:'tool' con el resultado inyectado.
+  const secondConvo = seen[1];
+  assert.ok(secondConvo.some((m) => m.role === 'tool'), 'el resultado de la tool se inyectó como mensaje tool');
+
+  setLlmToolsClient(null);
+  delete process.env.AI_TOOLS_ENABLED;
+});
+
+test('fallback: con tools deshabilitadas usa inyección de contexto (comportamiento previo)', async () => {
+  await ingestDoc({
+    gameSystemId: systemId,
+    title: 'Core',
+    content: '# Combate\n\n## Iniciativa\nLa iniciativa se determina con un dado de agilidad.',
+  });
+
+  // Sin AI_TOOLS_ENABLED: aunque haya un tools-client inyectado, NO debe usarse.
+  delete process.env.AI_TOOLS_ENABLED;
+  let toolsCalled = false;
+  setLlmToolsClient(async () => {
+    toolsCalled = true;
+    return { content: 'no debería llamarse', tool_calls: [] };
+  });
+
+  let receivedPrompt = '';
+  setLlmClient(async (messages) => {
+    // En fallback, el prompt es una lista de mensajes con el contexto estructurado.
+    receivedPrompt = Array.isArray(messages) ? messages.map((m) => m.content).join('\n') : String(messages);
+    return 'La iniciativa se tira con agilidad.';
+  });
+
+  const result = await answerRulesQuestion({ query: 'iniciativa', gameSystemId: systemId });
+  assert.equal(toolsCalled, false, 'con tools OFF no se invoca el cliente de tools');
+  assert.equal(result.answer, 'La iniciativa se tira con agilidad.');
+  assert.match(receivedPrompt, /REGLAS RECUPERADAS/, 'usa inyección de contexto');
+  assert.ok(result.sources.length > 0);
+
+  setLlmClient(null);
+  setLlmToolsClient(null);
+});
+
+test('prompts: el system prompt de reglas obliga a citar-o-abstenerse', async () => {
+  await ingestDoc({
+    gameSystemId: systemId,
+    title: 'Core',
+    content: '# Reglas\n\n## Salud\nLos personajes tienen puntos de vida.',
+  });
+
+  let systemPrompt = '';
+  setLlmClient(async (messages) => {
+    const sys = Array.isArray(messages) ? messages.find((m) => m.role === 'system') : null;
+    systemPrompt = sys ? sys.content : String(messages);
+    return 'ok';
+  });
+
+  await answerRulesQuestion({ query: 'salud', gameSystemId: systemId });
+  assert.match(systemPrompt, /no inventes/i, 'instruye a no inventar');
+  assert.match(systemPrompt, /No encuentro esa información|absten/i, 'instruye a abstenerse');
+
+  setLlmClient(null);
+});
+
+test('follow-up: el backend acepta historial y lo incluye acotado en el prompt', async () => {
+  await ingestDoc({
+    gameSystemId: systemId,
+    title: 'Core',
+    content: '# Reglas\n\n## Salud\nLos personajes tienen puntos de vida.',
+  });
+
+  let convo = null;
+  setLlmClient(async (messages) => {
+    convo = messages;
+    return 'respuesta de seguimiento';
+  });
+
+  const history = [
+    { role: 'user', content: '¿Qué son los puntos de vida?' },
+    { role: 'assistant', content: 'Son la salud del personaje.' },
+  ];
+  const result = await answerRulesQuestion({ query: '¿y cómo se recuperan?', gameSystemId: systemId, history });
+
+  assert.equal(result.answer, 'respuesta de seguimiento');
+  // El historial (2 turnos) aparece entre el system y la pregunta final.
+  const userTurns = convo.filter((m) => m.role === 'user');
+  assert.ok(userTurns.length >= 2, 'el historial de usuario se incluyó junto a la nueva pregunta');
+  assert.ok(
+    convo.some((m) => m.role === 'assistant' && /salud del personaje/.test(m.content)),
+    'el turno previo del asistente se incluyó'
+  );
+
+  setLlmClient(null);
+});
+
+test('normalizeHistory acota turnos y descarta entradas inválidas', () => {
+  const many = [];
+  for (let i = 0; i < 20; i++) {
+    many.push({ role: 'user', content: `q${i}` });
+    many.push({ role: 'assistant', content: `a${i}` });
+  }
+  const norm = normalizeHistory(many);
+  assert.ok(norm.length <= 6, 'acota a los últimos turnos (default 6)');
+  // Descarta entradas con role/content inválidos.
+  const dirty = normalizeHistory([
+    { role: 'system', content: 'x' },
+    { role: 'user', content: '' },
+    { role: 'user', content: 'válido' },
+    null,
+  ]);
+  assert.equal(dirty.length, 1);
+  assert.equal(dirty[0].content, 'válido');
+  assert.deepEqual(normalizeHistory('no-array'), []);
+});
+
+test('resolveTaskConfig respeta env por tarea con fallback al general', () => {
+  process.env.AI_TEMPERATURE = '0.5';
+  process.env.AI_TEMPERATURE_SUMMARY = '0.1';
+  const rules = resolveTaskConfig('rules');
+  const summary = resolveTaskConfig('summary');
+  assert.equal(rules.temperature, 0.5, 'rules cae al general');
+  assert.equal(summary.temperature, 0.1, 'summary usa su env específica');
+  assert.ok(rules.model, 'incluye modelo');
+  assert.ok(rules.topK > 0 && rules.contextBudget > 0);
+  delete process.env.AI_TEMPERATURE;
+  delete process.env.AI_TEMPERATURE_SUMMARY;
 });
 
 test('cleanup', () => {

@@ -295,15 +295,15 @@ export const api = {
   // Búsqueda híbrida directa + asistente de IA (fallback no-streaming; el streaming va por socket).
   ragSearch: (query, gameSystemId, k = 5) =>
     request('/rag/search', { method: 'POST', body: { query, game_system_id: gameSystemId, k } }),
-  aiAsk: (query, gameSystemId, sessionId = null) =>
+  aiAsk: (query, gameSystemId, sessionId = null, history = []) =>
     request('/ai/ask', {
       method: 'POST',
-      body: { query, game_system_id: gameSystemId, session_id: sessionId },
+      body: { query, game_system_id: gameSystemId, session_id: sessionId, history },
     }),
-  aiAssistPlanning: (prompt, gameSystemId = null, sessionId = null) =>
+  aiAssistPlanning: (prompt, gameSystemId = null, sessionId = null, history = []) =>
     request('/ai/assist-planning', {
       method: 'POST',
-      body: { prompt, game_system_id: gameSystemId, session_id: sessionId },
+      body: { prompt, game_system_id: gameSystemId, session_id: sessionId, history },
     }),
 
   // Resumen de sesión.
