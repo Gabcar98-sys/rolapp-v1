@@ -81,6 +81,7 @@ beforeEach(() => {
   db.exec(`
     DELETE FROM session_events;
     DELETE FROM session_stats;
+    DELETE FROM session_summaries;
     DELETE FROM session_characters;
     DELETE FROM characters;
     DELETE FROM session_members;
@@ -257,4 +258,30 @@ test('POST /:id/characters  permite cualquier personaje si la sesión no tiene c
     body: { character_id: charId, user_id: playerId },
   });
   assert.equal(res.status, 201);
+});
+
+// ── F14: el listado de sesiones cerradas trae resumen y duración para el historial ──
+
+test('GET /  las cerradas incluyen summary y duration_seconds (y NULL si no existen)', async () => {
+  const router = createSessionsRouter(makeFakeIo());
+  const withData = db.prepare("INSERT INTO sessions (name, dm_id, status) VALUES ('Con datos', ?, 'closed')").run(dmId).lastInsertRowid;
+  const bare = db.prepare("INSERT INTO sessions (name, dm_id, status) VALUES ('Sin datos', ?, 'closed')").run(dmId).lastInsertRowid;
+  db.prepare('INSERT INTO session_summaries (session_id, body) VALUES (?, ?)')
+    .run(withData, 'El grupo cruzó el vado.');
+  db.prepare('INSERT INTO session_stats (session_id, payload) VALUES (?, ?)')
+    .run(withData, JSON.stringify({ duration_seconds: 5400 }));
+  db.prepare('INSERT INTO session_members (session_id, user_id) VALUES (?, ?)').run(withData, dmId);
+  db.prepare('INSERT INTO session_members (session_id, user_id) VALUES (?, ?)').run(withData, playerId);
+
+  const { status, data } = await invoke(router, 'get', '/', { query: { status: 'closed' } });
+  assert.equal(status, 200);
+
+  const rich = data.sessions.find((s) => s.id === withData);
+  assert.equal(rich.summary, 'El grupo cruzó el vado.');
+  assert.equal(rich.duration_seconds, 5400);
+  assert.equal(rich.member_count, 2, 'los joins 1:1 no deben inflar el conteo de miembros');
+
+  const empty = data.sessions.find((s) => s.id === bare);
+  assert.equal(empty.summary, null);
+  assert.equal(empty.duration_seconds, null);
 });

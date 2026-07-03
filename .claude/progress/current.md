@@ -15,8 +15,14 @@ Backlog nuevo registrado: **F13–F19** en `feature_list.json`.
 
 ## Feature en progreso
 
-**F13-design-foundation** — lanzada al implementer. Tokens + tipografías + AppShell
-sidebar 236px + iconos SVG de línea + restyle de componentes ui/ + Login.
+**F14-pages-core** — Dashboard con métricas + Campañas (grid) + Sesiones Finalizadas
+(timeline + búsqueda + filtro).
+
+## Cerradas esta sesión
+- **F13-design-foundation** — APROBADA y commiteada (`476a07d`). El Lobby-hub fue
+  reemplazado por AppShell + páginas por sección (DashboardPage, CampaignsPage, etc.,
+  varias aún como contenedores de los paneles viejos — F14/F15 las rediseñan por dentro).
+  Review con 3 observaciones no bloqueantes en `review_F13-design-foundation.md`.
 
 ## Orden del backlog
 F13 (base de diseño) → F14 (Dashboard/Campañas/Historial) → F15 (catálogos: Habilidades
@@ -29,3 +35,4 @@ notas, tabs por personaje, toolbar, presets IA) → F19 (detalle de historial).
 
 ## Preguntas abiertas
 - ¿Disposición (Aliado/Neutral/Hostil) de NPCs: existe en schema v1 o se agrega en F16? (el implementer de F16 debe verificar el schema antes).
+- **Eliminar campaña (F14, para el founder):** no existe `DELETE /api/campaigns/:id` ni política de borrado (FK sessions→campaigns sin ON DELETE). Opciones: (a) archivado en vez de borrado, (b) DELETE bloqueado si tiene sesiones, (c) cascade. El implementer dejó solo Abrir/Editar; decidir antes de implementarlo.

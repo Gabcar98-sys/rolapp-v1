@@ -11,7 +11,11 @@ const selectCampaign = db.prepare(`
   WHERE c.id = ?
 `);
 
-// GET /api/campaigns?dm_id=  — lista las campañas de un DM (para agrupar en el lobby).
+// GET /api/campaigns?dm_id=  — lista las campañas de un DM enriquecidas con los
+// conteos que consumen Dashboard y Campañas (F14): sesiones totales/activas y
+// jugadores distintos (miembros sin contar al DM). Se derivan aquí con subselects
+// sobre tablas existentes para evitar N+1 peticiones del frontend; no es un
+// endpoint nuevo, solo columnas adicionales del listado existente.
 router.get('/', (req, res) => {
   const { dm_id } = req.query;
   if (!dm_id) {
@@ -19,7 +23,14 @@ router.get('/', (req, res) => {
   }
   const campaigns = db
     .prepare(`
-      SELECT c.*, gs.name AS game_system_name
+      SELECT c.*, gs.name AS game_system_name,
+             (SELECT COUNT(*) FROM sessions s WHERE s.campaign_id = c.id) AS session_count,
+             (SELECT COUNT(*) FROM sessions s
+               WHERE s.campaign_id = c.id AND s.status = 'active') AS active_session_count,
+             (SELECT COUNT(DISTINCT sm.user_id)
+                FROM session_members sm
+                JOIN sessions s ON s.id = sm.session_id
+               WHERE s.campaign_id = c.id AND sm.user_id != c.dm_id) AS player_count
       FROM campaigns c
       LEFT JOIN game_system_templates gs ON c.game_system_id = gs.id
       WHERE c.dm_id = ?

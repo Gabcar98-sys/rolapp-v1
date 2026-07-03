@@ -35,6 +35,7 @@ let systemId;
 
 beforeEach(() => {
   db.exec(`
+    DELETE FROM session_members;
     DELETE FROM sessions;
     DELETE FROM campaigns;
     DELETE FROM game_system_templates;
@@ -70,6 +71,40 @@ test('GET /  lista las campañas del DM con el nombre del sistema', async () => 
   assert.equal(status, 200);
   assert.equal(data.campaigns.length, 1);
   assert.equal(data.campaigns[0].game_system_name, 'Sistema A');
+});
+
+test('GET /  incluye conteos de sesiones y jugadores distintos sin contar al DM (F14)', async () => {
+  const created = await invoke(campaignsRouter, 'post', '/', { body: { name: 'Camp', dm_id: dmId } });
+  const campaignId = created.data.campaign.id;
+
+  const p1 = db.prepare("INSERT INTO users (username, pin_hash, role) VALUES ('p1', 'x', 'player')").run().lastInsertRowid;
+  const p2 = db.prepare("INSERT INTO users (username, pin_hash, role) VALUES ('p2', 'x', 'player')").run().lastInsertRowid;
+
+  // Dos sesiones de la campaña (una activa, una cerrada) con jugadores repetidos:
+  // p1 juega en ambas y debe contar UNA sola vez; el DM es miembro pero no cuenta.
+  const s1 = db.prepare("INSERT INTO sessions (name, dm_id, campaign_id, status) VALUES ('S1', ?, ?, 'active')").run(dmId, campaignId).lastInsertRowid;
+  const s2 = db.prepare("INSERT INTO sessions (name, dm_id, campaign_id, status) VALUES ('S2', ?, ?, 'closed')").run(dmId, campaignId).lastInsertRowid;
+  const addMember = db.prepare('INSERT INTO session_members (session_id, user_id) VALUES (?, ?)');
+  addMember.run(s1, dmId);
+  addMember.run(s1, p1);
+  addMember.run(s2, dmId);
+  addMember.run(s2, p1);
+  addMember.run(s2, p2);
+
+  const { status, data } = await invoke(campaignsRouter, 'get', '/', { query: { dm_id: String(dmId) } });
+  assert.equal(status, 200);
+  const camp = data.campaigns.find((c) => c.id === campaignId);
+  assert.equal(camp.session_count, 2);
+  assert.equal(camp.active_session_count, 1);
+  assert.equal(camp.player_count, 2, 'jugadores distintos, sin DM y sin duplicar entre sesiones');
+});
+
+test('GET /  campaña sin sesiones reporta conteos en cero (F14)', async () => {
+  await invoke(campaignsRouter, 'post', '/', { body: { name: 'Vacía', dm_id: dmId } });
+  const { data } = await invoke(campaignsRouter, 'get', '/', { query: { dm_id: String(dmId) } });
+  assert.equal(data.campaigns[0].session_count, 0);
+  assert.equal(data.campaigns[0].active_session_count, 0);
+  assert.equal(data.campaigns[0].player_count, 0);
 });
 
 test('PUT /:id  edita el sistema de juego de la campaña (DM dueño)', async () => {

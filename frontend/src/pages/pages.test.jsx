@@ -20,8 +20,8 @@ const player = { id: 2, username: 'ana', role: 'player' };
 const noop = () => {};
 
 const PAGES = [
-  ['dashboard', <DashboardPage key="d" user={dm} onEnterSession={noop} />],
-  ['campaigns', <CampaignsPage key="c" />],
+  ['dashboard', <DashboardPage key="d" user={dm} onEnterSession={noop} onNavigate={noop} />],
+  ['campaigns', <CampaignsPage key="c" user={dm} />],
   ['prep', <PrepPage key="p" user={dm} />],
   ['skills', <SkillsPage key="s" user={dm} />],
   ['base-characters', <BaseCharactersPage key="b" user={dm} />],
@@ -48,7 +48,7 @@ describe('AppShell + páginas', () => {
   it('el sidebar del DM muestra todas las secciones', () => {
     const html = renderToStaticMarkup(
       <AppShell user={dm} active="dashboard" onNavigate={noop} onLogout={noop}>
-        <CampaignsPage />
+        <CampaignsPage user={dm} />
       </AppShell>
     );
     for (const label of [
@@ -78,6 +78,42 @@ describe('AppShell + páginas', () => {
     expect(html).not.toContain('Preparar Sesión');
     expect(html).not.toContain('Bases de Atributos');
     expect(html).not.toContain('NPCs');
+  });
+
+  it('el Dashboard del DM pinta las 4 métricas y el bloque Nueva sesión (F14)', () => {
+    const html = renderToStaticMarkup(
+      <DashboardPage user={dm} onEnterSession={noop} onNavigate={noop} />
+    );
+    for (const label of [
+      'Campañas activas',
+      'Sesiones activas',
+      'Sesiones finalizadas',
+      'Total jugadores',
+      'Nueva sesión',
+      'Ver historial completo',
+    ]) {
+      expect(html).toContain(label);
+    }
+  });
+
+  it('el Dashboard del jugador no muestra métricas ni Nueva sesión (F14)', () => {
+    const html = renderToStaticMarkup(
+      <DashboardPage user={player} onEnterSession={noop} onNavigate={noop} />
+    );
+    expect(html).not.toContain('Total jugadores');
+    expect(html).not.toContain('Nueva sesión');
+    expect(html).toContain('Sesiones activas');
+  });
+
+  it('Campañas e Historial pintan header, acciones y filtros (F14)', () => {
+    const campaignsHtml = renderToStaticMarkup(<CampaignsPage user={dm} />);
+    expect(campaignsHtml).toContain('Nueva campaña');
+    expect(campaignsHtml).toContain('Campañas');
+
+    const historyHtml = renderToStaticMarkup(<HistoryPage user={dm} />);
+    expect(historyHtml).toContain('Sesiones Finalizadas');
+    expect(historyHtml).toContain('Buscar por nombre, campaña o resumen');
+    expect(historyHtml).toContain('Todas las campañas');
   });
 
   it('el Login renderiza sin emojis y con el wordmark', () => {

@@ -107,6 +107,11 @@ Las lecciones se agrupan por categoría. Cada entrada tiene:
 - **Lección:** Con flat config de ESLint 9 + JSX, `no-unused-vars` marca como sin usar los componentes que solo aparecen en JSX. Falta la regla `react/jsx-uses-vars` de `eslint-plugin-react`. La próxima feature que toque frontend debe añadir `eslint-plugin-react` y habilitar `react/jsx-uses-vars` (o usar su config recomendada) para eliminar los falsos positivos.
 - **Por qué importa:** El ruido de warnings falsos puede ocultar warnings reales y erosiona la confianza en el checkpoint de lint.
 
+### Colores dinámicos por entidad: lista de clases estáticas + índice estable, nunca clases interpoladas
+- **Contexto:** F14, franja de acento por campaña y puntos del timeline con color derivado del id.
+- **Lección:** El JIT de Tailwind solo genera clases que aparecen LITERALES en el código. Para colorear por entidad: define una lista estática de juegos de clases (`const ACCENTS = ['bg-cat-combat', …]`) y elige con un índice estable (hash del id). Ni `style={{}}` (prohibido) ni template strings tipo `bg-${color}` (el JIT no las ve).
+- **Por qué importa:** Las clases interpoladas compilan pero no existen en el CSS final; el bug aparece solo en el build de producción.
+
 ---
 
 ## Arquitectura
@@ -117,7 +122,10 @@ Las lecciones se agrupan por categoría. Cada entrada tiene:
 
 ## Testing
 
-> Aún no hay lecciones en esta categoría.
+### Al insertar en tablas puente en tests, actualizar el DELETE del beforeEach compartido
+- **Contexto:** F14, tests nuevos insertaban en `session_members` y `session_summaries`; las FKs rompieron la limpieza de tests vecinos.
+- **Lección:** Si un test nuevo inserta en una tabla puente (session_members, session_summaries, etc.), añade su `DELETE FROM` al `beforeEach` del archivo. El síntoma de olvidarlo es engañoso: `hookFailed` en tests AJENOS, no en el tuyo.
+- **Por qué importa:** El fallo aparece en tests que no tocaste y se pierde tiempo buscando en el lugar equivocado.
 
 ---
 
@@ -164,3 +172,4 @@ Las lecciones se agrupan por categoría. Cada entrada tiene:
 - 2026-06-29 — líder agregó tras cerrar F4: "Routers que emiten por socket → factory" (Backend), "El lint/test debe poder correr en Docker" (Docker/infra), "ESLint frontend necesita eslint-plugin-react" (Frontend), "No declarar un checkpoint en verde sin ejecutarlo" (Proceso).
 - 2026-06-29 — líder agregó tras cerrar F5: "Una feature de frontend no está terminada hasta que sus componentes estén cableados" (Frontend) y "Directiva eslint-disable a plugin no registrado = error fatal en ESLint 9" (Frontend).
 - 2026-06-29 — líder agregó tras cerrar F8b: "Cada servicio con imagen Docker necesita .dockerignore" (Docker/infra).
+- 2026-07-02 — líder agregó tras cerrar F14: "Colores dinámicos por entidad: lista de clases estáticas + índice estable" (Frontend) y "Al insertar en tablas puente en tests, actualizar el DELETE del beforeEach" (Testing).

@@ -9,6 +9,9 @@ export default function createSessionsRouter(io) {
   const router = Router();
 
   // GET /api/sessions?status=active|closed  — incluye DM, campaña y conteo de miembros.
+  // Para el historial (F14) se enriquece con el resumen de cierre y la duración del
+  // snapshot de stats. Ambos joins son 1:1 (session_id UNIQUE en session_summaries y
+  // session_stats), así que no duplican filas ni inflan el COUNT de miembros.
   router.get('/', (req, res) => {
     const status = req.query.status === 'closed' ? 'closed' : 'active';
     const sessions = db
@@ -16,11 +19,15 @@ export default function createSessionsRouter(io) {
         SELECT s.*, u.username AS dm_username,
                c.name AS campaign_name,
                c.game_system_id AS campaign_game_system_id,
-               COUNT(sm.user_id) AS member_count
+               COUNT(sm.user_id) AS member_count,
+               ss.body AS summary,
+               json_extract(st.payload, '$.duration_seconds') AS duration_seconds
         FROM sessions s
         JOIN users u ON s.dm_id = u.id
         LEFT JOIN campaigns c ON s.campaign_id = c.id
         LEFT JOIN session_members sm ON s.id = sm.session_id
+        LEFT JOIN session_summaries ss ON ss.session_id = s.id
+        LEFT JOIN session_stats st ON st.session_id = s.id
         WHERE s.status = ?
         GROUP BY s.id
         ORDER BY s.created_at DESC

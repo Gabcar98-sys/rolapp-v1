@@ -1,69 +1,107 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api.js';
+import {
+  deriveDashboardMetrics,
+  formatDate,
+  formatDuration,
+  playersInSession,
+} from '../lib/metrics.js';
 import Button from '../components/ui/Button.jsx';
 import Card from '../components/ui/Card.jsx';
+import Icon from '../components/ui/Icon.jsx';
 import Page from '../components/layout/Page.jsx';
 import PageHeader from '../components/layout/PageHeader.jsx';
 
-// Dashboard (placeholder de F14): conserva la funcionalidad de la vista de
-// sesiones del Lobby v0 — crear campaña/sesión (DM) y unirse a sesiones activas.
-// El rediseño fino con métricas llega en F14.
+const inputCls =
+  'rounded-[10px] border border-[#37312A] bg-bg px-3.5 py-[11px] text-sm text-ink outline-none placeholder:text-muted focus:border-accent';
 
-// Agrupa sesiones por campaña; las que no tienen campaña van bajo "Sin campaña".
-function groupByCampaign(sessions) {
-  const groups = new Map();
-  for (const s of sessions) {
-    const key = s.campaign_name || 'Sin campaña';
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(s);
-  }
-  return Array.from(groups.entries());
+// Tarjeta de métrica: icono de línea coloreado + label muted + cifra Newsreader 38px.
+function MetricCard({ icon, iconClass, label, value }) {
+  return (
+    <Card className="p-[18px]">
+      <div className="mb-3.5 flex items-center gap-2 text-[12.5px] text-faint">
+        <Icon name={icon} size={16} className={iconClass} />
+        {label}
+      </div>
+      <div className="num font-serif text-[38px] font-semibold leading-none text-title">
+        {value}
+      </div>
+    </Card>
+  );
 }
 
-const inputCls =
-  'rounded-btn border border-line bg-bg px-3 py-2 text-sm text-ink outline-none placeholder:text-faint focus:border-accent';
+// Fila de sesión activa: punto verde con halo + título + campaña · nº jugadores.
+function ActiveSessionRow({ session, actionLabel, onAction }) {
+  return (
+    <div className="flex items-center gap-3 border-t border-line-2 p-3">
+      <span className="h-[9px] w-[9px] flex-shrink-0 rounded-full bg-cat-explore-bar shadow-[0_0_0_3px_#22301E]" />
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-sm font-semibold text-ink">{session.name}</div>
+        <div className="text-xs text-faint">
+          {session.campaign_name || 'Sin campaña'} · {playersInSession(session)} jugadores
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={onAction}
+        className="flex flex-shrink-0 items-center gap-1 text-[12.5px] font-semibold text-accent-text hover:text-accent-hover"
+      >
+        {actionLabel}
+        <Icon name="arrow-right" size={12} />
+      </button>
+    </div>
+  );
+}
 
-export default function DashboardPage({ user, onEnterSession }) {
+// Panel del Dashboard con título Newsreader y pie de enlace opcional.
+function DashPanel({ title, footer, onFooter, children }) {
+  return (
+    <Card className="overflow-hidden">
+      <div className="px-[22px] pb-3 pt-[18px] font-serif text-lg font-semibold text-title-2">
+        {title}
+      </div>
+      <div className="px-3.5">{children}</div>
+      {footer && (
+        <button
+          type="button"
+          onClick={onFooter}
+          className="flex w-full items-center gap-1 border-t border-line-2 px-[22px] py-[13px] text-left text-[13px] font-semibold text-accent-text hover:text-accent-hover"
+        >
+          {footer}
+          <Icon name="arrow-right" size={12} />
+        </button>
+      )}
+    </Card>
+  );
+}
+
+// Dashboard (F14): métricas derivadas de los listados existentes, bloque Nueva
+// sesión (solo DM) y paneles de sesiones activas (Reanudar/Unirse) y recientes.
+export default function DashboardPage({ user, onEnterSession, onNavigate }) {
   const isDM = user.role === 'dm';
-  const [sessions, setSessions] = useState([]);
+  const [activeSessions, setActiveSessions] = useState([]);
+  const [closedSessions, setClosedSessions] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
-  const [gameSystems, setGameSystems] = useState([]);
   const [preps, setPreps] = useState([]);
   const [newName, setNewName] = useState('');
   const [newCampaignId, setNewCampaignId] = useState('');
   const [newPrepId, setNewPrepId] = useState('');
-  // Formulario de nueva campaña (solo DM).
-  const [newCampaignName, setNewCampaignName] = useState('');
-  const [newCampaignSystemId, setNewCampaignSystemId] = useState('');
   const [busy, setBusy] = useState(false);
-  const [campaignBusy, setCampaignBusy] = useState(false);
   const [error, setError] = useState('');
 
-  async function loadSessions() {
-    try {
-      const { sessions: list } = await api.listSessions('active');
-      setSessions(list);
-    } catch (err) {
-      setError(err.message);
-    }
-  }
-
-  async function loadCampaigns() {
-    try {
-      const { campaigns: list } = await api.listCampaigns(user.id);
-      setCampaigns(list);
-    } catch {
-      // Sin campañas no bloquea el dashboard.
-    }
-  }
-
   useEffect(() => {
-    loadSessions();
+    api
+      .listSessions('active')
+      .then(({ sessions }) => setActiveSessions(sessions))
+      .catch((err) => setError(err.message));
+    api
+      .listSessions('closed')
+      .then(({ sessions }) => setClosedSessions(sessions))
+      .catch(() => {});
     if (isDM) {
-      loadCampaigns();
       api
-        .listGameSystems(user.id)
-        .then(({ systems }) => setGameSystems(systems))
+        .listCampaigns(user.id)
+        .then(({ campaigns: list }) => setCampaigns(list))
         .catch(() => {});
       api
         .listPreps(user.id)
@@ -73,28 +111,6 @@ export default function DashboardPage({ user, onEnterSession }) {
     // Solo recarga al cambiar el usuario.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user.id, isDM]);
-
-  async function createCampaign(e) {
-    e.preventDefault();
-    if (!newCampaignName.trim()) return;
-    setCampaignBusy(true);
-    setError('');
-    try {
-      await api.createCampaign(
-        newCampaignName.trim(),
-        user.id,
-        '',
-        newCampaignSystemId || null
-      );
-      setNewCampaignName('');
-      setNewCampaignSystemId('');
-      await loadCampaigns();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setCampaignBusy(false);
-    }
-  }
 
   async function createSession(e) {
     e.preventDefault();
@@ -129,14 +145,12 @@ export default function DashboardPage({ user, onEnterSession }) {
     }
   }
 
-  const grouped = groupByCampaign(sessions);
+  const metrics = deriveDashboardMetrics({ campaigns, activeSessions, closedSessions });
+  const recent = closedSessions.slice(0, 5);
 
   return (
     <Page>
-      <PageHeader
-        title="Panel"
-        subtitle={isDM ? 'Resumen de tu mesa y sesiones activas' : 'Sesiones activas para unirte'}
-      />
+      <PageHeader title="Panel" subtitle="Gestiona tus campañas y sesiones." />
 
       {error && (
         <p className="mb-4 rounded-btn bg-danger-tint px-3 py-2 text-sm text-danger-text">
@@ -144,129 +158,127 @@ export default function DashboardPage({ user, onEnterSession }) {
         </p>
       )}
 
-      <div className="flex flex-col gap-5">
-        {isDM && (
-          <Card className="p-5">
-            <h2 className="mb-3 text-[11px] font-bold uppercase tracking-[1.2px] text-muted-2">
-              Nueva campaña
-            </h2>
-            <form onSubmit={createCampaign} className="flex flex-col gap-3 md:flex-row">
-              <input
-                value={newCampaignName}
-                onChange={(e) => setNewCampaignName(e.target.value)}
-                placeholder="Nombre de la campaña"
-                className={`flex-1 ${inputCls}`}
-              />
-              <select
-                value={newCampaignSystemId}
-                onChange={(e) => setNewCampaignSystemId(e.target.value)}
-                className={`${inputCls} md:w-56`}
-              >
-                <option value="">Sin sistema de juego</option>
-                {gameSystems.map((gs) => (
-                  <option key={gs.id} value={gs.id}>
-                    {gs.name}
-                  </option>
-                ))}
-              </select>
-              <Button type="submit" disabled={campaignBusy}>
-                {campaignBusy ? 'Creando…' : 'Crear campaña'}
-              </Button>
-            </form>
-          </Card>
-        )}
+      {isDM && (
+        <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <MetricCard
+            icon="book"
+            iconClass="text-cat-social-bar"
+            label="Campañas activas"
+            value={metrics.campaignCount}
+          />
+          <MetricCard
+            icon="map"
+            iconClass="text-cat-explore-bar"
+            label="Sesiones activas"
+            value={metrics.activeSessionCount}
+          />
+          <MetricCard
+            icon="clock"
+            iconClass="text-cat-discovery-bar"
+            label="Sesiones finalizadas"
+            value={metrics.closedSessionCount}
+          />
+          <MetricCard
+            icon="users"
+            iconClass="text-cat-combat-bar"
+            label="Total jugadores"
+            value={metrics.totalPlayers}
+          />
+        </div>
+      )}
 
-        {isDM && (
-          <Card className="p-5">
-            <h2 className="mb-3 text-[11px] font-bold uppercase tracking-[1.2px] text-muted-2">
-              Nueva sesión
-            </h2>
-            <form onSubmit={createSession} className="flex flex-col gap-3">
-              <div className="flex flex-col gap-3 md:flex-row">
-                <input
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  placeholder="Nombre de la sesión"
-                  className={`flex-1 ${inputCls}`}
-                />
-                <select
-                  value={newCampaignId}
-                  onChange={(e) => setNewCampaignId(e.target.value)}
-                  className={`${inputCls} md:w-56`}
-                >
-                  <option value="">Sin campaña</option>
-                  {campaigns.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                      {c.game_system_name ? ` (${c.game_system_name})` : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex flex-col gap-3 md:flex-row">
-                <select
-                  value={newPrepId}
-                  onChange={(e) => setNewPrepId(e.target.value)}
-                  className={`flex-1 ${inputCls}`}
-                >
-                  <option value="">Sin preparación</option>
-                  {preps.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} ({p.event_count})
-                    </option>
-                  ))}
-                </select>
-                <Button type="submit" disabled={busy}>
-                  {busy ? 'Creando…' : 'Crear'}
-                </Button>
-              </div>
-            </form>
-          </Card>
-        )}
+      {isDM && (
+        <Card className="mb-6 px-6 py-[22px]">
+          <div className="mb-4 font-serif text-[19px] font-semibold text-title-2">
+            Nueva sesión
+          </div>
+          <form onSubmit={createSession} className="flex flex-wrap items-center gap-3">
+            <input
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="Nombre de la sesión"
+              className={`min-w-[200px] flex-1 ${inputCls}`}
+            />
+            <select
+              value={newCampaignId}
+              onChange={(e) => setNewCampaignId(e.target.value)}
+              className={`min-w-[180px] ${inputCls} text-idle`}
+            >
+              <option value="">— Sin campaña —</option>
+              {campaigns.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                  {c.game_system_name ? ` (${c.game_system_name})` : ''}
+                </option>
+              ))}
+            </select>
+            <select
+              value={newPrepId}
+              onChange={(e) => setNewPrepId(e.target.value)}
+              className={`min-w-[180px] ${inputCls} text-idle`}
+            >
+              <option value="">— Sin preparación —</option>
+              {preps.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} ({p.event_count})
+                </option>
+              ))}
+            </select>
+            <Button type="submit" disabled={busy} className="px-[22px] py-[11px]">
+              {busy ? 'Creando…' : 'Crear'}
+            </Button>
+          </form>
+        </Card>
+      )}
 
-        <section className="flex flex-col gap-5">
-          <h2 className="text-[11px] font-bold uppercase tracking-[1.2px] text-muted-2">
-            Sesiones activas
-          </h2>
-          {sessions.length === 0 ? (
-            <div className="rounded-card border border-dashed border-line p-8 text-center text-sm text-faint">
-              No hay sesiones activas.
-            </div>
+      <div className="grid grid-cols-1 gap-[18px] lg:grid-cols-2">
+        <DashPanel
+          title="Sesiones activas"
+          footer={isDM ? 'Ver campañas' : undefined}
+          onFooter={isDM ? () => onNavigate('campaigns') : undefined}
+        >
+          {activeSessions.length === 0 ? (
+            <p className="border-t border-line-2 p-4 text-sm text-faint">
+              No hay sesiones activas ahora mismo.
+            </p>
           ) : (
-            grouped.map(([campaignName, items]) => (
-              <div key={campaignName} className="flex flex-col gap-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-faint">
-                  {campaignName}
-                </h3>
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                  {items.map((session) => (
-                    <Card
-                      key={session.id}
-                      hoverable
-                      className="flex items-center justify-between p-4"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-title">
-                          {session.name}
-                        </p>
-                        <p className="mt-0.5 text-xs text-sub">
-                          DM: {session.dm_username} · {session.member_count} miembros
-                        </p>
-                      </div>
-                      <Button
-                        size="sm"
-                        className="ml-3 flex-shrink-0"
-                        onClick={() => join(session)}
-                      >
-                        {String(session.dm_id) === String(user.id) ? 'Entrar' : 'Unirse'}
-                      </Button>
-                    </Card>
-                  ))}
+            activeSessions.map((session) => (
+              <ActiveSessionRow
+                key={session.id}
+                session={session}
+                actionLabel={String(session.dm_id) === String(user.id) ? 'Reanudar' : 'Unirse'}
+                onAction={() => join(session)}
+              />
+            ))
+          )}
+        </DashPanel>
+
+        <DashPanel
+          title="Sesiones recientes"
+          footer="Ver historial completo"
+          onFooter={() => onNavigate('history')}
+        >
+          {recent.length === 0 ? (
+            <p className="border-t border-line-2 p-4 text-sm text-faint">
+              Aún no hay sesiones finalizadas.
+            </p>
+          ) : (
+            recent.map((session) => (
+              <div key={session.id} className="flex items-center gap-3 border-t border-line-2 p-3">
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-semibold text-ink">{session.name}</div>
+                  <div className="text-xs text-faint">
+                    Cerrada · {formatDate(session.created_at)} ·{' '}
+                    {formatDuration(session.duration_seconds)}
+                  </div>
                 </div>
+                <span className="flex-shrink-0 text-[12.5px] font-semibold text-faint">
+                  {session.campaign_name || 'Sin campaña'}
+                </span>
               </div>
             ))
           )}
-        </section>
+        </DashPanel>
       </div>
     </Page>
   );

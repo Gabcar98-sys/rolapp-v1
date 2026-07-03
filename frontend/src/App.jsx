@@ -46,7 +46,7 @@ export default function App() {
   function renderPage() {
     switch (active) {
       case 'campaigns':
-        return <CampaignsPage />;
+        return <CampaignsPage user={user} />;
       case 'prep':
         return <PrepPage user={user} />;
       case 'skills':
@@ -64,7 +64,7 @@ export default function App() {
       case 'history':
         return <HistoryPage user={user} />;
       default:
-        return <DashboardPage user={user} onEnterSession={setSession} />;
+        return <DashboardPage user={user} onEnterSession={setSession} onNavigate={setPage} />;
     }
   }
 
