@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>*{box-sizing:border-box;}html,body{margin:0;padding:0;height:100%;}::selection{background:#3A2A21;}.scrl::-webkit-scrollbar{width:10px;}.scrl::-webkit-scrollbar-thumb{background:#3A342C;border-radius:8px;border:3px solid transparent;background-clip:content-box;}</style>
+</helmet>
+<div style="display:flex;height:100vh;width:100%;overflow:hidden;background:#1B1815;color:#ECE6DB;font-family:'Hanken Grotesk',system-ui,sans-serif;-webkit-font-smoothing:antialiased;">
+  <dc-import name="Sidebar" active="personajes" hint-size="236px,100%" style="flex:0 0 236px;height:100vh;"></dc-import>
+  <main class="scrl" style="flex:1;overflow-y:auto;">
+    <div style="max-width:1080px;padding:34px 40px 60px;">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:22px;">
+        <div>
+          <h1 style="font-family:'Newsreader',serif;font-size:32px;font-weight:600;margin:0 0 3px;letter-spacing:-.3px;color:#F4EFE6;">Personajes</h1>
+          <p style="margin:0;color:#8A8175;font-size:14.5px;">Los héroes creados por tus jugadores a partir de las plantillas.</p>
+        </div>
+        <button style="display:flex;align-items:center;gap:7px;background:#CE6A3A;color:#1B1815;border:none;padding:11px 18px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;" style-hover="background:#D97C4E;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Nuevo personaje</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:18px;">
+        <sc-for list="{{ chars }}" as="c" hint-placeholder-count="4">
+          <div style="background:#221E19;border:1px solid #2E2A24;border-radius:14px;overflow:hidden;cursor:pointer;transition:border-color .15s,box-shadow .15s;" style-hover="border-color:#4A4237;box-shadow:0 6px 20px rgba(0,0,0,.28);">
+            <div style="display:flex;gap:14px;padding:18px 20px;align-items:center;">
+              <span style="width:54px;height:54px;border-radius:14px;background:{{ c.bg }};color:{{ c.color }};display:flex;align-items:center;justify-content:center;font-family:'Newsreader',serif;font-size:23px;font-weight:600;flex:0 0 auto;">{{ c.glyph }}</span>
+              <div style="flex:1;min-width:0;">
+                <div style="font-family:'Newsreader',serif;font-size:19px;font-weight:600;color:#F1ECE2;line-height:1.15;">{{ c.name }}</div>
+                <div style="font-size:12.5px;color:#8A8175;">{{ c.base }} · Nivel {{ c.level }} · {{ c.player }}</div>
+              </div>
+            </div>
+            <div style="padding:0 20px 14px;">
+              <div style="display:flex;align-items:center;gap:9px;margin-bottom:8px;">
+                <span style="font-size:11px;color:#8A8175;width:26px;">PV</span>
+                <div style="flex:1;height:7px;border-radius:4px;background:#2A2620;overflow:hidden;"><div style="height:100%;width:{{ c.hpPct }}%;background:#7C9668;border-radius:4px;"></div></div>
+                <span style="font-size:12px;color:#B4AB9D;font-variant-numeric:tabular-nums;width:52px;text-align:right;">{{ c.hp }}</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:9px;">
+                <span style="font-size:11px;color:#8A8175;width:26px;">EXP</span>
+                <div style="flex:1;height:7px;border-radius:4px;background:#2A2620;overflow:hidden;"><div style="height:100%;width:{{ c.xpPct }}%;background:#CE6A3A;border-radius:4px;"></div></div>
+                <span style="font-size:12px;color:#B4AB9D;font-variant-numeric:tabular-nums;width:52px;text-align:right;">{{ c.xpPct }}%</span>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid #2A2620;">
+              <sc-for list="{{ c.stats }}" as="s" hint-placeholder-count="4">
+                <div style="text-align:center;padding:11px 0;border-right:1px solid #221E18;">
+                  <div style="font-family:'Newsreader',serif;font-size:18px;font-weight:600;color:#F1ECE2;">{{ s.val }}</div>
+                  <div style="font-size:10px;color:#8A8175;text-transform:uppercase;letter-spacing:.5px;">{{ s.label }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const S = (f,d,m,v) => [{label:'FUE',val:f},{label:'DES',val:d},{label:'MEN',val:m},{label:'VIT',val:v}];
+    return { chars: [
+      { name: 'Bran el Firme', base: 'Guerrero', level: 4, player: 'Ana', glyph: '⚔', bg: '#38241B', color: '#E79B72', hp: '38/42', hpPct: 90, xpPct: 65, stats: S(9,5,3,8) },
+      { name: 'Lira Sombra', base: 'Explorador', level: 3, player: 'Marco', glyph: '➹', bg: '#22301E', color: '#9DC08B', hp: '24/30', hpPct: 80, xpPct: 40, stats: S(5,9,5,6) },
+      { name: 'Hermana Cael', base: 'Sanador', level: 5, player: 'Sofía', glyph: '✚', bg: '#312330', color: '#CFA0BF', hp: '28/28', hpPct: 100, xpPct: 20, stats: S(3,5,9,6) },
+      { name: 'Orin Pergamino', base: 'Erudito', level: 3, player: 'Diego', glyph: '◈', bg: '#332B17', color: '#DBB55F', hp: '14/22', hpPct: 63, xpPct: 55, stats: S(2,6,10,4) }
+    ]};
+  }
+}
+</script>
+</body>
+</html>

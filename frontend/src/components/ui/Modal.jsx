@@ -1,3 +1,5 @@
+import Icon from './Icon.jsx';
+
 // Modal centrado con backdrop. Cierra al hacer clic fuera o en el botón de cerrar.
 export default function Modal({ open, onClose, title, children }) {
   if (!open) return null;
@@ -7,18 +9,19 @@ export default function Modal({ open, onClose, title, children }) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-card border border-ink-line bg-ink-700 p-6 shadow-xl"
+        className="w-full max-w-md rounded-card border border-line bg-surface p-6 shadow-card"
         onClick={(e) => e.stopPropagation()}
       >
         {title && (
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-bold text-gold">{title}</h2>
+            <h2 className="font-serif text-lg font-semibold text-title">{title}</h2>
             <button
+              type="button"
               onClick={onClose}
-              className="text-gray-400 hover:text-gold"
+              className="rounded-btn p-1 text-faint transition-colors hover:bg-hover hover:text-title"
               aria-label="Cerrar"
             >
-              ✕
+              <Icon name="x" size={16} />
             </button>
           </div>
         )}

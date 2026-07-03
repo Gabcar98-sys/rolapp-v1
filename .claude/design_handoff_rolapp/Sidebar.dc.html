@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<aside style="width:100%;height:100%;background:#201D18;border-right:1px solid #2E2A24;display:flex;flex-direction:column;font-family:'Hanken Grotesk',system-ui,sans-serif;color:#ECE6DB;">
+  <div style="display:flex;align-items:center;gap:10px;padding:18px 18px 14px;">
+    <div style="width:30px;height:30px;border-radius:8px;background:#CE6A3A;display:flex;align-items:center;justify-content:center;flex:0 0 auto;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1B1815" stroke-width="1.8" stroke-linejoin="round"><path d="M12 2l8.5 5v10L12 22 3.5 17V7z"></path><path d="M12 2v20M3.5 7L12 12l8.5-5M3.5 17L12 12l8.5 5"></path></svg>
+    </div>
+    <span style="font-family:'Newsreader',serif;font-size:20px;font-weight:600;letter-spacing:.3px;">RolApp</span>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:11px;padding:0 18px 16px;">
+    <div style="width:38px;height:38px;border-radius:50%;background:#CE6A3A;color:#1B1815;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;flex:0 0 auto;">D</div>
+    <div style="min-width:0;">
+      <div style="font-size:14px;font-weight:600;line-height:1.2;">DM1</div>
+      <div style="font-size:12px;color:#8A8175;">Dungeon Master</div>
+    </div>
+  </div>
+
+  <div class="scrl" style="flex:1;overflow-y:auto;padding-bottom:8px;">
+    <div style="font-size:10px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;color:#6E6659;padding:12px 20px 6px;">Principal</div>
+
+    <a href="Dashboard.dc.html" style="{{ nav.dashboard.style }}" style-hover="{{ nav.dashboard.hover }}">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg>Dashboard
+    </a>
+    <a href="Campanas.dc.html" style="{{ nav.campanas.style }}" style-hover="{{ nav.campanas.hover }}">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M4 5.5A2 2 0 016 4h5v15H6a2 2 0 00-2 1V5.5z"></path><path d="M20 5.5A2 2 0 0018 4h-5v15h5a2 2 0 012 1V5.5z"></path></svg>Campañas
+    </a>
+    <a href="Preparar Sesion.dc.html" style="{{ nav.prep.style }}" style-hover="{{ nav.prep.hover }}">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V5l6-2 5 2 5-2v14l-5 2-5-2-6 2z"></path><path d="M10 3v16M15 5v16"></path></svg>Preparar Sesión
+    </a>
+    <a href="Habilidades.dc.html" style="{{ nav.habilidades.style }}" style-hover="{{ nav.habilidades.hover }}">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3l2.1 6.3H20l-4.8 3.5 1.8 6.2L12 15.3 7 19l1.8-6.2L4 9.3h5.9z"></path></svg>Habilidades
+    </a>
+    <a href="PersonajesBase.dc.html" style="{{ nav.pbase.style }}" style-hover="{{ nav.pbase.hover }}">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"></rect><circle cx="8" cy="11" r="2"></circle><path d="M14 10h4M14 14h4M5.5 16a2.8 2.8 0 015 0"></path></svg>Personajes Base
+    </a>
+    <a href="BasesDeAtributos.dc.html" style="{{ nav.atributos.style }}" style-hover="{{ nav.atributos.hover }}">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"></path><circle cx="9" cy="6" r="2.3" fill="#201D18"></circle><circle cx="15" cy="12" r="2.3" fill="#201D18"></circle><circle cx="7" cy="18" r="2.3" fill="#201D18"></circle></svg>Bases de Atributos
+    </a>
+    <a href="Personajes.dc.html" style="{{ nav.personajes.style }}" style-hover="{{ nav.personajes.hover }}">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"></circle><path d="M5.5 20a6.5 6.5 0 0113 0"></path></svg>Personajes
+    </a>
+    <a href="Items.dc.html" style="{{ nav.items.style }}" style-hover="{{ nav.items.hover }}">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21 4 16.5v-9z"></path><path d="M4 7.5l8 4.5 8-4.5M12 12v9"></path></svg>Items
+    </a>
+    <a href="NPCs.dc.html" style="{{ nav.npcs.style }}" style-hover="{{ nav.npcs.hover }}">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"></circle><path d="M3 19a6 6 0 0112 0"></path><path d="M16 5.5a3 3 0 010 5.6M21 19a6 6 0 00-4-5.6"></path></svg>NPCs
+    </a>
+
+    <div style="font-size:10px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;color:#6E6659;padding:16px 20px 6px;">Historial</div>
+    <a href="SesionesFinalizadas.dc.html" style="{{ nav.historial.style }}" style-hover="{{ nav.historial.hover }}">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3.5 2"></path></svg>Sesiones Finalizadas
+    </a>
+  </div>
+
+  <div style="padding:12px 10px;border-top:1px solid #2A2620;">
+    <a href="#" style="display:flex;align-items:center;gap:11px;padding:8px 12px;border-radius:9px;text-decoration:none;color:#C0796E;font-size:13.5px;font-weight:500;" style-hover="background:#2E2020;color:#E4785E;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4h3a2 2 0 012 2v12a2 2 0 01-2 2h-3M10 17l-5-5 5-5M5 12h11"></path></svg>Cerrar Sesión
+    </a>
+  </div>
+</aside>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:236,&quot;height&quot;:760},&quot;active&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dashboard&quot;,&quot;campanas&quot;,&quot;prep&quot;,&quot;habilidades&quot;,&quot;pbase&quot;,&quot;atributos&quot;,&quot;personajes&quot;,&quot;items&quot;,&quot;npcs&quot;,&quot;historial&quot;],&quot;default&quot;:&quot;dashboard&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const active = this.props.active || 'dashboard';
+    const base = 'display:flex;align-items:center;gap:11px;padding:8px 12px;margin:1px 10px;border-radius:9px;text-decoration:none;font-size:13.5px;font-family:inherit;cursor:pointer;';
+    const mk = (key) => {
+      if (key === active) {
+        const s = base + 'color:#E08A5C;background:#33251C;font-weight:600;box-shadow:inset 3px 0 0 #CE6A3A;';
+        return { style: s, hover: s };
+      }
+      return { style: base + 'color:#ACA396;font-weight:500;', hover: base + 'color:#F1ECE2;font-weight:500;background:#282420;' };
+    };
+    const keys = ['dashboard','campanas','prep','habilidades','pbase','atributos','personajes','items','npcs','historial'];
+    const nav = {};
+    keys.forEach(k => { nav[k] = mk(k); });
+    return { nav };
+  }
+}
+</script>
+</body>
+</html>

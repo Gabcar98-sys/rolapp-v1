@@ -118,5 +118,61 @@
     "priority": 14,
     "status": "done",
     "description": "VERIFICADO 2026-07-01: 107 tests (tool-loop + fallback + follow-up), orquestador de tool-use con fallback a inyección de contexto (AI_TOOLS_ENABLED), prompts endurecidos citar-o-abstenerse (ES), config por tarea, follow-ups conversacionales, UX AIPanel (fuentes con score, regenerar, panel de depuración), /api/ai/status con toolsEnabled, degradación elegante. Reviewer APROBADO. Segunda mitad de la optimización de IA: (1) tool-use / function-calling real para modelos capaces (retrieve_rules, get_character, get_session_state, get_event_history, get_stats) con fallback a inyección de contexto para modelos locales; (2) endurecer system prompts (citar fuentes o abstenerse, cero alucinación, ES consistente) para reglas/resumen/planeación; (3) config por tarea (modelo/temperatura/top-k/máx-contexto por env); (4) follow-ups conversacionales (memoria corta de la conversación en el AIPanel); (5) UX: fuentes con score, botón regenerar, panel de depuración de retrieval opcional. Verificable con stubs; degradación elegante."
+  },
+  {
+    "id": "F13-design-foundation",
+    "phase": "F13 — Rediseño (a): base de diseño + AppShell",
+    "title": "Tokens del handoff, tipografías Newsreader/Hanken Grotesk, AppShell con sidebar 236px, iconos SVG de línea (adiós emojis)",
+    "priority": 15,
+    "status": "done",
+    "description": "VERIFICADO 2026-07-02: docker compose build frontend (lint+build) exit 0, 21/21 tests (navItems + smoke SSR de las 10 páginas en el shell), smoke HTTP OK (frontend 200, register/login/401), tokens/tipografías/sidebar 236px fieles al handoff, cero estilos inline y cero emojis en el alcance. Reviewer APROBADO (3 observaciones no bloqueantes). Base del rediseño según .claude/design_handoff_rolapp/README.md (fidelidad alta). (1) tailwind.config.js: reemplazar paleta navy/dorado por tokens del handoff (fondo #1B1815, rail #17140F/#201D18, superficies #221E19/#262119, bordes #2E2A24/#4A4237, texto #ECE6DB/#B4AB9D/#8A8175/#6E6659, acento #CE6A3A/#D97C4E/#E08A5C, peligro #E4785E/#3A231F, colores de categoría) + fuentes Newsreader (serif, títulos/cifras) y Hanken Grotesk (sans) desde Google Fonts. (2) AppShell: sidebar fijo 236px (logo cubo terracota + wordmark, bloque usuario con avatar inicial, grupos PRINCIPAL/HISTORIAL con labels uppercase muted, ítems con icono línea 18px, estado activo terracota con inset 3px, pie Cerrar Sesión en tono peligro) + main scrollable; navegación por estado (sin router nuevo) con secciones: Dashboard, Campañas, Preparar Sesión, Habilidades, Personajes Base, Bases de Atributos, Personajes, Items, NPCs, Sesiones Finalizadas. Sidebar de jugador reducido (Dashboard, Mis Personajes, Sesiones Finalizadas). (3) Set de iconos SVG de línea inline (stroke 1.6-1.8, estilo lucide) como componente Icon propio, sin dependencia nueva; eliminar emojis de la navegación y componentes base. (4) Restilizar componentes ui/ (Button, Card, Tabs, Modal, Sheet) a los tokens nuevos (radios 13-14px tarjetas, 9-10px botones, pills 20px). (5) Login restilizado. Las vistas existentes deben seguir funcionando montadas dentro del AppShell aunque su restyle fino llegue en F14-F19. Verificación: build+lint OK, smoke visual de navegación, cero estilos inline, cero emojis en shell."
+  },
+  {
+    "id": "F14-pages-core",
+    "phase": "F14 — Rediseño (b): Dashboard + Campañas + Historial",
+    "title": "Dashboard con métricas y crear sesión, página Campañas (grid tarjetas), Sesiones Finalizadas (timeline + búsqueda + filtro)",
+    "priority": 16,
+    "status": "pending",
+    "description": "Tres páginas núcleo según handoff (Dashboard.dc.html, Campanas.dc.html, SesionesFinalizadas.dc.html) y v0. Dashboard: 4 tarjetas de métrica (campañas activas, sesiones activas, sesiones finalizadas, total jugadores — cifra Newsreader 38px), bloque Nueva Sesión (nombre + select campaña + select preparación + Crear, solo DM), paneles Sesiones Activas (punto verde con halo + Reanudar→) y Sesiones Recientes; para jugador: sesiones activas para unirse. Campañas: grid auto-fill minmax(320px,1fr), tarjeta con franja superior de color de acento propio, badge estado (Activa/Pausada) + sistema, stats jugadores/sesiones, abrir/editar/eliminar; crear campaña con nombre+sistema+descripción. Sesiones Finalizadas: timeline vertical (línea + puntos), tarjeta con título/fecha/resumen truncado/duración/nº jugadores/campaña + Ver resumen→; búsqueda por texto (nombre/campaña/resumen) y filtro por campaña (puerta al detalle completo que llega en F19). Backend: verificar que existan endpoints de métricas o derivarlas de listados existentes (sin inventar endpoints nuevos si se puede componer en frontend). Verificación: build+lint+tests OK, smoke de flujos crear campaña/sesión y navegación."
+  },
+  {
+    "id": "F15-catalog-pages",
+    "phase": "F15 — Rediseño (c): páginas de catálogo",
+    "title": "Páginas dedicadas: Habilidades (bulk import JSON), Items, Bases de Atributos (con Mecánicas), Personajes Base, Personajes",
+    "priority": 17,
+    "status": "pending",
+    "description": "Sacar los catálogos del Lobby a páginas propias del AppShell, estilo handoff. Habilidades (Habilidades.dc.html + v0 SkillsPanel): formatos por sistema (filtro), tabla de habilidades con búsqueda + chips de filtro + paginación 50, editor de campos del formato (text/number/boolean), CRUD de habilidad con campos dinámicos, e IMPORTACIÓN MASIVA JSON (archivo o pegado, validación, auto-creación de campos faltantes, reporte importadas/omitidas/campos creados — endpoint bulk-import: portar de v0 si falta). Items (Items.dc.html + v0 ItemsPanel): formatos agrupados por sistema, gestión de items (búsqueda, paginación, equippable, campos dinámicos), grid de tarjetas con punto de rareza si aplica. Bases de Atributos (BasesDeAtributos.dc.html + pantallazos 5-7): lista de sistemas y detalle con tabs Atributos / Personajes base / Slots de Equipamiento / MECÁNICAS (CRUD mecánicas con tipo, affect y parámetros dinámicos — portar backend /api/game-systems/:id/mechanics* de v0 si falta en v1). Personajes Base (PersonajesBase.dc.html): grid de tarjetas con glifo, barras de atributos y chips de habilidades; editor con tabs atributos/inventario/habilidades; adoptar plantilla. Personajes (Personajes.dc.html): vista DM de todos los personajes + vista jugador de los míos (tarjetas con barras PV/EXP y 4 stats). Verificación: build+lint+tests, smoke CRUD de cada catálogo, bulk import con JSON de ejemplo."
+  },
+  {
+    "id": "F16-npcs",
+    "phase": "F16 — Gestor de NPCs",
+    "title": "NPCs completos: CRUD maestro-detalle con info, quests, inventario y vínculo a campañas (backend + página)",
+    "priority": 18,
+    "status": "pending",
+    "description": "Portar de la v0 el gestor de NPCs que la v1 perdió (hoy solo existen eventos NPC en planificación). Backend: rutas /api/npcs (CRUD con dm_id y game_system_id opcional), /api/npcs/:id/quests (título, descripción, reward), /api/npcs/:id/inventory (nombre, cantidad, descripción, costo), /api/npcs/:id/campaigns (asociar/desasociar); revisar schema.sql — las tablas de NPC deberían existir del F1; si faltan columnas, migración. Frontend: página NPCs según NPCs.dc.html + v0 NPCPanel — layout maestro-detalle (lista con filtro por sistema + crear; detalle con tabs Información / Quests / Inventario / Campañas), tarjetas con avatar-glifo (inicial, NO emoji), badge de disposición si existe el campo. Integración: el modal de evento NPC en sesión (PlanningPanel) debe poder seleccionar NPCs de este catálogo. Verificación: tests backend de rutas NPC, build+lint, smoke CRUD completo maestro-detalle."
+  },
+  {
+    "id": "F17-prep-redesign",
+    "phase": "F17 — Rediseño (d): Preparar Sesión",
+    "title": "Preparar Sesión según handoff: rail 62px + panel ubicaciones 266px + vistas Lista/Grafo (drag, zoom, enlaces con etiqueta)",
+    "priority": 19,
+    "status": "pending",
+    "description": "Recrear la pantalla estrella (Preparar Sesion.dc.html, pantallazos 11-13) sobre la funcionalidad ya existente (preps → locations → sub_locations → event_templates + event_links). Layout: rail de iconos 62px (réplica del sidebar solo iconos) + panel de ubicaciones 266px (árbol colapsable con chevron rotatorio, badges de conteo, ítem seleccionado con inset terracota, sección Sin ubicación con borde punteado, crear ubicación/sub-ubicación inline) + main con toolbar 60px (breadcrumb Preparaciones/nombre, contador de eventos, toggle segmentado Lista/Grafo, botón +Evento). Vista Lista: columna 820px, kicker uppercase + H1 Newsreader, tarjetas de evento con barra de categoría 4px, badge pill, etiqueta de enlace narrativo, acciones al hover (subir/bajar/editar/eliminar), estado vacío punteado con CTA. Vista Grafo: fondo de puntos radial, nodos 186px arrastrables (pointer events, delta/scale), aristas Bézier SVG (sólida gris = misma ubicación, punteada terracota con etiqueta-píldora = enlace narrativo), crear/eliminar enlaces con etiqueta, nodo seleccionado con borde de categoría + sombra, leyenda sticky y zoom +/-/reset (0.6-1.5, pasos 0.15). Mantener categorías v1 mapeadas a los 4 colores del handoff. Selector de preparación (lista de preps del DM) como vista de entrada. Verificación: build+lint+tests, smoke crear prep→ubicaciones→eventos→enlaces en ambas vistas."
+  },
+  {
+    "id": "F18-session-live",
+    "phase": "F18 — Sesión en vivo completa",
+    "title": "Notas de sesión, tabs por personaje (inventario/habilidades/equipo/estado/atributos), toolbar DM, presets del asistente IA",
+    "priority": 20,
+    "status": "pending",
+    "description": "Recuperar la sesión en vivo completa de la v0 (pantallazos 15-17) con el estilo nuevo. (1) Notas de sesión: backend /api/notes (CRUD, session_id, título, body, event_type, flag pública/privada — privada solo DM) + panel Notas con sync socket. (2) Tabs por personaje en el panel derecho: Inventario (agregar/quitar, +/- cantidad, solo dueño o DM), Habilidades (lista con valores + modal detalle), Equipamiento (slots del sistema, equipar items equippable, modal detalle), Estado (dot tracker clickeable para HP/voluntad, máx y actual editables), Atributos (editables por categoría) — todo con sync socket (characters:updated). Portar atributos dinámicos de sesión si el schema los soporta. (3) Toolbar DM: Cambiar mapa, Nuevo Evento, Nuevo Evento NPC (desde catálogo F16), Reset, Finalizar; jugador: Salir. (4) AIPanel ampliado: modos Sesión/Sistema; presets de sesión (Resumen, Cronología, Estado de personajes, Inventarios, Pregunta libre) y topics de sistema (core, habilidades, items, NPCs); checkbox incluir sesiones anteriores; conservar streaming, citas, follow-ups y degradación de F9-F12. (5) Restyle de todo el panel derecho a tokens del handoff (tabs de iconos línea). Verificación: tests backend de notas y de presets IA con stubs, build+lint, smoke multi-tab de sync en tiempo real."
+  },
+  {
+    "id": "F19-history-detail",
+    "phase": "F19 — Historial: detalle de sesión finalizada",
+    "title": "Detalle de sesión finalizada con tabs Notas / Eventos / Resumen / IA",
+    "priority": 21,
+    "status": "pending",
+    "description": "Completar el historial (v0 SessionHistory): desde la página Sesiones Finalizadas (F14), Ver resumen→ abre el detalle con tabs: Notas (públicas para jugadores, todas para DM, con badge de tipo), Eventos (log de eventos disparados con tipo/actor/ubicación/participantes, badge NPC), Resumen (resumen IA de cierre), IA (AIPanel en modo consulta sobre la sesión finalizada, incluye stats de F7). Mantener búsqueda y filtro por campaña. Estilo handoff (timeline + tarjetas + tabs). Verificación: build+lint+tests, smoke con una sesión cerrada con notas/eventos/resumen."
   }
 ]

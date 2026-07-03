@@ -1,10 +1,9 @@
-// Botón reutilizable con variantes basadas en tokens Tailwind del proyecto.
-// Reemplaza los estilos inline duplicados de la v0.
+// Botón reutilizable con variantes basadas en los tokens del handoff.
 const VARIANTS = {
-  primary: 'bg-gold text-ink-900 font-semibold hover:opacity-90',
-  secondary: 'border border-ink-line text-gray-200 hover:border-gold hover:text-gold',
-  ghost: 'text-gray-300 hover:text-gold',
-  danger: 'bg-danger text-white hover:opacity-90',
+  primary: 'bg-accent font-bold text-bg hover:bg-accent-hover',
+  secondary: 'border border-line bg-surface text-ink hover:border-accent',
+  ghost: 'text-sub hover:text-title',
+  danger: 'bg-danger-tint text-danger-text hover:bg-danger-wash',
   success: 'bg-success text-white hover:opacity-90',
 };
 
@@ -23,7 +22,7 @@ export default function Button({
   return (
     <button
       type={type}
-      className={`inline-flex items-center justify-center gap-1.5 rounded-md transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold disabled:cursor-not-allowed disabled:opacity-50 ${VARIANTS[variant]} ${SIZES[size]} ${className}`}
+      className={`inline-flex items-center justify-center gap-1.5 rounded-btn transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50 ${VARIANTS[variant]} ${SIZES[size]} ${className}`}
       {...props}
     />
   );

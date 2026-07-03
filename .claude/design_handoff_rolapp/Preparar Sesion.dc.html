@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  ::selection{background:#3A2A21;}
+  .scrl::-webkit-scrollbar{width:10px;height:10px;}
+  .scrl::-webkit-scrollbar-thumb{background:#3A342C;border-radius:8px;border:3px solid transparent;background-clip:content-box;}
+  .scrl::-webkit-scrollbar-thumb:hover{background:#4A443A;background-clip:content-box;}
+</style>
+</helmet>
+<div style="display:flex;height:100vh;width:100%;overflow:hidden;background:#1B1815;color:#ECE6DB;font-family:'Hanken Grotesk',system-ui,sans-serif;-webkit-font-smoothing:antialiased;">
+
+  <!-- APP RAIL -->
+  <nav style="width:62px;flex:0 0 62px;background:#17140F;border-right:1px solid #2E2A24;display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:4px;">
+    <a href="Dashboard.dc.html" title="RolApp" style="width:34px;height:34px;border-radius:9px;background:#CE6A3A;display:flex;align-items:center;justify-content:center;margin-bottom:14px;text-decoration:none;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1B1815" stroke-width="1.7" stroke-linejoin="round"><path d="M12 2l8.5 5v10L12 22 3.5 17V7z"></path><path d="M12 2v20M3.5 7L12 12l8.5-5M3.5 17L12 12l8.5 5"></path></svg>
+    </a>
+    <a href="Dashboard.dc.html" title="Panel" style="width:40px;height:40px;border-radius:10px;background:transparent;color:#7C7468;display:flex;align-items:center;justify-content:center;cursor:pointer;text-decoration:none;" style-hover="background:#2A251F;color:#ECE6DB;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg></a>
+    <a href="Campanas.dc.html" title="Campañas" style="width:40px;height:40px;border-radius:10px;background:transparent;color:#7C7468;display:flex;align-items:center;justify-content:center;cursor:pointer;text-decoration:none;" style-hover="background:#2A251F;color:#ECE6DB;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M4 5.5A2 2 0 016 4h5v15H6a2 2 0 00-2 1V5.5z"></path><path d="M20 5.5A2 2 0 0018 4h-5v15h5a2 2 0 012 1V5.5z"></path></svg></a>
+    <a href="Preparar Sesion.dc.html" title="Preparar Sesión" style="width:40px;height:40px;border-radius:10px;background:#33251C;color:#E08A5C;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;text-decoration:none;"><span style="position:absolute;left:-11px;top:9px;width:3px;height:22px;border-radius:2px;background:#CE6A3A;"></span><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M4 21V5l6-2 5 2 5-2v14l-5 2-5-2-6 2z"></path><path d="M10 3v16M15 5v16"></path></svg></a>
+    <a href="Personajes.dc.html" title="Personajes" style="width:40px;height:40px;border-radius:10px;background:transparent;color:#7C7468;display:flex;align-items:center;justify-content:center;cursor:pointer;text-decoration:none;" style-hover="background:#2A251F;color:#ECE6DB;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"></circle><path d="M5.5 20a6.5 6.5 0 0113 0"></path></svg></a>
+    <a href="Items.dc.html" title="Items" style="width:40px;height:40px;border-radius:10px;background:transparent;color:#7C7468;display:flex;align-items:center;justify-content:center;cursor:pointer;text-decoration:none;" style-hover="background:#2A251F;color:#ECE6DB;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21 4 16.5v-9z"></path><path d="M4 7.5l8 4.5 8-4.5M12 12v9"></path></svg></a>
+    <a href="NPCs.dc.html" title="NPCs" style="width:40px;height:40px;border-radius:10px;background:transparent;color:#7C7468;display:flex;align-items:center;justify-content:center;cursor:pointer;text-decoration:none;" style-hover="background:#2A251F;color:#ECE6DB;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"></circle><path d="M3 19a6 6 0 0112 0"></path><path d="M16 5.5a3 3 0 010 5.6M21 19a6 6 0 00-4-5.6"></path></svg></a>
+    <div style="flex:1;"></div>
+    <a href="Dashboard.dc.html" title="DM1 · Dungeon Master" style="width:36px;height:36px;border-radius:50%;background:#CE6A3A;color:#1B1815;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;letter-spacing:.5px;text-decoration:none;">D</a>
+  </nav>
+
+  <!-- LOCATIONS SIDEBAR -->
+  <aside style="width:266px;flex:0 0 266px;background:#201D18;border-right:1px solid #2E2A24;display:flex;flex-direction:column;">
+    <div style="padding:16px 16px 12px;border-bottom:1px solid #2A2620;">
+      <div style="font-size:10.5px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#7C7468;">Preparación</div>
+      <div style="font-family:'Newsreader',serif;font-size:19px;font-weight:600;margin-top:3px;line-height:1.2;color:#F1ECE2;">{{ prepName }}</div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px 8px;">
+      <span style="font-size:10.5px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#7C7468;">Ubicaciones</span>
+      <button title="Nueva ubicación" style="width:24px;height:24px;border:1px solid #37312A;border-radius:7px;background:#262119;color:#ACA396;display:flex;align-items:center;justify-content:center;cursor:pointer;" style-hover="border-color:#CE6A3A;color:#E08A5C;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></button>
+    </div>
+    <div class="scrl" style="flex:1;overflow-y:auto;padding:0 6px 16px;">
+      <sc-for list="{{ groups }}" as="group" hint-placeholder-count="2">
+        <div style="margin-top:4px;">
+          <button onClick="{{ group.onToggle }}" style="width:100%;display:flex;align-items:center;gap:7px;padding:7px 10px;border:none;background:transparent;cursor:pointer;color:#C6BEB0;font-family:inherit;text-align:left;" style-hover="color:#F1ECE2;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate({{ group.chev }}deg);transition:transform .15s;flex:0 0 auto;"><path d="M9 6l6 6-6 6"></path></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#CE6A3A" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto;"><path d="M12 21s-7-6.3-7-11a7 7 0 0114 0c0 4.7-7 11-7 11z"></path><circle cx="12" cy="10" r="2.2"></circle></svg>
+            <span style="font-family:'Newsreader',serif;font-size:15px;font-weight:600;flex:1;">{{ group.name }}</span>
+          </button>
+          <sc-if value="{{ group.expanded }}" hint-placeholder-val="{{ true }}">
+            <div style="padding-left:8px;">
+              <sc-for list="{{ group.subs }}" as="sub" hint-placeholder-count="2">
+                <div onClick="{{ sub.onSelect }}" style="{{ sub.rowStyle }}" style-hover="{{ sub.hoverStyle }}">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="opacity:.55;flex:0 0 auto;"><path d="M12 21s-6-5.4-6-10a6 6 0 0112 0c0 4.6-6 10-6 10z"></path></svg>
+                  <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ sub.name }}</span>
+                  <span style="{{ sub.countStyle }}">{{ sub.count }}</span>
+                  <span class="rowact" style="display:flex;gap:2px;">
+                    <span style="width:20px;height:20px;border-radius:5px;display:flex;align-items:center;justify-content:center;" style-hover="background:#332720;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9A9182" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4l6 6-11 11H3v-6z"></path></svg></span>
+                  </span>
+                </div>
+              </sc-for>
+              <button style="display:flex;align-items:center;gap:6px;padding:6px 10px 6px 12px;margin:1px 6px;border:none;background:transparent;color:#7C7468;font-size:12.5px;cursor:pointer;font-family:inherit;" style-hover="color:#E08A5C;">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+                Sub-ubicación
+              </button>
+            </div>
+          </sc-if>
+        </div>
+      </sc-for>
+
+      <div style="margin-top:10px;border-top:1px dashed #2E2A24;padding-top:8px;">
+        <div onClick="{{ unassigned.onSelect }}" style="{{ unassigned.rowStyle }}" style-hover="{{ unassigned.hoverStyle }}">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="opacity:.55;flex:0 0 auto;"><path d="M4 7h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1z"></path><path d="M4 7l2-3h12l2 3"></path></svg>
+          <span style="flex:1;">Sin ubicación</span>
+          <span style="{{ unassigned.countStyle }}">{{ unassigned.count }}</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main style="flex:1;display:flex;flex-direction:column;min-width:0;">
+    <!-- toolbar -->
+    <header style="height:60px;flex:0 0 60px;border-bottom:1px solid #2E2A24;background:#1B1815;display:flex;align-items:center;justify-content:space-between;padding:0 22px;">
+      <div style="display:flex;align-items:center;gap:12px;min-width:0;">
+        <button style="display:flex;align-items:center;gap:6px;border:none;background:transparent;color:#8A8175;font-size:13px;cursor:pointer;font-family:inherit;padding:4px 4px;" style-hover="color:#ECE6DB;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg>
+          Preparaciones
+        </button>
+        <span style="color:#4A443A;">/</span>
+        <span style="font-family:'Newsreader',serif;font-size:19px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#F1ECE2;">{{ prepName }}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;">
+        <span style="font-size:12.5px;color:#8A8175;font-variant-numeric:tabular-nums;white-space:nowrap;">{{ eventCountLabel }}</span>
+        <div style="display:flex;gap:2px;padding:3px;background:#2A251F;border-radius:9px;">
+          <button onClick="{{ setLista }}" style="{{ listaTabStyle }}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"></path></svg>
+            Lista
+          </button>
+          <button onClick="{{ setGrafo }}" style="{{ grafoTabStyle }}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.5"></circle><circle cx="18" cy="7" r="2.5"></circle><circle cx="10" cy="18" r="2.5"></circle><path d="M8 7.5l7.5-.3M7.4 8L9 15.6"></path></svg>
+            Grafo
+          </button>
+        </div>
+        <button style="display:flex;align-items:center;gap:7px;background:#CE6A3A;color:#1B1815;border:none;padding:9px 15px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;" style-hover="background:#D97C4E;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+          Evento
+        </button>
+      </div>
+    </header>
+
+    <!-- LISTA VIEW -->
+    <sc-if value="{{ isLista }}" hint-placeholder-val="{{ true }}">
+      <div class="scrl" style="flex:1;overflow-y:auto;">
+        <div style="max-width:820px;margin:0 auto;padding:30px 34px 60px;">
+          <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px;">
+            <span style="font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#E08A5C;">{{ selParentName }}</span>
+          </div>
+          <h1 style="font-family:'Newsreader',serif;font-size:30px;font-weight:600;margin:0 0 4px;letter-spacing:-.2px;color:#F4EFE6;">{{ selLocName }}</h1>
+          <p style="margin:0 0 26px;color:#8A8175;font-size:14px;">{{ selLocSubtitle }}</p>
+
+          <sc-if value="{{ selLocEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="border:1px dashed #3A342C;border-radius:14px;padding:48px 20px;text-align:center;">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#5A5348" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:10px;"><path d="M4 5.5A2 2 0 016 4h12a2 2 0 012 1.5V20l-4-2-4 2-4-2-4 2z"></path><path d="M9 9h6M9 13h4"></path></svg>
+              <div style="color:#8A8175;font-size:14px;margin-bottom:14px;">Aún no hay eventos en esta ubicación.</div>
+              <button style="display:inline-flex;align-items:center;gap:6px;background:#262119;border:1px solid #37312A;color:#ECE6DB;padding:8px 14px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;" style-hover="border-color:#CE6A3A;color:#E08A5C;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Añadir el primero</button>
+            </div>
+          </sc-if>
+
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <sc-for list="{{ currentEvents }}" as="ev" hint-placeholder-count="2">
+              <div onClick="{{ ev.onClick }}" style="{{ ev.cardStyle }}" style-hover="border-color:#4A4237;box-shadow:0 6px 20px rgba(0,0,0,.28);">
+                <div style="width:4px;align-self:stretch;border-radius:4px;background:{{ ev.bar }};flex:0 0 4px;"></div>
+                <div style="flex:1;min-width:0;padding:15px 16px 15px 15px;">
+                  <div style="display:flex;align-items:center;gap:9px;margin-bottom:6px;">
+                    <span style="font-size:15.5px;font-weight:600;color:#F1ECE2;">{{ ev.title }}</span>
+                    <span style="font-size:10.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;padding:2.5px 8px;border-radius:20px;background:{{ ev.catBg }};color:{{ ev.catText }};">{{ ev.catLabel }}</span>
+                    <sc-if value="{{ ev.hasLink }}" hint-placeholder-val="{{ false }}">
+                      <span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#8A8175;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 15l6-6M8 8H6a3.5 3.5 0 000 7h2M16 16h2a3.5 3.5 0 000-7h-2"></path></svg>{{ ev.linkLabel }}</span>
+                    </sc-if>
+                  </div>
+                  <p style="margin:0;font-size:13.5px;line-height:1.5;color:#B4AB9D;">{{ ev.desc }}</p>
+                </div>
+                <div class="rowact" style="display:flex;align-items:center;gap:2px;padding:0 12px 0 4px;">
+                  <span style="width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;color:#8A8175;cursor:pointer;" style-hover="background:#2E2A22;color:#ECE6DB;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"></path></svg></span>
+                  <span style="width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;color:#8A8175;cursor:pointer;" style-hover="background:#2E2A22;color:#ECE6DB;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"></path></svg></span>
+                  <span style="width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;color:#8A8175;cursor:pointer;" style-hover="background:#2E2A22;color:#ECE6DB;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4l6 6-11 11H3v-6z"></path></svg></span>
+                  <span style="width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;color:#A87D72;cursor:pointer;" style-hover="background:#3A231F;color:#E4785E;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2M6 7l1 13h10l1-13"></path></svg></span>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- GRAFO VIEW -->
+    <sc-if value="{{ isGrafo }}" hint-placeholder-val="{{ false }}">
+      <div class="scrl" style="flex:1;overflow:auto;position:relative;background:#1B1815;background-image:radial-gradient(#2E2A22 1.2px,transparent 1.2px);background-size:26px 26px;">
+        <div style="position:relative;width:1040px;height:760px;transform:scale({{ scale }});transform-origin:0 0;">
+          <svg width="1040" height="760" style="position:absolute;top:0;left:0;overflow:visible;pointer-events:none;">
+            <sc-for list="{{ edges }}" as="edge" hint-placeholder-count="3">
+              <path d="{{ edge.d }}" fill="none" stroke="{{ edge.stroke }}" stroke-width="{{ edge.w }}" stroke-dasharray="{{ edge.dash }}" stroke-linecap="round"></path>
+            </sc-for>
+          </svg>
+          <sc-for list="{{ edgeLabels }}" as="lb" hint-placeholder-count="3">
+            <div style="position:absolute;left:{{ lb.x }}px;top:{{ lb.y }}px;transform:translate(-50%,-50%);background:#241E19;padding:2px 8px;border:1px solid #4A2E20;border-radius:20px;font-size:10.5px;font-weight:600;color:#E08A5C;white-space:nowrap;">{{ lb.label }}</div>
+          </sc-for>
+          <sc-for list="{{ nodes }}" as="n" hint-placeholder-count="5">
+            <div onPointerDown="{{ n.onDown }}" style="position:absolute;left:{{ n.left }}px;top:{{ n.top }}px;width:186px;background:#262119;border:1.5px solid {{ n.border }};border-radius:12px;box-shadow:{{ n.shadow }};cursor:grab;user-select:none;touch-action:none;overflow:hidden;">
+              <div style="height:4px;background:{{ n.bar }};"></div>
+              <div style="padding:11px 13px 12px;">
+                <div style="font-size:14px;font-weight:600;color:#F1ECE2;line-height:1.25;margin-bottom:7px;">{{ n.title }}</div>
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <span style="font-size:9.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;padding:2px 7px;border-radius:20px;background:{{ n.catBg }};color:{{ n.catText }};">{{ n.catLabel }}</span>
+                  <span style="display:inline-flex;align-items:center;gap:3px;font-size:10.5px;color:#8A8175;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.4-6-10a6 6 0 0112 0c0 4.6-6 10-6 10z"></path></svg>{{ n.locName }}</span>
+                </div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+
+        <!-- legend -->
+        <div style="position:sticky;bottom:16px;left:16px;display:inline-flex;flex-direction:column;gap:7px;margin:16px;background:#221E19;border:1px solid #35302A;border-radius:11px;padding:11px 14px;box-shadow:0 8px 24px rgba(0,0,0,.4);width:max-content;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#7C7468;margin-bottom:1px;">Leyenda</div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:#B4AB9D;"><svg width="26" height="8"><line x1="1" y1="4" x2="25" y2="4" stroke="#5A5348" stroke-width="2.4" stroke-linecap="round"></line></svg>Misma ubicación</div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:#B4AB9D;"><svg width="26" height="8"><line x1="1" y1="4" x2="25" y2="4" stroke="#CE6A3A" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="5 4"></line></svg>Enlace narrativo</div>
+        </div>
+
+        <!-- zoom -->
+        <div style="position:sticky;bottom:16px;left:100%;float:right;margin:16px;display:flex;flex-direction:column;background:#221E19;border:1px solid #35302A;border-radius:10px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.4);">
+          <button onClick="{{ zoomIn }}" style="width:34px;height:34px;border:none;border-bottom:1px solid #2E2A24;background:#221E19;color:#ACA396;cursor:pointer;display:flex;align-items:center;justify-content:center;" style-hover="background:#2E2A22;color:#ECE6DB;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></button>
+          <button onClick="{{ zoomOut }}" style="width:34px;height:34px;border:none;border-bottom:1px solid #2E2A24;background:#221E19;color:#ACA396;cursor:pointer;display:flex;align-items:center;justify-content:center;" style-hover="background:#2E2A22;color:#ECE6DB;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><path d="M5 12h14"></path></svg></button>
+          <button onClick="{{ zoomReset }}" style="width:34px;height:34px;border:none;background:#221E19;color:#ACA396;cursor:pointer;display:flex;align-items:center;justify-content:center;" style-hover="background:#2E2A22;color:#ECE6DB;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V4h4M21 8V4h-4M3 16v4h4M21 16v4h-4"></path></svg></button>
+        </div>
+      </div>
+    </sc-if>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    view: 'lista',
+    selectedLoc: 'l1',
+    selectedEvent: null,
+    expanded: { p1: true, p2: true },
+    scale: 1,
+    nodePos: {
+      e1: { x: 70, y: 44 },  e2: { x: 70, y: 214 },
+      e3: { x: 380, y: 214 }, e4: { x: 380, y: 384 },
+      e5: { x: 70, y: 384 },  e6: { x: 380, y: 554 },
+      e7: { x: 720, y: 96 }
+    }
+  };
+
+  parents = [
+    { id: 'p1', name: 'Entrada del bosque', subs: [
+      { id: 'l1', name: 'Claro del arroyo' },
+      { id: 'l2', name: 'Sendero cubierto' }
+    ]},
+    { id: 'p2', name: 'La Cripta', subs: [
+      { id: 'l3', name: 'Antecámara' },
+      { id: 'l4', name: 'Cámara del sarcófago' },
+      { id: 'l5', name: 'Puerta sellada' }
+    ]}
+  ];
+
+  events = [
+    { id: 'e1', title: 'Emboscada de bandidos', cat: 'combate', loc: 'l1', desc: 'Tres forajidos vigilan el vado del arroyo. Exigen un peaje… o lo cobran a la fuerza.' },
+    { id: 'e2', title: 'El pescador ciego', cat: 'social', loc: 'l1', desc: 'Un anciano conoce el camino a la cripta. Hablará, a cambio de un pequeño favor.' },
+    { id: 'e3', title: 'Rastro de sangre', cat: 'exploracion', loc: 'l2', desc: 'Marcas frescas sobre el musgo suben por la ladera. Alguien pasó por aquí hace poco.' },
+    { id: 'e4', title: 'La antesala saqueada', cat: 'exploracion', loc: 'l3', desc: 'Sarcófagos abiertos y ceniza fría. Algo estuvo aquí antes que el grupo.' },
+    { id: 'e5', title: 'Guardián de hueso', cat: 'combate', loc: 'l3', desc: 'Al perturbar el altar, un centinela de huesos se yergue entre las sombras.' },
+    { id: 'e6', title: 'El sello de Vhalmar', cat: 'descubrimiento', loc: 'l4', desc: 'Un relieve oculta el mecanismo que abre la puerta sellada del fondo de la sala.' },
+    { id: 'e7', title: 'Voces tras la piedra', cat: 'social', loc: 'none', desc: 'Alguien —o algo— susurra desde el otro lado del muro. Negocia, si te atreves.' }
+  ];
+
+  links = [
+    { from: 'e2', to: 'e3', label: 'El pescador guía' },
+    { from: 'e3', to: 'e4', label: 'Siguiendo el rastro' },
+    { from: 'e5', to: 'e6', label: 'Al caer el guardián' }
+  ];
+  hier = [ ['e1', 'e2'], ['e4', 'e5'] ];
+
+  CAT = {
+    combate:       { label: 'Combate',       text: '#E79B72', bg: '#38241B', bar: '#D2703F' },
+    social:        { label: 'Social',        text: '#CFA0BF', bg: '#312330', bar: '#9E7890' },
+    exploracion:   { label: 'Exploración',   text: '#9DC08B', bg: '#22301E', bar: '#7C9668' },
+    descubrimiento:{ label: 'Descubrimiento',text: '#DBB55F', bg: '#332B17', bar: '#C9A24A' }
+  };
+
+  locName(id) {
+    if (id === 'none') return 'Sin ubicación';
+    for (const p of this.parents) { const s = p.subs.find(x => x.id === id); if (s) return s.name; }
+    return '';
+  }
+  parentName(id) {
+    for (const p of this.parents) { if (p.subs.some(x => x.id === id)) return p.name; }
+    return id === 'none' ? 'General' : '';
+  }
+  count(id) { return this.events.filter(e => e.loc === id).length; }
+
+  center(id) { const p = this.state.nodePos[id]; return { x: p.x + 93, y: p.y + 42 }; }
+  edgePath(a, b) {
+    const c1 = this.center(a), c2 = this.center(b);
+    const my = (c1.y + c2.y) / 2;
+    return { d: `M${c1.x},${c1.y} C${c1.x},${my} ${c2.x},${my} ${c2.x},${c2.y}`, mx: (c1.x + c2.x) / 2, midy: my };
+  }
+
+  startDrag = (id) => (e) => {
+    e.preventDefault();
+    const s0 = this.state.nodePos[id];
+    const sx = e.clientX, sy = e.clientY, ox = s0.x, oy = s0.y, sc = this.state.scale;
+    const move = (ev) => {
+      this.setState(st => ({ nodePos: { ...st.nodePos, [id]: { x: ox + (ev.clientX - sx) / sc, y: oy + (ev.clientY - sy) / sc } } }));
+    };
+    const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); };
+    window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
+    this.setState({ selectedEvent: id });
+  };
+
+  renderVals() {
+    const st = this.state;
+    const sel = 'display:flex;align-items:center;gap:8px;padding:7px 10px;margin:1px 4px;border-radius:8px;cursor:pointer;background:#2F2820;color:#F1ECE2;font-weight:600;font-size:13.5px;box-shadow:inset 3px 0 0 #CE6A3A;';
+    const norm = 'display:flex;align-items:center;gap:8px;padding:7px 10px;margin:1px 4px;border-radius:8px;cursor:pointer;color:#ACA396;font-weight:500;font-size:13.5px;';
+    const badge = 'font-size:10.5px;font-weight:700;min-width:19px;height:19px;padding:0 6px;border-radius:20px;display:inline-flex;align-items:center;justify-content:center;';
+    const badgeSel = badge + 'background:#CE6A3A;color:#1B1815;';
+    const badgeIdle = badge + 'background:#2E2A23;color:#9A9182;';
+
+    const groups = this.parents.map(p => ({
+      id: p.id, name: p.name,
+      expanded: st.expanded[p.id] !== false,
+      chev: st.expanded[p.id] !== false ? 90 : 0,
+      onToggle: () => this.setState(s => ({ expanded: { ...s.expanded, [p.id]: !(s.expanded[p.id] !== false) } })),
+      subs: p.subs.map(s => {
+        const isSel = st.selectedLoc === s.id;
+        return {
+          id: s.id, name: s.name, count: this.count(s.id),
+          rowStyle: isSel ? sel : norm,
+          hoverStyle: isSel ? sel : norm + 'background:#282420;color:#F1ECE2;',
+          countStyle: isSel ? badgeSel : badgeIdle,
+          onSelect: () => this.setState({ selectedLoc: s.id })
+        };
+      })
+    }));
+
+    const uSel = st.selectedLoc === 'none';
+    const unassigned = {
+      count: this.count('none'),
+      rowStyle: uSel ? sel : norm,
+      hoverStyle: uSel ? sel : norm + 'background:#282420;color:#F1ECE2;',
+      countStyle: uSel ? badgeSel : badgeIdle,
+      onSelect: () => this.setState({ selectedLoc: 'none' })
+    };
+
+    const linkFor = (id) => this.links.find(l => l.from === id);
+    const cardBase = 'display:flex;background:#262119;border:1px solid #35302A;border-radius:13px;cursor:pointer;transition:box-shadow .15s,border-color .15s;box-shadow:0 1px 2px rgba(0,0,0,.2);overflow:hidden;';
+
+    const currentEvents = this.events.filter(e => e.loc === st.selectedLoc).map(e => {
+      const c = this.CAT[e.cat]; const lk = linkFor(e.id);
+      return {
+        id: e.id, title: e.title, desc: e.desc,
+        catLabel: c.label, catText: c.text, catBg: c.bg, bar: c.bar,
+        hasLink: !!lk, linkLabel: lk ? lk.label : '',
+        cardStyle: cardBase + (st.selectedEvent === e.id ? 'border-color:#4A4237;box-shadow:0 6px 20px rgba(0,0,0,.3);' : ''),
+        onClick: () => this.setState({ selectedEvent: e.id })
+      };
+    });
+
+    const subtitles = {
+      l1: 'El primer contacto del grupo con lo que acecha en el bosque.',
+      l2: 'Un tramo estrecho donde es fácil perder —o seguir— un rastro.',
+      l3: 'La entrada de la cripta. Lo que quedó, y lo que despierta.',
+      l4: 'El corazón de la tumba y su secreto sellado.',
+      l5: 'Nada la ha cruzado en siglos. Todavía.',
+      none: 'Eventos flotantes, listos para colocarse en el mapa.'
+    };
+
+    const nodes = this.events.map(e => {
+      const c = this.CAT[e.cat]; const p = st.nodePos[e.id]; const isSel = st.selectedEvent === e.id;
+      return {
+        id: e.id, title: e.title, left: p.x, top: p.y,
+        catLabel: c.label, catText: c.text, catBg: c.bg, bar: c.bar,
+        locName: this.locName(e.loc),
+        border: isSel ? c.bar : '#35302A',
+        shadow: isSel ? '0 10px 26px rgba(0,0,0,.5)' : '0 3px 12px rgba(0,0,0,.32)',
+        onDown: this.startDrag(e.id)
+      };
+    });
+
+    const edges = [];
+    this.hier.forEach((h, i) => { const e = this.edgePath(h[0], h[1]); edges.push({ id: 'h' + i, d: e.d, stroke: '#5A5348', w: 2, dash: 'none' }); });
+    this.links.forEach((l, i) => { const e = this.edgePath(l.from, l.to); edges.push({ id: 'l' + i, d: e.d, stroke: '#CE6A3A', w: 2, dash: '5 4' }); });
+    const edgeLabels = this.links.map((l, i) => { const e = this.edgePath(l.from, l.to); return { id: 'lb' + i, x: e.mx, y: e.midy, label: l.label }; });
+
+    const tabOn = "display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:7px;font-size:12.5px;font-weight:600;background:#3A342C;color:#F1ECE2;box-shadow:0 1px 2px rgba(0,0,0,.3);border:none;cursor:pointer;font-family:inherit;";
+    const tabOff = "display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:7px;font-size:12.5px;font-weight:600;background:transparent;color:#8A8175;border:none;cursor:pointer;font-family:inherit;";
+
+    return {
+      prepName: 'La Cripta de Vhalmar',
+      eventCountLabel: this.events.length + ' eventos',
+      groups, unassigned, currentEvents,
+      selLocName: this.locName(st.selectedLoc),
+      selParentName: this.parentName(st.selectedLoc),
+      selLocSubtitle: subtitles[st.selectedLoc] || '',
+      selLocEmpty: currentEvents.length === 0,
+      isLista: st.view === 'lista',
+      isGrafo: st.view === 'grafo',
+      listaTabStyle: st.view === 'lista' ? tabOn : tabOff,
+      grafoTabStyle: st.view === 'grafo' ? tabOn : tabOff,
+      setLista: () => this.setState({ view: 'lista' }),
+      setGrafo: () => this.setState({ view: 'grafo' }),
+      scale: st.scale,
+      nodes, edges, edgeLabels,
+      zoomIn: () => this.setState(s => ({ scale: Math.min(1.5, +(s.scale + 0.15).toFixed(2)) })),
+      zoomOut: () => this.setState(s => ({ scale: Math.max(0.6, +(s.scale - 0.15).toFixed(2)) })),
+      zoomReset: () => this.setState({ scale: 1 })
+    };
+  }
+}
+</script>
+</body>
+</html>

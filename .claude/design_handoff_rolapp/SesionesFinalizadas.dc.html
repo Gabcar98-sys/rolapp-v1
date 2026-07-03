@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>*{box-sizing:border-box;}html,body{margin:0;padding:0;height:100%;}::selection{background:#3A2A21;}.scrl::-webkit-scrollbar{width:10px;}.scrl::-webkit-scrollbar-thumb{background:#3A342C;border-radius:8px;border:3px solid transparent;background-clip:content-box;}</style>
+</helmet>
+<div style="display:flex;height:100vh;width:100%;overflow:hidden;background:#1B1815;color:#ECE6DB;font-family:'Hanken Grotesk',system-ui,sans-serif;-webkit-font-smoothing:antialiased;">
+  <dc-import name="Sidebar" active="historial" hint-size="236px,100%" style="flex:0 0 236px;height:100vh;"></dc-import>
+  <main class="scrl" style="flex:1;overflow-y:auto;">
+    <div style="max-width:920px;padding:34px 40px 60px;">
+      <h1 style="font-family:'Newsreader',serif;font-size:32px;font-weight:600;margin:0 0 3px;letter-spacing:-.3px;color:#F4EFE6;">Sesiones Finalizadas</h1>
+      <p style="margin:0 0 26px;color:#8A8175;font-size:14.5px;">El registro de todo lo que ya ha ocurrido en la mesa.</p>
+      <div style="position:relative;padding-left:26px;">
+        <div style="position:absolute;left:6px;top:6px;bottom:6px;width:2px;background:#2E2A24;"></div>
+        <sc-for list="{{ sessions }}" as="s" hint-placeholder-count="4">
+          <div style="position:relative;margin-bottom:16px;">
+            <span style="position:absolute;left:-26px;top:20px;width:12px;height:12px;border-radius:50%;background:#1B1815;border:2px solid {{ s.dot }};"></span>
+            <div style="background:#221E19;border:1px solid #2E2A24;border-radius:13px;padding:18px 20px;" style-hover="border-color:#4A4237;">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;">
+                <span style="font-family:'Newsreader',serif;font-size:18px;font-weight:600;color:#F1ECE2;">{{ s.title }}</span>
+                <span style="font-size:12px;color:#8A8175;white-space:nowrap;">{{ s.date }}</span>
+              </div>
+              <p style="margin:0 0 14px;font-size:13.5px;line-height:1.55;color:#B4AB9D;">{{ s.summary }}</p>
+              <div style="display:flex;gap:20px;flex-wrap:wrap;padding-top:12px;border-top:1px solid #2A2620;">
+                <div style="display:flex;align-items:center;gap:7px;font-size:12.5px;color:#8A8175;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C9A24A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3.5 2"></path></svg>{{ s.duration }}</div>
+                <div style="display:flex;align-items:center;gap:7px;font-size:12.5px;color:#8A8175;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7C9668" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"></circle><path d="M3 19a6 6 0 0112 0"></path></svg>{{ s.players }} jugadores</div>
+                <div style="display:flex;align-items:center;gap:7px;font-size:12.5px;color:#8A8175;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9E7890" stroke-width="1.8" stroke-linejoin="round"><path d="M4 5.5A2 2 0 016 4h5v15H6a2 2 0 00-2 1V5.5z"></path></svg>{{ s.campaign }}</div>
+                <a href="#" style="margin-left:auto;font-size:12.5px;font-weight:600;color:#E08A5C;text-decoration:none;align-self:center;">Ver resumen →</a>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    return { sessions: [
+      { title: 'El pacto del pescador', date: '28 jun 2026', dot: '#CE6A3A', duration: '2h 40m', players: 4, campaign: 'La Cripta de Vhalmar', summary: 'El grupo negoció con el pescador ciego y obtuvo el camino a la cripta. Garrek fue derrotado en el vado tras un tenso combate.' },
+      { title: 'El sendero cubierto', date: '21 jun 2026', dot: '#7C9668', duration: '3h 05m', players: 4, campaign: 'La Cripta de Vhalmar', summary: 'Siguiendo el rastro de sangre, los héroes alcanzaron la antecámara saqueada y despertaron al guardián de hueso.' },
+      { title: 'Cenizas en el puerto', date: '14 jun 2026', dot: '#9E7890', duration: '2h 15m', players: 3, campaign: 'Mareas de Ceniza', summary: 'Primera toma de contacto con las tres facciones del puerto. Se selló una frágil alianza con el gremio de pescadores.' },
+      { title: 'La sesión inaugural', date: '07 jun 2026', dot: '#DBB55F', duration: '1h 50m', players: 4, campaign: 'La Cripta de Vhalmar', summary: 'Creación de personajes y emboscada de bandidos a la entrada del bosque. El grupo quedó al borde del arroyo.' }
+    ]};
+  }
+}
+</script>
+</body>
+</html>

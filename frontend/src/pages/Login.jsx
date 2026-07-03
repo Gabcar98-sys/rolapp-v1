@@ -1,5 +1,9 @@
 import { useState } from 'react';
 import { api } from '../lib/api.js';
+import Logo from '../components/ui/Logo.jsx';
+
+const inputCls =
+  'rounded-btn border border-line bg-bg px-3 py-2 text-ink outline-none placeholder:text-faint focus:border-accent';
 
 export default function Login({ onAuth }) {
   const [mode, setMode] = useState('login'); // 'login' | 'register'
@@ -27,18 +31,23 @@ export default function Login({ onAuth }) {
   }
 
   return (
-    <div className="flex min-h-full items-center justify-center p-4">
-      <div className="w-full max-w-sm rounded-card border border-ink-line bg-ink-700 p-6 shadow-xl">
-        <h1 className="mb-1 text-center text-2xl font-bold text-gold">RolApp</h1>
-        <p className="mb-6 text-center text-sm text-gray-400">
+    <div className="flex min-h-full items-center justify-center bg-bg p-4">
+      <div className="w-full max-w-sm rounded-card border border-line bg-surface p-7 shadow-card">
+        <div className="mb-1 flex items-center justify-center gap-2.5">
+          <Logo />
+          <span className="font-serif text-2xl font-semibold tracking-[0.3px] text-title">
+            RolApp
+          </span>
+        </div>
+        <p className="mb-6 text-center text-sm text-sub">
           {mode === 'login' ? 'Entra a tu mesa' : 'Crea tu cuenta'}
         </p>
 
         <form onSubmit={submit} className="flex flex-col gap-3">
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-gray-400">Usuario</span>
+            <span className="text-faint">Usuario</span>
             <input
-              className="rounded-md border border-ink-line bg-ink-900 px-3 py-2 text-gray-100 outline-none focus:border-gold"
+              className={inputCls}
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               autoComplete="username"
@@ -46,11 +55,11 @@ export default function Login({ onAuth }) {
           </label>
 
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-gray-400">PIN</span>
+            <span className="text-faint">PIN</span>
             <input
               type="password"
               inputMode="numeric"
-              className="rounded-md border border-ink-line bg-ink-900 px-3 py-2 text-gray-100 outline-none focus:border-gold"
+              className={inputCls}
               value={pin}
               onChange={(e) => setPin(e.target.value)}
               autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
@@ -59,20 +68,20 @@ export default function Login({ onAuth }) {
 
           {mode === 'register' && (
             <div className="flex flex-col gap-1 text-sm">
-              <span className="text-gray-400">Rol</span>
+              <span className="text-faint">Rol</span>
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  ['player', '⚔️ Jugador'],
-                  ['dm', '🎲 DM'],
+                  ['player', 'Jugador'],
+                  ['dm', 'Dungeon Master'],
                 ].map(([value, label]) => (
                   <button
                     type="button"
                     key={value}
                     onClick={() => setRole(value)}
-                    className={`rounded-md border px-3 py-2 transition-colors ${
+                    className={`rounded-btn border px-3 py-2 transition-colors ${
                       role === value
-                        ? 'border-gold bg-ink-600 text-gold'
-                        : 'border-ink-line text-gray-400 hover:border-gold/50'
+                        ? 'border-accent bg-accent-tint font-semibold text-accent-text'
+                        : 'border-line text-sub hover:border-line-hover'
                     }`}
                   >
                     {label}
@@ -83,24 +92,27 @@ export default function Login({ onAuth }) {
           )}
 
           {error && (
-            <p className="rounded-md bg-danger/20 px-3 py-2 text-sm text-red-300">{error}</p>
+            <p className="rounded-btn bg-danger-tint px-3 py-2 text-sm text-danger-text">
+              {error}
+            </p>
           )}
 
           <button
             type="submit"
             disabled={busy}
-            className="mt-1 rounded-md bg-gold py-2 font-semibold text-ink-900 transition-opacity hover:opacity-90 disabled:opacity-50"
+            className="mt-1 rounded-btn bg-accent py-2 font-bold text-bg transition-colors hover:bg-accent-hover disabled:opacity-50"
           >
-            {busy ? '…' : mode === 'login' ? 'Entrar' : 'Crear cuenta'}
+            {busy ? 'Un momento…' : mode === 'login' ? 'Entrar' : 'Crear cuenta'}
           </button>
         </form>
 
         <button
+          type="button"
           onClick={() => {
             setMode((m) => (m === 'login' ? 'register' : 'login'));
             setError('');
           }}
-          className="mt-4 w-full text-center text-sm text-gray-400 hover:text-gold"
+          className="mt-4 w-full text-center text-sm text-sub transition-colors hover:text-accent-text"
         >
           {mode === 'login' ? '¿No tienes cuenta? Regístrate' : '¿Ya tienes cuenta? Entra'}
         </button>
