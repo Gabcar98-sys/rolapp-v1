@@ -4,34 +4,95 @@
 
 ---
 
-## Sesión actual (2026-07-02)
+## Sesión actual (2026-07-20) — autónoma
 
-Petición del founder: (1) rediseño visual completo según `.claude/design_handoff_rolapp/`
-(modo oscuro cálido, terracota, Newsreader/Hanken Grotesk, sidebar 236px, sin emojis) y
-(2) recuperar funcionalidades de la v0 que la v1 perdió.
+Petición del founder: (1) completar las features que faltan para poder **llevar una
+sesión de rol completa** (F15→F19) y (2) **mejorar y dejar funcionando la IA para todo**.
+Instrucción: trabajar solo; el founder revisa después.
 
-Análisis de brechas completado → `.claude/progress/gap_v0_v1.md`.
-Backlog nuevo registrado: **F13–F19** en `feature_list.json`.
+El líder orquesta; no escribe código. Ciclo por feature: implementer → reviewer → cierre.
+
+## Hallazgo de arranque
+
+- **F15-catalog-pages** quedó `in_progress`. Su código se commiteó en `d894c3b`
+  ("bulk skills import…") **fuera del flujo del harness**: sin `impl_F15` ni `review_F15`,
+  sin aprobación del reviewer. El commit incluye TODO el alcance de F15
+  (5 páginas de catálogo + bulk import + backend), +4140 líneas.
+- Backend de **Mecánicas SÍ existe** (`gameSystems.js` GET/POST `/:id/mechanics` + tablas
+  `game_mechanics`/`game_mechanic_params`). El frontend `AttributesPage` (+1047) debe cablearse a eso.
+- **`npcs.js` ya existe** en backend → F16 podría estar parcialmente hecho (verificar al llegar).
 
 ## Feature en progreso
 
-**F15-catalog-pages** — Habilidades (bulk import JSON), Items, Bases de Atributos
-(con Mecánicas), Personajes Base, Personajes.
+**Ninguna aún** — F15 cerrada (APROBADA). Siguiente a lanzar: **F16-npcs**.
+Ciclo por feature: implementer (flip pending→in_progress) → reviewer → aprobación → líder commitea `feat(Fxx)` + history.md.
 
-## Cerradas esta sesión
-- **F13-design-foundation** — APROBADA, commit `476a07d`. AppShell + tokens + iconos.
-- **F14-pages-core** — APROBADA, commit `6b9c2c3`. Dashboard/Campañas/Historial
-  rediseñadas; listados backend enriquecidos; lecciones F14 en LEARNINGS.md.
+## En paralelo (no bloquea features)
 
-## Orden del backlog
-F13 (base de diseño) → F14 (Dashboard/Campañas/Historial) → F15 (catálogos: Habilidades
-con bulk import, Items, Bases de Atributos con Mecánicas, Personajes Base, Personajes) →
-F16 (NPCs completos) → F17 (Preparar Sesión rediseñada) → F18 (sesión en vivo completa:
-notas, tabs por personaje, toolbar, presets IA) → F19 (detalle de historial).
+- `consultor` → **auditoría de IA end-to-end** (`ai_audit.md`): qué funciona, dónde está
+  cableada la IA y dónde falta, dependencias de runtime (Ollama + reindex), y spec/quick-wins
+  para F18. Informa el "que la IA funcione para todo".
+
+## Orden del backlog restante
+
+F15 (cerrar) → F16 (NPCs completos; backend parcialmente presente) → F17 (Preparar Sesión
+rediseñada) → F18 (sesión en vivo completa: notas, tabs por personaje, toolbar, **presets IA**) →
+F19 (detalle de historial).
+
+## Cerradas esta sesión (2026-07-20)
+- **F15-catalog-pages** — APROBADA. 5 páginas de catálogo + bulk import. Saneado el commit
+  `d894c3b` fuera-de-flujo (verificado+revisado en Docker). Cierre commiteado como `feat(F15)`.
+
+## Cerradas en sesiones previas
+- **F13-design-foundation** — commit `476a07d`. AppShell + tokens + iconos.
+- **F14-pages-core** — commit `6b9c2c3`. Dashboard/Campañas/Historial rediseñadas.
+
+## IA — auditoría (`ai_audit.md`) + acción REQUERIDA del founder
+Veredicto: la IA **no funciona para todo hoy**. Motor backend excelente (F6/F9/F11/F12), pero
+(1) runtime apagado de fábrica y (2) solo cableada en el AIPanel de sesión (presets/historial = F18/F19).
+El código lo completo yo. Lo que **SOLO el founder puede cerrar** (runtime en su máquina, descarga
+de modelos ~GB que ya llenó disco en F9, juicio de calidad del LLM):
+1. `docker compose --profile ai up -d --build`
+2. `docker compose --profile ai run --rm ai-bootstrap`  (baja `nomic-embed-text` + `qwen2.5:3b`)
+3. `curl localhost:3001/api/ai/status`  → esperar `ready:true`
+4. **REINDEXAR cada doc** (hoy solo FTS, cero vectores): botón en tab Documentos o
+   `POST /api/game-systems/:id/docs/:docId/reindex` (no hay reindex-all).
+5. Si `qwen2.5:3b` flojea, subir a 7b vía `AI_MODEL` (sin tocar código).
+Riesgo: la IA real nunca corrió en vivo (todo con stubs). La calidad LLM + reindex real están sin verificar.
+
+## Spec F18 (de la auditoría, componer sobre F9–F12; SIN arquitectura nueva)
+- Presets Sesión = helper `streamSessionPreset` reusando `callLlmStream`+`packWithinBudget`+`toSources`.
+- Topics Sistema = `streamRulesQuestion` con filtro `sectionType` (ya en `hybridSearch`).
+- "Incluir sesiones anteriores" = inyectar `session_summaries` previos (sugerido `GET /api/campaigns/:id/summaries`).
+- Único backend nuevo: **router de `session_notes`** (tabla existe, faltan rutas) → `createNotesRouter(io)`.
+- Con Ollama, correr por **inyección de contexto** (tool-use OFF en local, solo `AI_PROVIDER=api`).
+- Quick-win: `ai:ask` no propaga `sectionType` (una línea en `sockets/ai.js` + `streamRulesQuestion`).
+- Deuda visual: `AIPanel`/`SessionView` aún con tokens viejos + emojis (`App.jsx:17`) → re-tematizar en F18.
 
 ## Deuda menor
-- Reindexar vectores del RAG cuando Ollama esté arriba (`docker compose --profile ai up` + bootstrap + reindex).
+- Commit `d894c3b` no sigue la convención `feat(F15): …` (cosmético; no re-escribir historia).
+
+## F16 pre-scouted (`scout_F16-npcs.md`)
+Backend ~90% listo (CRUD + quests/inventory/campaigns + montado + 4 tablas). Frontend es
+placeholder. Trabajo de F16 = frontend (maestro-detalle real) + 7 métodos en `api.js` +
+`npcs.test.js` + columna `disposition`. NO tocar router/sub-recursos/PlanningPanel (ya integran).
+
+## F17 pre-scouted (`scout_F17-prep.md`)
+Backend COMPLETO (preps/ubicaciones/sub/eventos/enlaces con etiqueta). Página `PrepPage.jsx`
+existe pero provisional. Grafo objetivo ~55-60% ya en `EventFlowGraph.jsx` (drag, aristas,
+enlaces con etiqueta, CRUD). Trabajo de F17 = frontend: rail 62px + panel ubicaciones 266px +
+toggle Lista/Grafo; al grafo faltan Bézier, zoom, fondo de puntos, aristas por tipo, nodo 186px
+con barra de categoría, leyenda. Migrar tokens v0→handoff + emojis→`Icon.jsx`. Mapear 8 categorías
+v1 → 4 colores `cat.*` (ya en tailwind). Cuidar la firma `compact` de EventFlowGraph (la usa PlanningPanel/F8b).
+Decisiones del líder (en diseño documentado + principios): (1) `PrepPage` **full-bleed con rail 62px
+propio** (como SessionView), no colapsar el sidebar; (2) **reorder por swap de `order_index` con el PUT
+existente**, sin endpoint nuevo; añadir `updateLocation`/`updateSubLocation` a `api.js` (PUT ya existe).
 
 ## Preguntas abiertas
-- ¿Disposición (Aliado/Neutral/Hostil) de NPCs: existe en schema v1 o se agrega en F16? (el implementer de F16 debe verificar el schema antes).
-- **Eliminar campaña (F14, para el founder):** no existe `DELETE /api/campaigns/:id` ni política de borrado (FK sessions→campaigns sin ON DELETE). Opciones: (a) archivado en vez de borrado, (b) DELETE bloqueado si tiene sesiones, (c) cascade. El implementer dejó solo Abrir/Editar; decidir antes de implementarlo.
+- ~~Disposición de NPCs~~ **RESUELTA por scout**: NO existe en schema y el mockup `NPCs.dc.html`
+  la necesita (badge Aliado/Neutral/Hostil). Decisión del líder: se agrega en F16 como columna
+  `disposition` nullable (aditiva, backward-compatible) = implementar el diseño documentado, no
+  inventar arquitectura. Reflejar en POST/PUT.
+- **Eliminar campaña (F14, para el founder):** no existe `DELETE /api/campaigns/:id` ni
+  política de borrado (FK sessions→campaigns sin ON DELETE). Opciones: (a) archivado,
+  (b) DELETE bloqueado si tiene sesiones, (c) cascade. Pendiente de decisión del founder.

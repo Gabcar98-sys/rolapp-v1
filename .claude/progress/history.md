@@ -141,3 +141,14 @@ Pulido mobile-first + tldraw. Implementer → Reviewer APROBADO. **Roadmap base 
 - 71 tests (5 nuevos del handler de snapshot), frontend build OK, sin node_modules residual.
 - Backlog ampliado por el founder: F9 (activar/optimizar IA) y F10 (sembrar juegos + pregens + guías).
 - Próxima: F9-ai-activation.
+
+## 2026-07-20 — F15-catalog-pages (DONE)
+
+Páginas de catálogo del rediseño. Sesión autónoma del líder. Implementer → Reviewer APROBADO.
+
+- **Situación anómala saneada:** el código de F15 se había commiteado en `d894c3b` FUERA del flujo del harness (sin `impl_`/`review_`, sin aprobación). El líder lo reincorporó al carril: verificación → revisión → cierre.
+- **5 páginas** sacadas del Lobby a páginas propias del AppShell: Habilidades (formatos por sistema, tabla búsqueda+chips+paginación 50, editor de campos text/number/boolean, CRUD dinámico, **bulk import JSON** con auto-creación de campos y reporte importadas/omitidas/campos-creados vía `services/skillsImport.js`), Items (equippable, campos dinámicos, punto de rareza), Bases de Atributos (tabs Atributos/Personajes base/Slots/**Mecánicas** cableada a rutas existentes de `gameSystems.js`), Personajes Base (grid con glifo/barras/chips, editor, adoptar), Personajes (vista DM vs jugador).
+- Única corrección del implementer en esta pasada: 1 línea en `App.jsx` (`onNavigate={setPage}` a `AttributesPage`) que arreglaba un enlace huérfano "Gestionar en Personajes Base".
+- **Verificación (reproducida por el reviewer en Docker):** backend lint exit 0, backend 116 pass/0 fail/1 skip (preexistente F14), `docker compose build frontend --no-cache` exit 0 (lint+build), frontend vitest 54/54. Scope limpio (16 archivos del commit + App.jsx), cableado end-to-end verificado, cero anti-patrones (sin inline, sin `window.innerWidth`, sin clases Tailwind interpoladas), better-sqlite3 síncrono, `session_events` append-only.
+- Nota no bloqueante para el founder: no se añadió botón "adoptar" en la tarjeta de `BaseCharactersPage` (el flujo de adopción ya vive en `CharactersPage`); queda como posible atajo futuro.
+- Próxima: F16-npcs (backend ~90% ya presente; trabajo cargado al frontend).
