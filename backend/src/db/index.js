@@ -75,7 +75,18 @@ function runMigrations() {
   const ran = new Set(db.prepare('SELECT name FROM _migrations').all().map(r => r.name));
 
   // Las migraciones estructurales se agregan aquí desde F1 en adelante.
-  const migrations = [];
+  const migrations = [
+    // F16: columna disposition en npcs para instalaciones previas al baseline nuevo.
+    // Idempotente: verifica con PRAGMA antes de ALTER (lección SQLite/F1).
+    ['M001_npcs_disposition', () => {
+      const cols = db.prepare('PRAGMA table_info(npcs)').all();
+      if (cols.some((c) => c.name === 'disposition')) return;
+      db.exec(
+        "ALTER TABLE npcs ADD COLUMN disposition TEXT NOT NULL DEFAULT 'neutral' " +
+          "CHECK(disposition IN ('ally','neutral','hostile'))"
+      );
+    }],
+  ];
 
   const insert = db.prepare('INSERT INTO _migrations (name) VALUES (?)');
   for (const [name, fn] of migrations) {

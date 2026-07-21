@@ -117,6 +117,26 @@ export function parseBulkSkillsText(text) {
   return { ok: true, data, count: entries.length, invalidCount: invalid.length };
 }
 
+// ── Disposición de NPC (F16) ──────────────────────────────────────────────────
+// Valores en inglés en código; la UI muestra estas etiquetas en español.
+// El orden coincide con NPC_GLYPH_CLASSES/NPC_BADGE_CLASSES (ally·neutral·hostile).
+export const DISPOSITIONS = [
+  { value: 'ally', label: 'Aliado' },
+  { value: 'neutral', label: 'Neutral' },
+  { value: 'hostile', label: 'Hostil' },
+];
+
+// Índice estable de la disposición para elegir clase literal (fallback neutral = 1).
+export function dispositionIndex(value) {
+  const idx = DISPOSITIONS.findIndex((d) => d.value === value);
+  return idx === -1 ? 1 : idx;
+}
+
+// Etiqueta en español de una disposición (fallback Neutral).
+export function dispositionLabel(value) {
+  return DISPOSITIONS[dispositionIndex(value)].label;
+}
+
 // ── Atributos de personajes (barras PV/EXP, stats core) ───────────────────────
 
 export const HP_ATTR_NAMES = ['pv', 'hp', 'vida', 'salud', 'health', 'puntos de vida', 'hit points'];

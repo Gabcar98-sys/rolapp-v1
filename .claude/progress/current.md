@@ -24,8 +24,9 @@ El líder orquesta; no escribe código. Ciclo por feature: implementer → revie
 
 ## Feature en progreso
 
-**Ninguna aún** — F15 cerrada (APROBADA). Siguiente a lanzar: **F16-npcs**.
+**Ninguna aún** — F15 y F16 cerradas (APROBADAS). Siguiente a lanzar: **F17-prep-redesign**.
 Ciclo por feature: implementer (flip pending→in_progress) → reviewer → aprobación → líder commitea `feat(Fxx)` + history.md.
+F18 ya scouteada (`scout_F18-live.md`): mayormente reutilización; orden sugerido notas→apoyo-IA→AIPanel v2→toolbar→tabs→restyle.
 
 ## En paralelo (no bloquea features)
 
@@ -42,6 +43,8 @@ F19 (detalle de historial).
 ## Cerradas esta sesión (2026-07-20)
 - **F15-catalog-pages** — APROBADA. 5 páginas de catálogo + bulk import. Saneado el commit
   `d894c3b` fuera-de-flujo (verificado+revisado en Docker). Cierre commiteado como `feat(F15)`.
+- **F16-npcs** — APROBADA. Gestor de NPCs maestro-detalle + columna `disposition` (migración
+  idempotente) + `npcs.test.js`. Backend ya estaba ~90%. Commiteado como `feat(F16)`.
 
 ## Cerradas en sesiones previas
 - **F13-design-foundation** — commit `476a07d`. AppShell + tokens + iconos.

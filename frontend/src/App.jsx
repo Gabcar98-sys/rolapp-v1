@@ -60,7 +60,7 @@ export default function App() {
       case 'items':
         return <ItemsPage user={user} />;
       case 'npcs':
-        return <NpcsPage />;
+        return <NpcsPage user={user} />;
       case 'history':
         return <HistoryPage user={user} />;
       default:

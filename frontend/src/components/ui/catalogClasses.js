@@ -35,3 +35,14 @@ export const RARITY_DOT_CLASSES = [
   'bg-cat-discovery-text shadow-[0_0_0_3px_#332B17]',
   'bg-cat-combat-text shadow-[0_0_0_3px_#38241B]',
 ];
+
+// ── Disposición de NPC (F16) ─────────────────────────────────────────────────
+// Clases LITERALES por disposición (lección F14: nada de bg-${x}). El mapeo
+// value → índice lo hace lib/catalog.js (dispositionIndex), sin interpolar.
+// Orden: ally · neutral · hostile (mismos tonos del mockup NPCs.dc.html).
+export const NPC_GLYPH_CLASSES = [
+  'bg-cat-explore-bg text-cat-explore-text', // ally
+  'bg-cat-discovery-bg text-cat-discovery-text', // neutral
+  'bg-cat-combat-bg text-cat-combat-text', // hostile
+];
+export const NPC_BADGE_CLASSES = NPC_GLYPH_CLASSES;

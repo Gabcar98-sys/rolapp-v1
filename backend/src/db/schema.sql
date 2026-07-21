@@ -418,6 +418,10 @@ CREATE TABLE IF NOT EXISTS npcs (
   name           TEXT    NOT NULL,
   description    TEXT    NOT NULL DEFAULT '',
   avatar_icon    TEXT    NOT NULL DEFAULT '🧑',
+  -- Disposición del NPC hacia los jugadores. Valores en inglés en código; la UI
+  -- muestra etiquetas en español (Aliado/Neutral/Hostil). Añadida en F16.
+  disposition    TEXT    NOT NULL DEFAULT 'neutral'
+                   CHECK(disposition IN ('ally','neutral','hostile')),
   created_at     INTEGER NOT NULL DEFAULT (unixepoch())
 );
 

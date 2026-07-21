@@ -28,7 +28,7 @@ const PAGES = [
   ['attributes', <AttributesPage key="a" user={dm} />],
   ['characters', <CharactersPage key="ch" user={dm} />],
   ['items', <ItemsPage key="i" user={dm} />],
-  ['npcs', <NpcsPage key="n" />],
+  ['npcs', <NpcsPage key="n" user={dm} />],
   ['history', <HistoryPage key="h" user={dm} />],
 ];
 

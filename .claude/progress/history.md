@@ -152,3 +152,14 @@ Páginas de catálogo del rediseño. Sesión autónoma del líder. Implementer �
 - **Verificación (reproducida por el reviewer en Docker):** backend lint exit 0, backend 116 pass/0 fail/1 skip (preexistente F14), `docker compose build frontend --no-cache` exit 0 (lint+build), frontend vitest 54/54. Scope limpio (16 archivos del commit + App.jsx), cableado end-to-end verificado, cero anti-patrones (sin inline, sin `window.innerWidth`, sin clases Tailwind interpoladas), better-sqlite3 síncrono, `session_events` append-only.
 - Nota no bloqueante para el founder: no se añadió botón "adoptar" en la tarjeta de `BaseCharactersPage` (el flujo de adopción ya vive en `CharactersPage`); queda como posible atajo futuro.
 - Próxima: F16-npcs (backend ~90% ya presente; trabajo cargado al frontend).
+
+## 2026-07-20 — F16-npcs (DONE)
+
+Gestor de NPCs completo. Sesión autónoma del líder. Implementer → Reviewer APROBADO.
+
+- **Backend ya estaba ~90%** (scout `scout_F16-npcs.md`): CRUD `/api/npcs` + sub-recursos `/quests`, `/inventory`, `/campaigns` (`npc_campaign_links`) con ownership por dm_id, montado, 4 tablas en schema, e integración en `PlanningPanel` (selector de NPCs). El implementer NO reescribió nada de eso.
+- **Añadido:** columna `disposition` (`ally`/`neutral`/`hostile`, default `neutral`) en `npcs` — migración idempotente `M001_npcs_disposition` (guard con PRAGMA + `_migrations`) + baseline en `schema.sql` + reflejada en POST/PUT. Resuelve la pregunta abierta (disposición no existía; el mockup la exige).
+- **Frontend:** `NpcsPage.jsx` deja de ser placeholder → maestro-detalle real (lista con filtro por sistema + crear; detalle con tabs Información/Quests/Inventario/Campañas), tarjetas con **glifo-inicial (NO emoji)** y badge de disposición con color (clases literales). Métodos nuevos en `api.js` (updateNpc + sub-recursos + asociar/desasociar campañas). Estilo con tokens del handoff + `Icon.jsx`.
+- **Tests:** `backend/src/routes/npcs.test.js` nuevo (10/10). Verificación reviewer en Docker: backend lint exit 0, 126 pass/1 skip; frontend build `--no-cache` exit 0; vitest 58/58; migración confirmada con `PRAGMA table_info(npcs)`.
+- Brechas no bloqueantes: no hay edición individual de quest/objeto (backend solo crea/borra; F16 no lo pide); `avatar_icon` se conserva en el modelo (lo usa PlanningPanel) pero la UI usa la inicial.
+- Próxima: F17-prep-redesign (backend completo; trabajo frontend: rail 62px + panel 266px + vistas Lista/Grafo).

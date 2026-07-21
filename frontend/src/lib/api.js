@@ -113,16 +113,29 @@ export const api = {
   deleteEventLink: (id, dmId) =>
     request(`/event-templates/links/${id}`, { method: 'DELETE', body: { dm_id: dmId } }),
 
-  // ── NPCs ──────────────────────────────────────────────────────────────────────
+  // ── NPCs (F16) ──────────────────────────────────────────────────────────────
   listNpcs: (dmId, gameSystemId = null) =>
     request(`/npcs?dm_id=${dmId}${gameSystemId ? `&game_system_id=${gameSystemId}` : ''}`),
   getNpc: (id) => request(`/npcs/${id}`),
-  createNpc: (dmId, name, description = '', avatarIcon = '🧑') =>
-    request('/npcs', {
-      method: 'POST',
-      body: { dm_id: dmId, name, description, avatar_icon: avatarIcon },
-    }),
+  createNpc: (dmId, fields) => request('/npcs', { method: 'POST', body: { dm_id: dmId, ...fields } }),
+  updateNpc: (id, dmId, fields) =>
+    request(`/npcs/${id}`, { method: 'PUT', body: { dm_id: dmId, ...fields } }),
   deleteNpc: (id, dmId) => request(`/npcs/${id}`, { method: 'DELETE', body: { dm_id: dmId } }),
+  // Quests del NPC
+  createNpcQuest: (id, dmId, quest) =>
+    request(`/npcs/${id}/quests`, { method: 'POST', body: { dm_id: dmId, ...quest } }),
+  deleteNpcQuest: (id, questId, dmId) =>
+    request(`/npcs/${id}/quests/${questId}`, { method: 'DELETE', body: { dm_id: dmId } }),
+  // Inventario del NPC
+  createNpcItem: (id, dmId, item) =>
+    request(`/npcs/${id}/inventory`, { method: 'POST', body: { dm_id: dmId, ...item } }),
+  deleteNpcItem: (id, itemId, dmId) =>
+    request(`/npcs/${id}/inventory/${itemId}`, { method: 'DELETE', body: { dm_id: dmId } }),
+  // Vínculos a campaña
+  linkNpcCampaign: (id, dmId, campaignId) =>
+    request(`/npcs/${id}/campaigns`, { method: 'POST', body: { dm_id: dmId, campaign_id: campaignId } }),
+  unlinkNpcCampaign: (id, campaignId, dmId) =>
+    request(`/npcs/${id}/campaigns/${campaignId}`, { method: 'DELETE', body: { dm_id: dmId } }),
 
   // ── Sistemas de juego (F2) ──────────────────────────────────────────────────
   // Sin dmId devuelve TODOS los sistemas (útil para jugadores al crear personaje).

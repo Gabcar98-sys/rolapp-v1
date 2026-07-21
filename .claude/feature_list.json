@@ -148,7 +148,7 @@
     "phase": "F16 — Gestor de NPCs",
     "title": "NPCs completos: CRUD maestro-detalle con info, quests, inventario y vínculo a campañas (backend + página)",
     "priority": 18,
-    "status": "pending",
+    "status": "done",
     "description": "Portar de la v0 el gestor de NPCs que la v1 perdió (hoy solo existen eventos NPC en planificación). Backend: rutas /api/npcs (CRUD con dm_id y game_system_id opcional), /api/npcs/:id/quests (título, descripción, reward), /api/npcs/:id/inventory (nombre, cantidad, descripción, costo), /api/npcs/:id/campaigns (asociar/desasociar); revisar schema.sql — las tablas de NPC deberían existir del F1; si faltan columnas, migración. Frontend: página NPCs según NPCs.dc.html + v0 NPCPanel — layout maestro-detalle (lista con filtro por sistema + crear; detalle con tabs Información / Quests / Inventario / Campañas), tarjetas con avatar-glifo (inicial, NO emoji), badge de disposición si existe el campo. Integración: el modal de evento NPC en sesión (PlanningPanel) debe poder seleccionar NPCs de este catálogo. Verificación: tests backend de rutas NPC, build+lint, smoke CRUD completo maestro-detalle."
   },
   {

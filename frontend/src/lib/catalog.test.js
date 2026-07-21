@@ -5,6 +5,8 @@ import {
   baseCharBars,
   coreStats,
   distinctFieldValues,
+  dispositionIndex,
+  dispositionLabel,
   filterEntities,
   findAttr,
   findField,
@@ -14,9 +16,36 @@ import {
   paginate,
   parseBulkSkillsText,
   percent,
+  DISPOSITIONS,
   HP_ATTR_NAMES,
   TYPE_FIELD_NAMES,
 } from './catalog.js';
+
+describe('disposición de NPC (F16)', () => {
+  it('dispositionIndex mapea cada valor a su posición en la paleta', () => {
+    expect(dispositionIndex('ally')).toBe(0);
+    expect(dispositionIndex('neutral')).toBe(1);
+    expect(dispositionIndex('hostile')).toBe(2);
+  });
+
+  it('dispositionIndex cae en neutral (1) ante valores desconocidos o vacíos', () => {
+    expect(dispositionIndex('desconocido')).toBe(1);
+    expect(dispositionIndex(undefined)).toBe(1);
+    expect(dispositionIndex(null)).toBe(1);
+  });
+
+  it('dispositionLabel devuelve la etiqueta en español', () => {
+    expect(dispositionLabel('ally')).toBe('Aliado');
+    expect(dispositionLabel('hostile')).toBe('Hostil');
+    expect(dispositionLabel('nope')).toBe('Neutral');
+  });
+
+  it('el índice nunca desborda la paleta de disposiciones', () => {
+    for (const d of DISPOSITIONS) {
+      expect(dispositionIndex(d.value)).toBeLessThan(DISPOSITIONS.length);
+    }
+  });
+});
 
 describe('glifos y acentos', () => {
   it('el índice de acento es estable y está acotado a la paleta', () => {

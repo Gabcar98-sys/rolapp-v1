@@ -70,10 +70,21 @@ router.get('/:id', (req, res) => {
   res.json({ npc, quests, inventory, campaigns });
 });
 
-// POST /api/npcs  { dm_id, name, description?, avatar_icon?, game_system_id? }
+// Disposiciones válidas (en inglés en código; la UI las traduce). Fallback a 'neutral'.
+const DISPOSITIONS = new Set(['ally', 'neutral', 'hostile']);
+const normalizeDisposition = (value) =>
+  DISPOSITIONS.has(value) ? value : 'neutral';
+
+// POST /api/npcs  { dm_id, name, description?, avatar_icon?, game_system_id?, disposition? }
 router.post('/', (req, res) => {
-  const { dm_id, name, description = '', avatar_icon = '🧑', game_system_id = null } =
-    req.body ?? {};
+  const {
+    dm_id,
+    name,
+    description = '',
+    avatar_icon = '🧑',
+    game_system_id = null,
+    disposition = 'neutral',
+  } = req.body ?? {};
   if (!dm_id || !name) return res.status(400).json({ error: 'dm_id y name son requeridos' });
 
   const dm = db.prepare("SELECT id FROM users WHERE id = ? AND role = 'dm'").get(dm_id);
@@ -81,16 +92,23 @@ router.post('/', (req, res) => {
 
   const info = db
     .prepare(
-      'INSERT INTO npcs (dm_id, name, description, avatar_icon, game_system_id) VALUES (?, ?, ?, ?, ?)'
+      'INSERT INTO npcs (dm_id, name, description, avatar_icon, game_system_id, disposition) VALUES (?, ?, ?, ?, ?, ?)'
     )
-    .run(dm_id, name.trim(), description.trim(), avatar_icon, game_system_id || null);
+    .run(
+      dm_id,
+      name.trim(),
+      description.trim(),
+      avatar_icon,
+      game_system_id || null,
+      normalizeDisposition(disposition)
+    );
 
   res.status(201).json({ npc: selectNpcWithSystem.get(info.lastInsertRowid) });
 });
 
 // PUT /api/npcs/:id
 router.put('/:id', (req, res) => {
-  const { dm_id, name, description, avatar_icon, game_system_id } = req.body ?? {};
+  const { dm_id, name, description, avatar_icon, game_system_id, disposition } = req.body ?? {};
   const owned = getOwnedNpc(req.params.id, dm_id);
   if (owned.error === 404) return res.status(404).json({ error: 'NPC no encontrado' });
   if (owned.error === 403) return res.status(403).json({ error: 'Sin permisos' });
@@ -112,6 +130,10 @@ router.put('/:id', (req, res) => {
   if (game_system_id !== undefined) {
     parts.push('game_system_id = ?');
     vals.push(game_system_id || null);
+  }
+  if (disposition !== undefined) {
+    parts.push('disposition = ?');
+    vals.push(normalizeDisposition(disposition));
   }
   if (parts.length === 0) return res.status(400).json({ error: 'Nada que actualizar' });
 
