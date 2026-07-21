@@ -125,7 +125,8 @@ export const api = {
   deleteNpc: (id, dmId) => request(`/npcs/${id}`, { method: 'DELETE', body: { dm_id: dmId } }),
 
   // ── Sistemas de juego (F2) ──────────────────────────────────────────────────
-  listGameSystems: (dmId) => request(`/game-systems?dm_id=${dmId}`),
+  // Sin dmId devuelve TODOS los sistemas (útil para jugadores al crear personaje).
+  listGameSystems: (dmId = null) => request(`/game-systems${dmId ? `?dm_id=${dmId}` : ''}`),
   getGameSystem: (id) => request(`/game-systems/${id}`),
   createGameSystem: (dmId, name, description = '') =>
     request('/game-systems', { method: 'POST', body: { dm_id: dmId, name, description } }),
@@ -175,7 +176,12 @@ export const api = {
     request(`/skills/formats/${formatId}/fields/${fieldId}`, { method: 'DELETE', body: { dm_id: dmId } }),
   createSkill: (dmId, formatId, name, description = '', values = {}) =>
     request('/skills', { method: 'POST', body: { dm_id: dmId, format_id: formatId, name, description, values } }),
+  updateSkill: (id, dmId, fields) =>
+    request(`/skills/${id}`, { method: 'PUT', body: { dm_id: dmId, ...fields } }),
   deleteSkill: (id, dmId) => request(`/skills/${id}`, { method: 'DELETE', body: { dm_id: dmId } }),
+  // Importación masiva (F15): data = { "Nombre": { campo: valor, description? } }.
+  bulkImportSkills: (dmId, formatId, data) =>
+    request('/skills/bulk-import', { method: 'POST', body: { dm_id: dmId, format_id: formatId, data } }),
 
   // ── Formatos de objeto + objetos ──────────────────────────────────────────────
   listItemFormats: (dmId, gameSystemId = null) => {
@@ -194,6 +200,8 @@ export const api = {
     request(`/items/formats/${formatId}/fields/${fieldId}`, { method: 'DELETE', body: { dm_id: dmId } }),
   createItem: (dmId, formatId, name, description = '', equippable = true, values = {}) =>
     request('/items', { method: 'POST', body: { dm_id: dmId, format_id: formatId, name, description, equippable, values } }),
+  updateItem: (id, dmId, fields) =>
+    request(`/items/${id}`, { method: 'PUT', body: { dm_id: dmId, ...fields } }),
   deleteItem: (id, dmId) => request(`/items/${id}`, { method: 'DELETE', body: { dm_id: dmId } }),
 
   // ── Import / Export de packs ────────────────────────────────────────────────
@@ -203,6 +211,8 @@ export const api = {
 
   // ── Personajes (F3) ───────────────────────────────────────────────────────
   listMyCharacters: (userId) => request(`/characters?user_id=${userId}`),
+  // Vista DM (F15): todos los personajes de todos los jugadores, con su dueño.
+  listAllCharacters: (dmId) => request(`/characters?dm_id=${dmId}`),
   listSessionCharacters: (sessionId) => request(`/characters/session/${sessionId}`),
   getCharacter: (id) => request(`/characters/${id}`),
   createCharacter: (userId, name, gameSystemTemplateId = null) =>

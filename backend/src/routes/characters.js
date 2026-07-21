@@ -121,8 +121,16 @@ export default function createCharactersRouter(io) {
   // ── Listados ────────────────────────────────────────────────────────────────
 
   // GET /api/characters?user_id=  — mis personajes (ficha completa de cada uno).
+  // GET /api/characters?dm_id=    — vista DM (F15): TODOS los personajes con su dueño
+  // (getCharacterFull ya incluye username del dueño). Solo un usuario con rol dm.
   router.get('/', (req, res) => {
-    const { user_id } = req.query;
+    const { user_id, dm_id } = req.query;
+    if (dm_id) {
+      const dm = db.prepare("SELECT id FROM users WHERE id = ? AND role = 'dm'").get(dm_id);
+      if (!dm) return res.status(403).json({ error: 'Solo un DM puede listar todos los personajes' });
+      const rows = db.prepare('SELECT id FROM characters ORDER BY created_at ASC, id ASC').all();
+      return res.json({ characters: rows.map((r) => getCharacterFull(r.id)) });
+    }
     if (!user_id) return res.status(400).json({ error: 'user_id es requerido' });
     const rows = db.prepare(
       'SELECT id FROM characters WHERE user_id = ? ORDER BY created_at ASC, id ASC'

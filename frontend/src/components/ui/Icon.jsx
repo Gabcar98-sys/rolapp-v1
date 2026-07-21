@@ -103,6 +103,33 @@ const ICONS = {
   x: <path d="M18 6L6 18M6 6l12 12" />,
   check: <path d="M20 6L9 17l-5-5" />,
   'arrow-right': <path d="M5 12h14M12 5l7 7-7 7" />,
+  'arrow-left': <path d="M19 12H5M12 19l-7-7 7-7" />,
+  // Catálogos (F15)
+  upload: <path d="M12 16V4M6 10l6-6 6 6M4 20h16" />,
+  download: <path d="M12 4v12M6 10l6 6 6-6M4 20h16" />,
+  shield: <path d="M12 3l7 3v5c0 4.6-3 7.7-7 9.2C8 18.7 5 15.6 5 11V6z" />,
+  heart: (
+    <path d="M12 20s-7.2-4.6-9-8.6C1.6 8.2 3.6 5 6.7 5c2 0 3.4 1.1 5.3 3.1C13.9 6.1 15.3 5 17.3 5c3.1 0 5.1 3.2 3.7 6.4-1.8 4-9 8.6-9 8.6z" />
+  ),
+  bag: (
+    <>
+      <path d="M6 8h12l-1.2 12H7.2z" />
+      <path d="M9 8V6a3 3 0 016 0v2" />
+    </>
+  ),
+  coin: (
+    <>
+      <circle cx="12" cy="12" r="8" />
+      <path d="M12 8v8M9.5 10h5M9.5 14h5" />
+    </>
+  ),
+  file: (
+    <>
+      <path d="M6 3h8l4 4v14H6z" />
+      <path d="M14 3v4h4" />
+    </>
+  ),
+  chart: <path d="M5 20v-8M11 20V5M17 20v-11M3 20h18" />,
 };
 
 // Nombres disponibles, exportados para poder validar la config de navegación en tests.

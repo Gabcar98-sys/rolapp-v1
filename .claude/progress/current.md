@@ -15,14 +15,13 @@ Backlog nuevo registrado: **F13–F19** en `feature_list.json`.
 
 ## Feature en progreso
 
-**F14-pages-core** — Dashboard con métricas + Campañas (grid) + Sesiones Finalizadas
-(timeline + búsqueda + filtro).
+**F15-catalog-pages** — Habilidades (bulk import JSON), Items, Bases de Atributos
+(con Mecánicas), Personajes Base, Personajes.
 
 ## Cerradas esta sesión
-- **F13-design-foundation** — APROBADA y commiteada (`476a07d`). El Lobby-hub fue
-  reemplazado por AppShell + páginas por sección (DashboardPage, CampaignsPage, etc.,
-  varias aún como contenedores de los paneles viejos — F14/F15 las rediseñan por dentro).
-  Review con 3 observaciones no bloqueantes en `review_F13-design-foundation.md`.
+- **F13-design-foundation** — APROBADA, commit `476a07d`. AppShell + tokens + iconos.
+- **F14-pages-core** — APROBADA, commit `6b9c2c3`. Dashboard/Campañas/Historial
+  rediseñadas; listados backend enriquecidos; lecciones F14 en LEARNINGS.md.
 
 ## Orden del backlog
 F13 (base de diseño) → F14 (Dashboard/Campañas/Historial) → F15 (catálogos: Habilidades

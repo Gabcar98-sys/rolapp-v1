@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import db from '../db/index.js';
+import { bulkImportSkills, validateBulkSkillsData } from '../services/skillsImport.js';
 
 const router = Router();
 
@@ -111,6 +112,31 @@ router.delete('/formats/:formatId/fields/:fieldId', (req, res) => {
   ).run(req.params.fieldId, format.id);
   if (r.changes === 0) return res.status(404).json({ error: 'Campo no encontrado' });
   res.json({ ok: true });
+});
+
+// ── Importación masiva (F15) ─────────────────────────────────────────────────
+
+// POST /api/skills/bulk-import  { dm_id, format_id, data }
+// data = { "Nombre": { campo: valor, description?: "…" } }. Crea los campos
+// faltantes del formato (tipo autodetectado), omite duplicados por nombre y
+// devuelve el reporte { imported, skipped, createdFields }.
+router.post('/bulk-import', (req, res) => {
+  const { dm_id, format_id, data } = req.body ?? {};
+  if (!dm_id || !format_id) {
+    return res.status(400).json({ error: 'dm_id y format_id son requeridos' });
+  }
+  const valid = validateBulkSkillsData(data);
+  if (!valid.ok) return res.status(400).json({ error: valid.error });
+
+  const format = requireOwnedFormat(format_id, dm_id, res);
+  if (!format) return;
+
+  try {
+    const report = bulkImportSkills(db, { dmId: dm_id, formatId: format.id, data });
+    res.status(201).json({ ok: true, ...report });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ── Skills (entidades) ────────────────────────────────────────────────────────

@@ -358,3 +358,24 @@ test('POST /base/:id/adopt  404 si el pregen no existe', async () => {
   });
   assert.equal(status, 404);
 });
+
+// ── Vista DM de todos los personajes (F15) ────────────────────────────────────
+
+test('GET /?dm_id=  devuelve TODOS los personajes con su dueño (vista DM)', async () => {
+  const router = createCharactersRouter(makeFakeIo());
+  const p2 = db.prepare("INSERT INTO users (username, pin_hash, role) VALUES ('p2', 'x', 'player')").run().lastInsertRowid;
+  await createChar(router, 'Héroe A');
+  await invoke(router, 'post', '/', { body: { user_id: p2, name: 'Héroe B' } });
+
+  const { status, data } = await invoke(router, 'get', '/', { query: { dm_id: String(dmId) } });
+  assert.equal(status, 200);
+  assert.equal(data.characters.length, 2);
+  const owners = data.characters.map((c) => c.username).sort();
+  assert.deepEqual(owners, ['p1', 'p2']);
+});
+
+test('GET /?dm_id=  403 si el id no es de un DM', async () => {
+  const router = createCharactersRouter(makeFakeIo());
+  const { status } = await invoke(router, 'get', '/', { query: { dm_id: String(playerId) } });
+  assert.equal(status, 403);
+});
