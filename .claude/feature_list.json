@@ -140,7 +140,7 @@
     "phase": "F15 — Rediseño (c): páginas de catálogo",
     "title": "Páginas dedicadas: Habilidades (bulk import JSON), Items, Bases de Atributos (con Mecánicas), Personajes Base, Personajes",
     "priority": 17,
-    "status": "in_progress",
+    "status": "done",
     "description": "Sacar los catálogos del Lobby a páginas propias del AppShell, estilo handoff. Habilidades (Habilidades.dc.html + v0 SkillsPanel): formatos por sistema (filtro), tabla de habilidades con búsqueda + chips de filtro + paginación 50, editor de campos del formato (text/number/boolean), CRUD de habilidad con campos dinámicos, e IMPORTACIÓN MASIVA JSON (archivo o pegado, validación, auto-creación de campos faltantes, reporte importadas/omitidas/campos creados — endpoint bulk-import: portar de v0 si falta). Items (Items.dc.html + v0 ItemsPanel): formatos agrupados por sistema, gestión de items (búsqueda, paginación, equippable, campos dinámicos), grid de tarjetas con punto de rareza si aplica. Bases de Atributos (BasesDeAtributos.dc.html + pantallazos 5-7): lista de sistemas y detalle con tabs Atributos / Personajes base / Slots de Equipamiento / MECÁNICAS (CRUD mecánicas con tipo, affect y parámetros dinámicos — portar backend /api/game-systems/:id/mechanics* de v0 si falta en v1). Personajes Base (PersonajesBase.dc.html): grid de tarjetas con glifo, barras de atributos y chips de habilidades; editor con tabs atributos/inventario/habilidades; adoptar plantilla. Personajes (Personajes.dc.html): vista DM de todos los personajes + vista jugador de los míos (tarjetas con barras PV/EXP y 4 stats). Verificación: build+lint+tests, smoke CRUD de cada catálogo, bulk import con JSON de ejemplo."
   },
   {

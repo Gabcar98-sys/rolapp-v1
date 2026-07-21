@@ -54,7 +54,7 @@ export default function App() {
       case 'base-characters':
         return <BaseCharactersPage user={user} />;
       case 'attributes':
-        return <AttributesPage user={user} />;
+        return <AttributesPage user={user} onNavigate={setPage} />;
       case 'characters':
         return <CharactersPage user={user} />;
       case 'items':
