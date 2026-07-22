@@ -163,3 +163,17 @@ Gestor de NPCs completo. Sesión autónoma del líder. Implementer → Reviewer 
 - **Tests:** `backend/src/routes/npcs.test.js` nuevo (10/10). Verificación reviewer en Docker: backend lint exit 0, 126 pass/1 skip; frontend build `--no-cache` exit 0; vitest 58/58; migración confirmada con `PRAGMA table_info(npcs)`.
 - Brechas no bloqueantes: no hay edición individual de quest/objeto (backend solo crea/borra; F16 no lo pide); `avatar_icon` se conserva en el modelo (lo usa PlanningPanel) pero la UI usa la inicial.
 - Próxima: F17-prep-redesign (backend completo; trabajo frontend: rail 62px + panel 266px + vistas Lista/Grafo).
+
+## 2026-07-20 — F17-prep-redesign (DONE)
+
+Rediseño de "Preparar Sesión". Sesión autónoma del líder. Implementer → Reviewer APROBADO.
+
+- **Backend ya estaba completo** (scout `scout_F17-prep.md`): CRUD preps/ubicaciones/sub/eventos/enlaces con etiqueta. Sin endpoints nuevos. Solo se añadieron `updateLocation`/`updateSubLocation` a `api.js` (PUT ya existía) para rename inline; reorder de eventos por **swap de `order_index`** con el PUT existente.
+- **Frontend (todo el trabajo):** `PrepPage.jsx` reconstruida full-bleed con **rail 62px propio** (decisión del líder, no colapsar sidebar) + panel de ubicaciones 266px (árbol colapsable, badges de conteo, inset terracota, "Sin ubicación" punteada, crear/rename inline) + toolbar 60px (breadcrumb, contador, **toggle Lista/Grafo**, +Evento).
+- **Vista Lista**: tarjetas con barra de categoría 4px, badge pill, etiqueta de enlace, acciones hover (subir/bajar/editar/eliminar), estado vacío punteado.
+- **Vista Grafo**: `EventFlowGraph` **extendido de forma retrocompatible** (preserva prop `compact` que usa PlanningPanel en la sesión): aristas **Bézier**, zoom +/-/reset (0.6–1.5), fondo de puntos, aristas por tipo (sólida gris misma-ubicación / punteada terracota con etiqueta = enlace narrativo), borde de categoría en nodo seleccionado, leyenda sticky.
+- 8 categorías v1 → 4 colores `cat.*` con listas de clases literales + índice estable. Migrados tokens v0→handoff y emojis→`Icon.jsx`. Eliminados `EventTemplatePanel.jsx` y `SessionPrepPanel.jsx` (provisionales, sin importadores).
+- **Juicios del reviewer (ambos ACEPTADOS):** los 3 `style={{}}` son geometría dinámica (no decorativos); el borrado de provisionales no dejó imports colgando ni rompió la sesión en vivo.
+- **Verificación (reviewer, Docker):** lint exit 0, backend 126 pass/1 skip, frontend build exit 0, vitest 62/62.
+- 3 lecciones nuevas en LEARNINGS (Frontend). Brechas no bloqueantes: drag de nodos efímero (como el mockup); sin botón "crear rama" en vista Lista (no está en el handoff; ramas existentes respetadas).
+- Próxima: F18-session-live (sesión en vivo completa: notas, tabs por personaje, toolbar, **presets de IA**). Ya scouteada (`scout_F18-live.md`).

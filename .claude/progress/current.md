@@ -24,9 +24,9 @@ El líder orquesta; no escribe código. Ciclo por feature: implementer → revie
 
 ## Feature en progreso
 
-**Ninguna aún** — F15 y F16 cerradas (APROBADAS). Siguiente a lanzar: **F17-prep-redesign**.
+**Ninguna aún** — F15, F16 y F17 cerradas (APROBADAS). Siguiente a lanzar: **F18-session-live** (la más grande).
 Ciclo por feature: implementer (flip pending→in_progress) → reviewer → aprobación → líder commitea `feat(Fxx)` + history.md.
-F18 ya scouteada (`scout_F18-live.md`): mayormente reutilización; orden sugerido notas→apoyo-IA→AIPanel v2→toolbar→tabs→restyle.
+F18 ya scouteada (`scout_F18-live.md`): mayormente reutilización (`CharacterSheet` ya tiene los 5 tabs; `AIPanel` ya tiene streaming/citas/follow-ups). Orden: notas backend+panel → apoyo-IA → AIPanel v2 (envolver, no reescribir) → toolbar DM → StatusTab editable + reaccionar a `characters:updated` → restyle. Único backend real: router de `session_notes` (tabla existe, faltan rutas).
 
 ## En paralelo (no bloquea features)
 
@@ -45,6 +45,9 @@ F19 (detalle de historial).
   `d894c3b` fuera-de-flujo (verificado+revisado en Docker). Cierre commiteado como `feat(F15)`.
 - **F16-npcs** — APROBADA. Gestor de NPCs maestro-detalle + columna `disposition` (migración
   idempotente) + `npcs.test.js`. Backend ya estaba ~90%. Commiteado como `feat(F16)`.
+- **F17-prep-redesign** — APROBADA. "Preparar Sesión" full-bleed (rail 62px + panel 266px +
+  vistas Lista/Grafo con Bézier/zoom/enlaces). `EventFlowGraph` extendido sin romper `compact`.
+  3 lecciones nuevas en LEARNINGS. Backend ya estaba completo.
 
 ## Cerradas en sesiones previas
 - **F13-design-foundation** — commit `476a07d`. AppShell + tokens + iconos.

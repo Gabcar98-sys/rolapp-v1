@@ -112,6 +112,21 @@ Las lecciones se agrupan por categoría. Cada entrada tiene:
 - **Lección:** El JIT de Tailwind solo genera clases que aparecen LITERALES en el código. Para colorear por entidad: define una lista estática de juegos de clases (`const ACCENTS = ['bg-cat-combat', …]`) y elige con un índice estable (hash del id). Ni `style={{}}` (prohibido) ni template strings tipo `bg-${color}` (el JIT no las ve).
 - **Por qué importa:** Las clases interpoladas compilan pero no existen en el CSS final; el bug aparece solo en el build de producción.
 
+### `style={{}}` inline SÍ se permite para geometría computada en runtime (no es estilo decorativo)
+- **Contexto:** F17, grafo de eventos: posición de nodos arrastrados, `transform: scale` del zoom, posición de píldoras de enlace.
+- **Lección:** La prohibición de estilos inline (`const s = {…}`) es contra estilos DECORATIVOS (colores, spacing, tipografía, bordes) que deben ser clases Tailwind + tokens. Un valor GEOMÉTRICO computado en runtime (`transform: translate(347px,122px)`, `scale(1.15)`, `top/left` de un nodo arrastrable) NO se puede expresar como clase estática y `style={{}}` es la vía correcta. Regla para el reviewer: acepta `style=` si es puramente posición/geometría calculada; rechaza si es decoración disfrazada.
+- **Por qué importa:** Un rechazo automático por "estilo inline" sobre geometría dinámica bloquea features de canvas/drag/zoom legítimas; y al revés, colar decoración en `style` evade el sistema de diseño.
+
+### Extender un componente compartido = props opcionales retrocompatibles, nunca romper la firma existente
+- **Contexto:** F17 extendió `EventFlowGraph` (Bézier, zoom, fondo de puntos, aristas por tipo) que `PlanningPanel` (F8b) ya usa embebido en la sesión con la prop `compact`.
+- **Lección:** Cuando amplíes un componente que ya tiene consumidores, añade lo nuevo tras **props opcionales con default** que preserven el comportamiento previo; verifica con `grep` todos los consumidores y confirma que su uso no cambia. El reviewer hace grep de la prop/firma en riesgo (`compact`) y confirma cero regresión en el consumidor existente.
+- **Por qué importa:** Cambiar la firma de un componente compartido rompe silenciosamente otras vistas (aquí, la sesión en vivo) que pasan build/lint pero fallan en runtime.
+
+### Vistas de trabajo intensivo van full-bleed (rail 62px propio) fuera del AppShell de 236px
+- **Contexto:** F17 (Preparar Sesión) y F4/F18 (SessionView): pantallas-lienzo que necesitan todo el ancho.
+- **Lección:** El AppShell con sidebar 236px es para las páginas de navegación (Dashboard, catálogos…). Las pantallas de trabajo intensivo (planificación, sesión en vivo) van **full-bleed con su propio rail de iconos 62px** (réplica solo-iconos del sidebar), como ya hace `SessionView`. No colapses el sidebar 236px para esto; monta la vista full-bleed en `App.jsx`.
+- **Por qué importa:** Mantiene consistencia entre las pantallas-lienzo del handoff y evita hacks de layout para exprimir ancho dentro del shell.
+
 ---
 
 ## Arquitectura
@@ -173,3 +188,4 @@ Las lecciones se agrupan por categoría. Cada entrada tiene:
 - 2026-06-29 — líder agregó tras cerrar F5: "Una feature de frontend no está terminada hasta que sus componentes estén cableados" (Frontend) y "Directiva eslint-disable a plugin no registrado = error fatal en ESLint 9" (Frontend).
 - 2026-06-29 — líder agregó tras cerrar F8b: "Cada servicio con imagen Docker necesita .dockerignore" (Docker/infra).
 - 2026-07-02 — líder agregó tras cerrar F14: "Colores dinámicos por entidad: lista de clases estáticas + índice estable" (Frontend) y "Al insertar en tablas puente en tests, actualizar el DELETE del beforeEach" (Testing).
+- 2026-07-20 — líder agregó tras cerrar F17 (sesión autónoma): "`style={{}}` inline SÍ se permite para geometría computada", "Extender un componente compartido = props opcionales retrocompatibles" y "Vistas de trabajo intensivo van full-bleed (rail 62px)" — las tres en Frontend.
