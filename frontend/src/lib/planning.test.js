@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { flattenPrepEvents, computeGraphLayout } from './planning.js';
+import {
+  flattenPrepEvents,
+  computeGraphLayout,
+  categoryBucket,
+  categoryLabel,
+  eventCategoryClasses,
+} from './planning.js';
 
 describe('flattenPrepEvents', () => {
   it('aplana ubicaciones, sub-ubicaciones, ramas y eventos sueltos con su etiqueta', () => {
@@ -55,5 +61,45 @@ describe('computeGraphLayout', () => {
     const { positions } = computeGraphLayout(events, edges);
     expect(positions.size).toBe(1);
     expect(positions.get(1)).toEqual({ x: 0, y: 0 });
+  });
+});
+
+describe('mapeo de categorías v1 → 4 colores del handoff', () => {
+  it('agrupa las 8 categorías v1 en los 4 cubos (0=combat…3=discovery)', () => {
+    // Caso feliz: cada categoría cae en un índice 0..3.
+    for (const cat of [
+      'general',
+      'combate',
+      'exploración',
+      'interacción',
+      'trampa',
+      'recompensa',
+      'historia',
+      'NPC',
+    ]) {
+      const i = categoryBucket(cat);
+      expect(i).toBeGreaterThanOrEqual(0);
+      expect(i).toBeLessThanOrEqual(3);
+    }
+    // Anclas concretas del mapeo.
+    expect(categoryBucket('combate')).toBe(0);
+    expect(categoryBucket('exploración')).toBe(2);
+  });
+
+  it('cae a discovery (índice de general) para categorías desconocidas', () => {
+    expect(categoryBucket('inexistente')).toBe(categoryBucket('general'));
+  });
+
+  it('devuelve clases LITERALES de barra/badge/borde sin interpolar', () => {
+    const cls = eventCategoryClasses('combate');
+    expect(cls.barClass).toBe('bg-cat-combat-bar');
+    expect(cls.badgeClass).toContain('bg-cat-combat-bg');
+    expect(cls.borderClass).toBe('border-cat-combat-bar');
+    expect(cls.label).toBe('Combate');
+  });
+
+  it('etiqueta legible con fallback al valor crudo', () => {
+    expect(categoryLabel('NPC')).toBe('NPC');
+    expect(categoryLabel('rara')).toBe('rara');
   });
 });

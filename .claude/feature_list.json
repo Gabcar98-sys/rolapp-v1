@@ -156,7 +156,7 @@
     "phase": "F17 — Rediseño (d): Preparar Sesión",
     "title": "Preparar Sesión según handoff: rail 62px + panel ubicaciones 266px + vistas Lista/Grafo (drag, zoom, enlaces con etiqueta)",
     "priority": 19,
-    "status": "pending",
+    "status": "done",
     "description": "Recrear la pantalla estrella (Preparar Sesion.dc.html, pantallazos 11-13) sobre la funcionalidad ya existente (preps → locations → sub_locations → event_templates + event_links). Layout: rail de iconos 62px (réplica del sidebar solo iconos) + panel de ubicaciones 266px (árbol colapsable con chevron rotatorio, badges de conteo, ítem seleccionado con inset terracota, sección Sin ubicación con borde punteado, crear ubicación/sub-ubicación inline) + main con toolbar 60px (breadcrumb Preparaciones/nombre, contador de eventos, toggle segmentado Lista/Grafo, botón +Evento). Vista Lista: columna 820px, kicker uppercase + H1 Newsreader, tarjetas de evento con barra de categoría 4px, badge pill, etiqueta de enlace narrativo, acciones al hover (subir/bajar/editar/eliminar), estado vacío punteado con CTA. Vista Grafo: fondo de puntos radial, nodos 186px arrastrables (pointer events, delta/scale), aristas Bézier SVG (sólida gris = misma ubicación, punteada terracota con etiqueta-píldora = enlace narrativo), crear/eliminar enlaces con etiqueta, nodo seleccionado con borde de categoría + sombra, leyenda sticky y zoom +/-/reset (0.6-1.5, pasos 0.15). Mantener categorías v1 mapeadas a los 4 colores del handoff. Selector de preparación (lista de preps del DM) como vista de entrada. Verificación: build+lint+tests, smoke crear prep→ubicaciones→eventos→enlaces en ambas vistas."
   },
   {

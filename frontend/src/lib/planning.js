@@ -28,6 +28,79 @@ export function categoryClasses(category) {
   return CATEGORY_CLASSES[category] ?? CATEGORY_CLASSES.general;
 }
 
+// ── Mapeo de categorías v1 → 4 colores del handoff (tokens cat-*) ─────────────────
+// El handoff sólo define 4 colores de categoría (combat/social/explore/discovery).
+// Las 8 categorías v1 se agrupan en esos 4 cubos. El color se elige por ÍNDICE
+// estable sobre listas de clases LITERALES (lección F14: el JIT sólo genera lo que
+// ve literal — nunca `bg-${x}` ni estilos inline).
+//
+// Índices: 0=combat · 1=social · 2=explore · 3=discovery.
+const CATEGORY_BUCKET = {
+  combate: 0,
+  NPC: 1,
+  interacción: 1,
+  exploración: 2,
+  trampa: 2,
+  historia: 3,
+  recompensa: 3,
+  general: 3,
+};
+
+// Etiqueta en español para mostrar en badges (capitaliza el valor v1 tal cual).
+const CATEGORY_LABELS = {
+  general: 'General',
+  combate: 'Combate',
+  exploración: 'Exploración',
+  interacción: 'Interacción',
+  trampa: 'Trampa',
+  recompensa: 'Recompensa',
+  historia: 'Historia',
+  NPC: 'NPC',
+};
+
+// Barra superior 4px del nodo/tarjeta (color de fondo, no borde).
+const CAT_BAR_CLASSES = [
+  'bg-cat-combat-bar',
+  'bg-cat-social-bar',
+  'bg-cat-explore-bar',
+  'bg-cat-discovery-bar',
+];
+
+// Badge píldora (tinte de fondo + texto de la categoría).
+const CAT_BADGE_CLASSES = [
+  'bg-cat-combat-bg text-cat-combat-text',
+  'bg-cat-social-bg text-cat-social-text',
+  'bg-cat-explore-bg text-cat-explore-text',
+  'bg-cat-discovery-bg text-cat-discovery-text',
+];
+
+// Borde de color de categoría (nodo seleccionado en el grafo).
+const CAT_BORDER_CLASSES = [
+  'border-cat-combat-bar',
+  'border-cat-social-bar',
+  'border-cat-explore-bar',
+  'border-cat-discovery-bar',
+];
+
+export function categoryBucket(category) {
+  return CATEGORY_BUCKET[category] ?? CATEGORY_BUCKET.general;
+}
+
+export function categoryLabel(category) {
+  return CATEGORY_LABELS[category] ?? category ?? 'General';
+}
+
+// Devuelve las clases del handoff para una categoría v1: barra, badge y borde.
+export function eventCategoryClasses(category) {
+  const i = categoryBucket(category);
+  return {
+    label: categoryLabel(category),
+    barClass: CAT_BAR_CLASSES[i],
+    badgeClass: CAT_BADGE_CLASSES[i],
+    borderClass: CAT_BORDER_CLASSES[i],
+  };
+}
+
 // Eventos del log que NO son de planificación (presencia / sistema / chat).
 const NON_PLANNING_TYPES = new Set([
   'session_join',

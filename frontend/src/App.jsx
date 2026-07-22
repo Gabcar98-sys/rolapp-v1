@@ -43,12 +43,22 @@ export default function App() {
   const isDM = user.role === 'dm';
   const active = !isDM && dmOnly.has(page) ? 'dashboard' : page;
 
+  const logout = () => {
+    setSession(null);
+    setUser(null);
+    setPage('dashboard');
+  };
+
+  // Preparar Sesión es full-bleed (rail 62px propio), fuera del AppShell — igual
+  // que SessionView. El resto de páginas viven dentro del shell.
+  if (active === 'prep') {
+    return <PrepPage user={user} onNavigate={setPage} onLogout={logout} />;
+  }
+
   function renderPage() {
     switch (active) {
       case 'campaigns':
         return <CampaignsPage user={user} />;
-      case 'prep':
-        return <PrepPage user={user} />;
       case 'skills':
         return <SkillsPage user={user} />;
       case 'base-characters':
@@ -73,11 +83,7 @@ export default function App() {
       user={user}
       active={active}
       onNavigate={setPage}
-      onLogout={() => {
-        setSession(null);
-        setUser(null);
-        setPage('dashboard');
-      }}
+      onLogout={logout}
     >
       {renderPage()}
     </AppShell>

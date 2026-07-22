@@ -68,6 +68,8 @@ export const api = {
       method: 'POST',
       body: { dm_id: dmId, name, campaign_id: campaignId, description },
     }),
+  updatePrep: (id, dmId, fields) =>
+    request(`/session-preps/${id}`, { method: 'PUT', body: { dm_id: dmId, ...fields } }),
   deletePrep: (id, dmId) =>
     request(`/session-preps/${id}`, { method: 'DELETE', body: { dm_id: dmId } }),
 
@@ -77,6 +79,8 @@ export const api = {
       method: 'POST',
       body: { prep_id: prepId, name, description, dm_id: dmId },
     }),
+  updateLocation: (id, dmId, fields) =>
+    request(`/locations/${id}`, { method: 'PUT', body: { dm_id: dmId, ...fields } }),
   deleteLocation: (id, dmId) =>
     request(`/locations/${id}`, { method: 'DELETE', body: { dm_id: dmId } }),
 
@@ -86,6 +90,8 @@ export const api = {
       method: 'POST',
       body: { location_id: locationId, name, description, dm_id: dmId },
     }),
+  updateSubLocation: (id, dmId, fields) =>
+    request(`/sub-locations/${id}`, { method: 'PUT', body: { dm_id: dmId, ...fields } }),
   deleteSubLocation: (id, dmId) =>
     request(`/sub-locations/${id}`, { method: 'DELETE', body: { dm_id: dmId } }),
 

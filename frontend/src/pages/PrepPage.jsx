@@ -1,25 +1,23 @@
 import { useState } from 'react';
-import Page from '../components/layout/Page.jsx';
-import PageHeader from '../components/layout/PageHeader.jsx';
-import SessionPrepPanel from '../components/DMMaster/SessionPrepPanel.jsx';
-import EventTemplatePanel from '../components/DMMaster/EventTemplatePanel.jsx';
+import PrepRail from '../components/DMMaster/PrepRail.jsx';
+import PrepSelector from '../components/DMMaster/PrepSelector.jsx';
+import PrepWorkspace from '../components/DMMaster/PrepWorkspace.jsx';
 
-// Preparar Sesión (solo DM): selector de preparaciones + constructor de eventos.
-// El rediseño completo (rail 62px + panel de ubicaciones + vistas Lista/Grafo) llega en F17.
-export default function PrepPage({ user }) {
-  const [editingPrep, setEditingPrep] = useState(null);
+// Preparar Sesión (solo DM), pantalla full-bleed del handoff (Preparar Sesion.dc.html):
+// rail de iconos 62px propio + selector de preparaciones (entrada) o espacio de
+// trabajo de la prep abierta (panel de ubicaciones 266px + vistas Lista/Grafo).
+// Se renderiza fuera del AppShell (como SessionView); el rail replica la navegación.
+export default function PrepPage({ user, onNavigate, onLogout }) {
+  const [activePrep, setActivePrep] = useState(null);
 
   return (
-    <Page>
-      <PageHeader
-        title="Preparar Sesión"
-        subtitle="Constructor de ubicaciones, eventos y enlaces narrativos"
-      />
-      {editingPrep ? (
-        <EventTemplatePanel user={user} prep={editingPrep} onBack={() => setEditingPrep(null)} />
+    <div className="flex h-screen w-full overflow-hidden bg-bg text-ink">
+      <PrepRail user={user} active="prep" onNavigate={onNavigate} onLogout={onLogout} />
+      {activePrep ? (
+        <PrepWorkspace prep={activePrep} user={user} onBack={() => setActivePrep(null)} />
       ) : (
-        <SessionPrepPanel user={user} onEditPrep={setEditingPrep} />
+        <PrepSelector user={user} onOpen={setActivePrep} />
       )}
-    </Page>
+    </div>
   );
 }
