@@ -192,3 +192,17 @@ Sesión en vivo completa + presets de IA. Sesión autónoma del líder. Implemen
 - Migración `M002` idempotente. **Verificación (reviewer, Docker):** lint exit 0, backend 141 pass/1 skip, frontend build `--no-cache` exit 0, vitest 68/68. `session_events` intacto (append-only), `EventFlowGraph` sin tocar.
 - Deuda no bloqueante: `ChatPanel`/`CanvasBoard`/`SessionStatsPanel` aún con tokens v0 + emojis (terminar antes de eliminar alias v0); 2 exports muertos (`listCampaignSummaries`, `categoryClasses`).
 - Próxima: F19-history-detail (última; ~85% composición según scout, backend 100% listo).
+
+## 2026-07-20 — F19-history-detail (DONE) — 🏁 BACKLOG F0–F19 COMPLETO
+
+Detalle de sesión finalizada. Sesión autónoma del líder. Implementer → Reviewer APROBADO. **Última feature del backlog.**
+
+- **~85% composición, backend 100% listo (cero endpoints nuevos):** reutiliza `GET /api/notes`, `/sessions/:id/events`, `/sessions/:id/summary`, `/sessions/:id/stats`.
+- **Contenedor `SessionDetail`** con 4 tabs abierto desde "Ver resumen→" de `HistoryPage` (antes toggle inline): **Notas** (`NotesPanel` en `readOnly`; jugador solo públicas, DM todas con badge), **Eventos** (log con tipo/actor/ubicación/participantes + badge NPC), **Resumen** (resumen IA de cierre), **IA** (`AIPanel` v2 sobre la sesión finalizada + stats de F7 vía `SessionStatsPanel`). Búsqueda + filtro por campaña de F14 preservados.
+- **Decisiones clave:** el tab IA **conecta el socket** (sin `session:join`) para conservar streaming sin reescribir el AIPanel (seguro: `SessionDetail` y `SessionView` nunca coexisten); el render de eventos se **extrajo a `FiredEventCard`** (en `SessionEventsPanel.jsx`) y `PlanningPanel` lo reutiliza (una sola fuente de verdad, byte-idéntico).
+- Restyle de `SessionStatsPanel` (emojis 📜⏱️⚔️ → `Icon.jsx`, tokens handoff). Contrato de `StatTile`/`BarChart` migrado; consumidores compartidos (`CampaignStatsPanel`/`CharacterStatsPanel`) sin regresión (mismo hex: `gold==accent`, `ink900==bg`, verificado).
+- **Verificación (reviewer, Docker):** lint exit 0, backend 141 pass/1 skip, frontend build `--no-cache` exit 0 (888 módulos), vitest 77/77. Privacidad de notas server-side confirmada. Sin regresión de la sesión en vivo (F18).
+- Deuda no bloqueante: `📍` preexistente en `CampaignStatsPanel:67` (fuera de alcance); ChatPanel/CanvasBoard aún con tokens v0.
+
+### Cierre de sesión autónoma (2026-07-20)
+Con F19, el backlog completo F0–F19 está `done`. En esta sesión autónoma el líder cerró **F15, F16, F17, F18, F19** (F15 saneada de un commit fuera-de-flujo; F16–F19 ciclo completo implementer→reviewer). La app ya tiene todas las features para llevar una sesión de rol completa (preparación → sesión en vivo con notas/personajes/toolbar/IA → cierre → historial con detalle e IA). **Pendiente SOLO del founder (runtime, no código):** levantar Ollama (perfil `ai`) + bootstrap de modelos + reindexar docs para que la IA generativa funcione en vivo — ver `ai_audit.md` y `current.md`.

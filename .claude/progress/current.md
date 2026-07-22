@@ -24,9 +24,17 @@ El líder orquesta; no escribe código. Ciclo por feature: implementer → revie
 
 ## Feature en progreso
 
-**Ninguna aún** — F15, F16, F17 y F18 cerradas (APROBADAS). Siguiente y ÚLTIMA: **F19-history-detail**.
-Ciclo por feature: implementer (flip pending→in_progress) → reviewer → aprobación → líder commitea `feat(Fxx)` + history.md.
-F19 ya scouteada (`scout_F19-history.md`): **~85% composición, backend 100% listo (cero endpoints nuevos)**. Reutiliza `NotesPanel` (+flag `readOnly`), `AIPanel` v2 (acepta `sessionId`), `HistoryPage` (búsqueda/filtro/timeline), `SessionStatsPanel`. Nuevo: contenedor `SessionDetail` con 4 tabs (Notas/Eventos/Resumen/IA) + tab Eventos (render casi hecho en PlanningPanel) + navegación desde "Ver resumen→". Riesgo menor: conectar socket para el tab IA (o fallback REST `api.aiAsk`).
+**NINGUNA — 🏁 BACKLOG F0–F19 COMPLETO.** Todas las features `done`.
+Esta sesión autónoma cerró F15 (saneada), F16, F17, F18 y F19 (ciclo implementer→reviewer cada una).
+La app tiene todas las features para llevar una sesión de rol completa.
+
+## Pendiente SOLO del founder (runtime IA, no código)
+Para que la IA generativa funcione en vivo (hoy degrada limpio sin ella):
+1. `docker compose --profile ai up -d --build`
+2. `docker compose --profile ai run --rm ai-bootstrap`  (baja `nomic-embed-text` + `qwen2.5:3b`)
+3. `curl localhost:3001/api/ai/status` → esperar `ready:true`
+4. **Reindexar cada doc** (hoy solo FTS, cero vectores): tab Documentos o `POST /api/game-systems/:id/docs/:docId/reindex`.
+5. Validar calidad del LLM; si flojea, subir a 7b vía `AI_MODEL`. Detalle en `ai_audit.md`.
 
 ## En paralelo (no bloquea features)
 
@@ -51,6 +59,8 @@ F19 (detalle de historial).
 - **F18-session-live** — APROBADA (la más grande). Notas (privacidad verificada en vivo) +
   IA backend (presets/topics/summaries) + AIPanel v2 (envuelto, streaming intacto) + toolbar DM +
   StatusTab editable + restyle. Backend 141 pass, frontend 68. Migración M002.
+- **F19-history-detail** — APROBADA (última). `SessionDetail` con 4 tabs (Notas/Eventos/Resumen/IA)
+  reutilizando piezas de F18/F14/F7; tab IA conserva streaming; `FiredEventCard` DRY. frontend 77.
 
 ## Cerradas en sesiones previas
 - **F13-design-foundation** — commit `476a07d`. AppShell + tokens + iconos.
