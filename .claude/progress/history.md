@@ -177,3 +177,18 @@ Rediseño de "Preparar Sesión". Sesión autónoma del líder. Implementer → R
 - **Verificación (reviewer, Docker):** lint exit 0, backend 126 pass/1 skip, frontend build exit 0, vitest 62/62.
 - 3 lecciones nuevas en LEARNINGS (Frontend). Brechas no bloqueantes: drag de nodos efímero (como el mockup); sin botón "crear rama" en vista Lista (no está en el handoff; ramas existentes respetadas).
 - Próxima: F18-session-live (sesión en vivo completa: notas, tabs por personaje, toolbar, **presets de IA**). Ya scouteada (`scout_F18-live.md`).
+
+## 2026-07-20 — F18-session-live (DONE)
+
+Sesión en vivo completa + presets de IA. Sesión autónoma del líder. Implementer → Reviewer APROBADO. **La feature más grande; núcleo de "la IA para todo".**
+
+- **Mayormente reutilización** (scout): `CharacterSheet` ya tenía los 5 tabs; `AIPanel` ya tenía streaming/citas/follow-ups; el modal de evento NPC ya vivía en PlanningPanel; `characters:updated` ya se emitía. El implementer ENVOLVIÓ, no reescribió.
+- **(1) Notas:** `routes/notes.js` como **factory `createNotesRouter(io)`** (CRUD sobre `session_notes`, visibilidad por rol: privadas solo DM), `NotesPanel` con sync socket. **Privacidad verificada en vivo por el reviewer:** jugador NO recibe notas privadas ni sus bodies (REST filtra por rol; `notes:updated` emite solo `{sessionId}`, sin bodies; POST/PUT no-DM → 403). 7 tests.
+- **(2) IA backend (compone sobre F9–F12):** `streamSessionPreset` + `SESSION_PRESETS` sobre datos estructurados; `sectionType` propagado en `ai:ask`/`streamRulesQuestion` (habilita topics de sistema); `GET /campaigns/:id/summaries` (incluir sesiones anteriores). 9 tests con stubs deterministas; degradación elegante.
+- **(3) AIPanel v2:** modos Sesión/Sistema; presets (Resumen/Cronología/Estado de personajes/Inventarios/Pregunta libre); topics de sistema; checkbox incluir-sesiones-anteriores. **Streaming/citas/follow-ups/regenerar/degradación preservados** (verificado por el reviewer con Ollama off: 503 limpio).
+- **(4) Toolbar DM:** Cambiar mapa/Nuevo Evento/Evento NPC (catálogo F16)/Reset/Finalizar; jugador: Salir. Sin romper el canvas tldraw.
+- **(5) Tabs personaje:** `StatusTab` editable (dot-tracker HP/voluntad, máx+actual); la ficha reacciona a `characters:updated`.
+- **(6) Restyle:** SessionView + 4 paneles (Notas, AIPanel, CharacterSheet, PlanningPanel) + SessionCharactersPanel/ConnectedUsers a tokens del handoff + `Icon.jsx`. Cero emojis.
+- Migración `M002` idempotente. **Verificación (reviewer, Docker):** lint exit 0, backend 141 pass/1 skip, frontend build `--no-cache` exit 0, vitest 68/68. `session_events` intacto (append-only), `EventFlowGraph` sin tocar.
+- Deuda no bloqueante: `ChatPanel`/`CanvasBoard`/`SessionStatsPanel` aún con tokens v0 + emojis (terminar antes de eliminar alias v0); 2 exports muertos (`listCampaignSummaries`, `categoryClasses`).
+- Próxima: F19-history-detail (última; ~85% composición según scout, backend 100% listo).

@@ -24,9 +24,9 @@ El líder orquesta; no escribe código. Ciclo por feature: implementer → revie
 
 ## Feature en progreso
 
-**Ninguna aún** — F15, F16 y F17 cerradas (APROBADAS). Siguiente a lanzar: **F18-session-live** (la más grande).
+**Ninguna aún** — F15, F16, F17 y F18 cerradas (APROBADAS). Siguiente y ÚLTIMA: **F19-history-detail**.
 Ciclo por feature: implementer (flip pending→in_progress) → reviewer → aprobación → líder commitea `feat(Fxx)` + history.md.
-F18 ya scouteada (`scout_F18-live.md`): mayormente reutilización (`CharacterSheet` ya tiene los 5 tabs; `AIPanel` ya tiene streaming/citas/follow-ups). Orden: notas backend+panel → apoyo-IA → AIPanel v2 (envolver, no reescribir) → toolbar DM → StatusTab editable + reaccionar a `characters:updated` → restyle. Único backend real: router de `session_notes` (tabla existe, faltan rutas).
+F19 ya scouteada (`scout_F19-history.md`): **~85% composición, backend 100% listo (cero endpoints nuevos)**. Reutiliza `NotesPanel` (+flag `readOnly`), `AIPanel` v2 (acepta `sessionId`), `HistoryPage` (búsqueda/filtro/timeline), `SessionStatsPanel`. Nuevo: contenedor `SessionDetail` con 4 tabs (Notas/Eventos/Resumen/IA) + tab Eventos (render casi hecho en PlanningPanel) + navegación desde "Ver resumen→". Riesgo menor: conectar socket para el tab IA (o fallback REST `api.aiAsk`).
 
 ## En paralelo (no bloquea features)
 
@@ -48,6 +48,9 @@ F19 (detalle de historial).
 - **F17-prep-redesign** — APROBADA. "Preparar Sesión" full-bleed (rail 62px + panel 266px +
   vistas Lista/Grafo con Bézier/zoom/enlaces). `EventFlowGraph` extendido sin romper `compact`.
   3 lecciones nuevas en LEARNINGS. Backend ya estaba completo.
+- **F18-session-live** — APROBADA (la más grande). Notas (privacidad verificada en vivo) +
+  IA backend (presets/topics/summaries) + AIPanel v2 (envuelto, streaming intacto) + toolbar DM +
+  StatusTab editable + restyle. Backend 141 pass, frontend 68. Migración M002.
 
 ## Cerradas en sesiones previas
 - **F13-design-foundation** — commit `476a07d`. AppShell + tokens + iconos.
@@ -76,6 +79,13 @@ Riesgo: la IA real nunca corrió en vivo (todo con stubs). La calidad LLM + rein
 - Deuda visual: `AIPanel`/`SessionView` aún con tokens viejos + emojis (`App.jsx:17`) → re-tematizar en F18.
 
 ## Deuda menor
+- **Deuda de estilo v0 (importante antes de eliminar alias v0 de Tailwind):** quedan con tokens v0
+  (`gold/ink/gray`) + emojis: `ChatPanel`, `CanvasBoard`, `SessionStatsPanel` (📜⏱️⚔️ en `StatTile`).
+  F19 puede rematar `SessionStatsPanel` (está en su superficie); ChatPanel/CanvasBoard necesitan una
+  pasada de limpieza. Si se eliminan los alias v0 sin restilar estos, rompen visualmente.
+- **Exports muertos (F18):** `listCampaignSummaries` y `categoryClasses` — limpiar en una pasada futura.
+- El auto-commiteador del entorno sella el working tree con mensajes genéricos y a veces gana la
+  carrera a mis commits `feat(Fxx)`. El trabajo se persiste igual; no reescribir historia.
 - Commit `d894c3b` no sigue la convención `feat(F15): …` (cosmético; no re-escribir historia).
 
 ## F16 pre-scouted (`scout_F16-npcs.md`)
