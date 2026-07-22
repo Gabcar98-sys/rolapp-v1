@@ -86,6 +86,15 @@ function runMigrations() {
           "CHECK(disposition IN ('ally','neutral','hostile'))"
       );
     }],
+    // F18: session_notes es editable (UPDATE), a diferencia de session_events. Se añade
+    // updated_at para reflejar la última edición. Idempotente: verifica con PRAGMA antes.
+    ['M002_session_notes_updated_at', () => {
+      const cols = db.prepare('PRAGMA table_info(session_notes)').all();
+      if (cols.some((c) => c.name === 'updated_at')) return;
+      // SQLite no admite DEFAULT no-constante en ALTER; se añade sin default y se rellena.
+      db.exec('ALTER TABLE session_notes ADD COLUMN updated_at INTEGER');
+      db.exec('UPDATE session_notes SET updated_at = created_at WHERE updated_at IS NULL');
+    }],
   ];
 
   const insert = db.prepare('INSERT INTO _migrations (name) VALUES (?)');

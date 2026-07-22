@@ -463,7 +463,8 @@ CREATE TABLE IF NOT EXISTS session_notes (
   body       TEXT    NOT NULL DEFAULT '',
   event_type TEXT    NOT NULL DEFAULT 'general',
   is_public  INTEGER NOT NULL DEFAULT 0,
-  created_at INTEGER NOT NULL DEFAULT (unixepoch())
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch())
 );
 
 -- ── Resúmenes de sesión (generados por IA) ────────────────────────────────────

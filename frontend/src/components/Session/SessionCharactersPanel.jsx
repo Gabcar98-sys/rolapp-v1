@@ -6,7 +6,7 @@ import Card from '../ui/Card.jsx';
 import CharacterSheet from '../Character/CharacterSheet.jsx';
 
 const inputCls =
-  'rounded-md border border-ink-line bg-ink-900 px-3 py-2 text-sm text-gray-100 outline-none focus:border-gold';
+  'rounded-btn border border-line bg-bg px-3 py-2 text-sm text-title outline-none focus:border-accent';
 
 // Panel de personajes en sesión. El jugador elige qué personaje lleva (lo vincula vía
 // session_characters) y edita su ficha. El DM ve/gestiona los de la sesión. Escucha
@@ -90,19 +90,19 @@ export default function SessionCharactersPanel({ sessionId, session, user }) {
 
   return (
     <div className="flex flex-col gap-4 overflow-y-auto p-3">
-      {error && <p className="rounded-md bg-danger/20 px-3 py-2 text-sm text-red-300">{error}</p>}
+      {error && <p className="rounded-btn bg-danger-tint px-3 py-2 text-sm text-danger-text">{error}</p>}
 
       {/* Selector: el jugador elige qué personaje lleva a la sesión */}
       {!isDM && (
         <Card className="p-3">
-          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-gold">Llevar un personaje</h4>
+          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-accent-text">Llevar un personaje</h4>
           {myInSession.length > 0 && (
-            <p className="mb-2 text-xs text-gray-400">
+            <p className="mb-2 text-xs text-sub">
               Ya tienes {myInSession.length} en esta sesión. Puedes añadir otro.
             </p>
           )}
           {bringable.length === 0 ? (
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-faint">
               {hasIncompatibleOnly
                 ? 'No tienes personajes del sistema de juego de esta campaña.'
                 : 'No tienes más personajes para añadir.'}
@@ -127,17 +127,17 @@ export default function SessionCharactersPanel({ sessionId, session, user }) {
 
       {/* Lista de personajes en la sesión */}
       <div className="flex flex-col gap-2">
-        <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+        <h4 className="text-xs font-semibold uppercase tracking-wider text-muted">
           {isDM ? 'Personajes de la sesión' : 'En la sesión'}
         </h4>
         {sessionChars.length === 0 ? (
-          <p className="text-sm text-gray-500">Aún no hay personajes vinculados.</p>
+          <p className="text-sm text-faint">Aún no hay personajes vinculados.</p>
         ) : (
           sessionChars.map((c) => (
             <Card key={c.id} className="flex items-center justify-between p-3">
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-gray-100">{c.name}</p>
-                <p className="mt-0.5 text-xs text-gray-400">
+                <p className="truncate text-sm font-medium text-title">{c.name}</p>
+                <p className="mt-0.5 text-xs text-sub">
                   {c.username}
                   {c.game_system_name ? ` · ${c.game_system_name}` : ''}
                 </p>

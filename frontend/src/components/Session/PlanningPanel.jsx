@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import socket from '../../lib/socket.js';
 import { api } from '../../lib/api.js';
-import { categoryClasses, isPlanningEvent, EVENT_CATEGORIES } from '../../lib/planning.js';
+import { eventCategoryClasses, isPlanningEvent, EVENT_CATEGORIES } from '../../lib/planning.js';
 import Button from '../ui/Button.jsx';
 import Modal from '../ui/Modal.jsx';
 import Tabs from '../ui/Tabs.jsx';
+import Icon from '../ui/Icon.jsx';
 import EventFlowGraph from '../DMMaster/EventFlowGraph.jsx';
+
+const inputCls =
+  'rounded-btn border border-line bg-bg px-3 py-2 text-sm text-title outline-none focus:border-accent';
 
 // Panel de planificación en sesión (solo DM). Carga la jerarquía del prep de la sesión
 // (o event_templates sueltos) y permite disparar eventos al log append-only de la sesión.
@@ -272,31 +276,33 @@ export default function PlanningPanel({ sessionId, user, session }) {
         disabled={busy}
         onClick={() => openFire(tmpl, branchLabel, locationName, subLocationName)}
       >
-        {busy ? '⏳' : done ? '✅ Lanzado' : '🎯 Lanzar'}
+        {busy ? '…' : done ? 'Lanzado' : 'Lanzar'}
       </Button>
     );
   }
 
   function EventCard({ event, locName = '', subLocName = '', linkLabel = '' }) {
-    const cls = categoryClasses(event.category);
+    const cat = eventCategoryClasses(event.category);
     return (
-      <div className="flex gap-2 rounded-md border border-ink-line bg-ink-800 p-2">
-        <div className={`w-1 flex-shrink-0 rounded-sm border-l-2 ${cls}`} />
+      <div className="flex gap-2 overflow-hidden rounded-btn border border-line bg-bg p-2">
+        <div className={`w-1 flex-shrink-0 rounded-sm ${cat.barClass}`} />
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           {linkLabel && (
-            <span className="text-[0.66rem] font-bold uppercase tracking-wide text-gold">→ {linkLabel}</span>
+            <span className="text-[0.66rem] font-bold uppercase tracking-wide text-accent-text">→ {linkLabel}</span>
           )}
           <div className="flex items-start gap-2">
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-1.5">
-                <strong className="text-sm text-gray-100">{event.title}</strong>
-                <span className={`rounded border px-1.5 text-[0.66rem] ${cls}`}>{event.category}</span>
+                <strong className="text-sm text-title">{event.title}</strong>
+                <span className={`rounded-pill px-2 py-0.5 text-[0.66rem] ${cat.badgeClass}`}>{cat.label}</span>
                 {(subLocName || locName) && (
-                  <span className="text-[0.65rem] text-gray-500">📌 {subLocName || locName}</span>
+                  <span className="flex items-center gap-0.5 text-[0.65rem] text-muted">
+                    <Icon name="pin" size={11} /> {subLocName || locName}
+                  </span>
                 )}
               </div>
               {event.description && (
-                <p className="mt-0.5 text-xs leading-snug text-gray-400">{event.description}</p>
+                <p className="mt-0.5 text-xs leading-snug text-sub">{event.description}</p>
               )}
             </div>
             <FireButton tmpl={event} locationName={locName} subLocationName={subLocName} />
@@ -307,10 +313,10 @@ export default function PlanningPanel({ sessionId, user, session }) {
   }
 
   const tabs = [
-    { id: 'plan', label: '📋 Prep.' },
-    { id: 'fired', label: `⚡ Disparados`, badge: firedEvents.length },
+    { id: 'plan', label: 'Prep.' },
+    { id: 'fired', label: 'Disparados', badge: firedEvents.length },
     // Edición visual del flujo en vivo: requiere un prep asociado a la sesión.
-    ...(session?.prep_id ? [{ id: 'edit', label: '🕸 Editar' }] : []),
+    ...(session?.prep_id ? [{ id: 'edit', label: 'Flujo' }] : []),
   ];
 
   return (
@@ -318,11 +324,11 @@ export default function PlanningPanel({ sessionId, user, session }) {
       <Tabs tabs={tabs} activeId={tab} onChange={setTab} className="flex-shrink-0" />
 
       {error && (
-        <p className="mx-2 mt-2 rounded-md bg-danger/20 px-2 py-1 text-xs text-red-300">{error}</p>
+        <p className="mx-2 mt-2 rounded-btn bg-danger-tint px-2 py-1 text-xs text-danger-text">{error}</p>
       )}
 
       <div className="flex flex-1 flex-col gap-1.5 overflow-y-auto p-2">
-        {loading && <p className="mt-2 text-center text-sm italic text-gray-600">Cargando…</p>}
+        {loading && <p className="mt-2 text-center text-sm italic text-muted">Cargando…</p>}
 
         {/* ── Pestaña Preparación ── */}
         {!loading && tab === 'plan' && (
@@ -331,20 +337,22 @@ export default function PlanningPanel({ sessionId, user, session }) {
             {hierarchy && hasLinks && (
               <>
                 {subLocFlows.length === 0 && (
-                  <p className="mt-2 text-center text-sm italic text-gray-600">
+                  <p className="mt-2 text-center text-sm italic text-muted">
                     Sin eventos en esta preparación.
                   </p>
                 )}
                 {subLocFlows.map(({ locName, subLocName, mode, initialEntries, nextEntries }) => (
                   <div key={`${locName}|||${subLocName}`} className="mb-1 flex flex-col gap-1">
-                    <div className="rounded bg-ink-700 px-2 py-1 text-sm font-bold text-gold">📍 {locName}</div>
-                    <div className="px-1 text-xs font-semibold text-gray-300">📌 {subLocName}</div>
+                    <div className="flex items-center gap-1 rounded-btn bg-surface px-2 py-1 text-sm font-bold text-accent-text">
+                      <Icon name="pin" size={13} /> {locName}
+                    </div>
+                    <div className="px-1 text-xs font-semibold text-sub">{subLocName}</div>
 
-                    <span className="self-start rounded bg-ink-900 px-1.5 py-0.5 text-[0.69rem] font-bold text-gold">
-                      🚀 Inicio
+                    <span className="self-start rounded-pill bg-surface-2 px-2 py-0.5 text-[0.69rem] font-bold text-accent-text">
+                      Inicio
                     </span>
                     {initialEntries.length === 0 ? (
-                      <p className="text-xs italic text-gray-600">Sin eventos de inicio definidos.</p>
+                      <p className="text-xs italic text-muted">Sin eventos de inicio definidos.</p>
                     ) : (
                       initialEntries.map(({ event, locName: l, subLocName: sl }) => (
                         <EventCard key={event.id} event={event} locName={l} subLocName={sl} />
@@ -353,11 +361,11 @@ export default function PlanningPanel({ sessionId, user, session }) {
 
                     {mode === 'active' && (
                       <>
-                        <span className="self-start rounded bg-success/20 px-1.5 py-0.5 text-[0.69rem] font-bold text-emerald-400">
-                          🎯 Próximo
+                        <span className="self-start rounded-pill bg-cat-explore-bg px-2 py-0.5 text-[0.69rem] font-bold text-cat-explore-text">
+                          Próximo
                         </span>
                         {nextEntries.length === 0 ? (
-                          <p className="text-xs italic text-gray-600">Camino completado en esta ubicación.</p>
+                          <p className="text-xs italic text-muted">Camino completado en esta ubicación.</p>
                         ) : (
                           nextEntries.map(({ event, locName: l, subLocName: sl, linkLabel }) => (
                             <EventCard key={event.id} event={event} locName={l} subLocName={sl} linkLabel={linkLabel} />
@@ -374,18 +382,20 @@ export default function PlanningPanel({ sessionId, user, session }) {
             {hierarchy && !hasLinks && (
               <>
                 {hierarchy.locations.length === 0 && hierarchy.freeEvents.length === 0 && (
-                  <p className="mt-2 text-center text-sm italic text-gray-600">
+                  <p className="mt-2 text-center text-sm italic text-muted">
                     Sin eventos en esta preparación.
                   </p>
                 )}
                 {hierarchy.locations.map((loc) => (
                   <div key={loc.id} className="mb-1 flex flex-col gap-1">
-                    <div className="rounded bg-ink-700 px-2 py-1 text-sm font-bold text-gold">📍 {loc.name}</div>
+                    <div className="flex items-center gap-1 rounded-btn bg-surface px-2 py-1 text-sm font-bold text-accent-text">
+                      <Icon name="pin" size={13} /> {loc.name}
+                    </div>
                     {(loc.sub_locations ?? []).map((sub) => (
                       <div key={sub.id} className="flex flex-col gap-1 pl-2">
-                        <div className="px-1 text-xs font-semibold text-gray-300">📌 {sub.name}</div>
+                        <div className="px-1 text-xs font-semibold text-sub">{sub.name}</div>
                         {(sub.events ?? []).length === 0 ? (
-                          <p className="text-xs italic text-gray-600">Sin eventos.</p>
+                          <p className="text-xs italic text-muted">Sin eventos.</p>
                         ) : (
                           (sub.events ?? []).map((evt) => (
                             <EventCard key={evt.id} event={evt} locName={loc.name} subLocName={sub.name} />
@@ -397,7 +407,7 @@ export default function PlanningPanel({ sessionId, user, session }) {
                 ))}
                 {hierarchy.freeEvents.length > 0 && (
                   <div className="mb-1 flex flex-col gap-1">
-                    <div className="rounded bg-ink-700 px-2 py-1 text-sm font-bold text-gold">📋 Sin ubicación</div>
+                    <div className="rounded-btn bg-surface px-2 py-1 text-sm font-bold text-accent-text">Sin ubicación</div>
                     {hierarchy.freeEvents.map((evt) => (
                       <EventCard key={evt.id} event={evt} />
                     ))}
@@ -410,7 +420,7 @@ export default function PlanningPanel({ sessionId, user, session }) {
             {!hierarchy && (
               <>
                 {templates.length === 0 ? (
-                  <p className="mt-2 whitespace-pre-line text-center text-sm italic leading-relaxed text-gray-600">
+                  <p className="mt-2 whitespace-pre-line text-center text-sm italic leading-relaxed text-muted">
                     {'Sin eventos preparados.\nCrea una preparación desde el Lobby (Constructor de prep.).'}
                   </p>
                 ) : (
@@ -427,17 +437,17 @@ export default function PlanningPanel({ sessionId, user, session }) {
             <Button
               variant="secondary"
               size="sm"
-              className="self-start border-orange-400 text-orange-400 hover:text-orange-300"
+              className="self-start"
               onClick={() => {
                 setShowNpcModal(true);
                 setError('');
               }}
             >
-              👤 Nuevo Evento NPC
+              <Icon name="user" size={15} className="mr-1" /> Nuevo Evento NPC
             </Button>
 
             {firedEvents.length === 0 && (
-              <p className="mt-2 text-center text-sm italic text-gray-600">
+              <p className="mt-2 text-center text-sm italic text-muted">
                 Sin eventos disparados en esta sesión.
               </p>
             )}
@@ -448,7 +458,7 @@ export default function PlanningPanel({ sessionId, user, session }) {
               } catch {
                 payload = {};
               }
-              const cls = categoryClasses(evt.type);
+              const cat = eventCategoryClasses(evt.type);
               const isNpc = payload.actor_type === 'npc';
               const hasSpecific =
                 payload.participant_type === 'specific' &&
@@ -457,28 +467,28 @@ export default function PlanningPanel({ sessionId, user, session }) {
               return (
                 <div
                   key={evt.id ?? i}
-                  className={`flex flex-col gap-1 rounded-md border bg-ink-900 p-2 ${
-                    isNpc ? 'border-l-2 border-orange-400' : 'border-ink-line'
+                  className={`flex flex-col gap-1 rounded-btn border bg-bg p-2 ${
+                    isNpc ? 'border-l-2 border-accent' : 'border-line'
                   }`}
                 >
                   <div className="flex flex-wrap items-center gap-1.5">
                     {isNpc && (
-                      <span className="rounded border border-orange-400 px-1.5 text-[0.66rem] text-orange-400">
-                        👤 NPC
+                      <span className="flex items-center gap-0.5 rounded-pill border border-accent px-1.5 text-[0.66rem] text-accent-text">
+                        <Icon name="user" size={11} /> NPC
                       </span>
                     )}
-                    <span className={`rounded border px-1.5 text-[0.66rem] ${cls}`}>{evt.type}</span>
-                    <span className="text-sm font-semibold text-gray-300">{payload.title || evt.type}</span>
+                    <span className={`rounded-pill px-2 py-0.5 text-[0.66rem] ${cat.badgeClass}`}>{cat.label}</span>
+                    <span className="text-sm font-semibold text-sub">{payload.title || evt.type}</span>
                   </div>
                   {payload.description && (
-                    <p className="text-xs leading-snug text-gray-400">{payload.description}</p>
+                    <p className="text-xs leading-snug text-sub">{payload.description}</p>
                   )}
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[0.68rem] text-gray-600">
-                      {isNpc ? `👤 ${payload.npc_name || 'NPC'}` : evt.actor_username || 'sistema'}
+                    <span className="text-[0.68rem] text-muted">
+                      {isNpc ? payload.npc_name || 'NPC' : evt.actor_username || 'sistema'}
                     </span>
                     {hasSpecific && (
-                      <span className="text-[0.68rem] text-blue-300">
+                      <span className="text-[0.68rem] text-cat-social-text">
                         Solo: {payload.participants.map((p) => p.name ?? p).join(', ')}
                       </span>
                     )}
@@ -509,13 +519,14 @@ export default function PlanningPanel({ sessionId, user, session }) {
       <Modal open={!!pendingFire} onClose={() => setPendingFire(null)} title="¿Quién participa?">
         {pendingFire && (
           <div className="flex flex-col gap-3">
-            <p className="text-sm text-gray-300">
-              <strong className="text-gray-100">{pendingFire.tmpl.title}</strong>
+            <p className="text-sm text-sub">
+              <strong className="text-title">{pendingFire.tmpl.title}</strong>
             </p>
             <div className="flex gap-4">
-              <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-300">
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-sub">
                 <input
                   type="radio"
+                  className="accent-accent"
                   checked={partType === 'all'}
                   onChange={() => {
                     setPartType('all');
@@ -524,20 +535,21 @@ export default function PlanningPanel({ sessionId, user, session }) {
                 />
                 <span>Todo el grupo</span>
               </label>
-              <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-300">
-                <input type="radio" checked={partType === 'specific'} onChange={() => setPartType('specific')} />
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-sub">
+                <input type="radio" className="accent-accent" checked={partType === 'specific'} onChange={() => setPartType('specific')} />
                 <span>Específicos</span>
               </label>
             </div>
             {partType === 'specific' && (
               <div className="flex max-h-36 flex-col gap-2 overflow-y-auto">
                 {sessionChars.length === 0 && (
-                  <p className="text-xs italic text-gray-600">Sin personajes en sesión.</p>
+                  <p className="text-xs italic text-muted">Sin personajes en sesión.</p>
                 )}
                 {sessionChars.map((c) => (
-                  <label key={c.id} className="flex cursor-pointer items-center gap-2 text-sm text-gray-300">
+                  <label key={c.id} className="flex cursor-pointer items-center gap-2 text-sm text-sub">
                     <input
                       type="checkbox"
+                      className="accent-accent"
                       checked={partSelected.has(c.id)}
                       onChange={() =>
                         setPartSelected((prev) => {
@@ -558,7 +570,7 @@ export default function PlanningPanel({ sessionId, user, session }) {
                 Cancelar
               </Button>
               <Button size="sm" onClick={confirmFireEvent} disabled={!!firing}>
-                {firing ? '⏳' : '🎯 Lanzar'}
+                {firing ? '…' : 'Lanzar'}
               </Button>
             </div>
           </div>
@@ -566,24 +578,24 @@ export default function PlanningPanel({ sessionId, user, session }) {
       </Modal>
 
       {/* ── Modal de evento NPC ── */}
-      <Modal open={showNpcModal} onClose={() => setShowNpcModal(false)} title="👤 Nuevo Evento NPC">
+      <Modal open={showNpcModal} onClose={() => setShowNpcModal(false)} title="Nuevo Evento NPC">
         <div className="flex flex-col gap-2.5">
           <select
             value={npcForm.npc_id}
             onChange={(e) => setNpcForm((f) => ({ ...f, npc_id: e.target.value }))}
-            className="rounded-md border border-ink-line bg-ink-900 px-3 py-2 text-sm text-gray-100 outline-none focus:border-gold"
+            className={inputCls}
           >
             <option value="">— Seleccionar NPC —</option>
             {npcs.map((n) => (
               <option key={n.id} value={n.id}>
-                {n.avatar_icon} {n.name}
+                {n.name}
               </option>
             ))}
           </select>
           <select
             value={npcForm.category}
             onChange={(e) => setNpcForm((f) => ({ ...f, category: e.target.value }))}
-            className="rounded-md border border-ink-line bg-ink-900 px-3 py-2 text-sm text-gray-100 outline-none focus:border-gold"
+            className={inputCls}
           >
             {EVENT_CATEGORIES.map((c) => (
               <option key={c} value={c}>
@@ -595,25 +607,20 @@ export default function PlanningPanel({ sessionId, user, session }) {
             value={npcForm.title}
             onChange={(e) => setNpcForm((f) => ({ ...f, title: e.target.value }))}
             placeholder="Título del evento"
-            className="rounded-md border border-ink-line bg-ink-900 px-3 py-2 text-sm text-gray-100 outline-none focus:border-gold"
+            className={inputCls}
           />
           <textarea
             value={npcForm.description}
             onChange={(e) => setNpcForm((f) => ({ ...f, description: e.target.value }))}
             placeholder="Descripción (opcional)"
-            className="min-h-[60px] resize-y rounded-md border border-ink-line bg-ink-900 px-3 py-2 text-sm text-gray-100 outline-none focus:border-gold"
+            className={`min-h-[60px] resize-y ${inputCls}`}
           />
           <div className="flex justify-end gap-2">
             <Button variant="secondary" size="sm" onClick={() => setShowNpcModal(false)}>
               Cancelar
             </Button>
-            <Button
-              size="sm"
-              className="bg-orange-500 text-ink-900 hover:opacity-90"
-              onClick={fireNpcEvent}
-              disabled={npcFiring}
-            >
-              {npcFiring ? '⏳' : '👤 Crear Evento'}
+            <Button size="sm" onClick={fireNpcEvent} disabled={npcFiring}>
+              {npcFiring ? '…' : 'Crear Evento'}
             </Button>
           </div>
         </div>

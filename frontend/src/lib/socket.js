@@ -10,10 +10,11 @@ const socket = io({ autoConnect: false });
 // `history` (opcional) es la memoria corta de la conversación para follow-ups (F12):
 // [{ role:'user'|'assistant', content }]. El backend la normaliza y acota.
 //
-// callbacks: { onToken(token), onDone({ answer, sources }), onError(message) }
-export function streamAiAsk({ query, gameSystemId, history = [] }, callbacks) {
-  const requestId = `ask-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-
+// Núcleo compartido de streaming de IA: emite `emitEvent` con `payload` (que ya incluye
+// requestId) y enruta ai:token/ai:answer_done/ai:error por requestId a los callbacks.
+// Devuelve una función de limpieza. Lo usan tanto la pregunta libre como los presets.
+function streamAi(emitEvent, payload, callbacks) {
+  const { requestId } = payload;
   const onToken = (msg) => {
     if (msg.requestId === requestId) callbacks.onToken?.(msg.token);
   };
@@ -28,13 +29,37 @@ export function streamAiAsk({ query, gameSystemId, history = [] }, callbacks) {
   socket.on('ai:answer_done', onDone);
   socket.on('ai:error', onError);
 
-  socket.emit('ai:ask', { requestId, query, gameSystemId, history });
+  socket.emit(emitEvent, payload);
 
   return () => {
     socket.off('ai:token', onToken);
     socket.off('ai:answer_done', onDone);
     socket.off('ai:error', onError);
   };
+}
+
+function newRequestId(prefix) {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+// callbacks: { onToken(token), onDone({ answer, sources }), onError(message) }
+// `sectionType` (opcional, F18) filtra el retrieval por metadato para los topics de sistema.
+export function streamAiAsk({ query, gameSystemId, history = [], sectionType = null }, callbacks) {
+  return streamAi(
+    'ai:ask',
+    { requestId: newRequestId('ask'), query, gameSystemId, history, sectionType },
+    callbacks
+  );
+}
+
+// Preset de sesión (F18): Resumen/Cronología/Estado/Inventarios por inyección de contexto.
+// callbacks: { onToken, onDone({ answer, sources }), onError }.
+export function streamSessionPreset({ sessionId, preset, includePrevious = false, history = [] }, callbacks) {
+  return streamAi(
+    'ai:session_preset',
+    { requestId: newRequestId('preset'), sessionId, preset, includePrevious, history },
+    callbacks
+  );
 }
 
 export default socket;

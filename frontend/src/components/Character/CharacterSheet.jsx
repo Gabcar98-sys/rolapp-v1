@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
+import socket from '../../lib/socket.js';
 import { api } from '../../lib/api.js';
 import Button from '../ui/Button.jsx';
 import Card from '../ui/Card.jsx';
 import Tabs from '../ui/Tabs.jsx';
+import Icon from '../ui/Icon.jsx';
 
 const inputCls =
-  'rounded-md border border-ink-line bg-ink-900 px-3 py-2 text-sm text-gray-100 outline-none focus:border-gold';
+  'rounded-btn border border-line bg-bg px-3 py-2 text-sm text-title outline-none focus:border-accent';
 
 // Barra de estado: ancho en pasos de 10% con clases Tailwind literales (sin inline).
 // Las clases se escriben completas para que el JIT de Tailwind las incluya en el build.
@@ -20,8 +22,9 @@ function barWidthClass(pct) {
 
 // Ficha dinámica reutilizable (MyCharacters y SessionView). Renderiza atributos según
 // el sistema de juego (agrupados por category; is_core destacados; has_max como valor/máx),
-// estado (atributos is_core/has_max), inventario, equipo (slots del sistema) y skills.
+// estado (dot-tracker editable de PV/voluntad), inventario, equipo (slots) y skills.
 // El backend valida permisos; aquí `canEdit` solo decide si se muestran los controles.
+// Reacciona a `characters:updated` por socket: si otro usuario edita ESTA ficha, se recarga.
 export default function CharacterSheet({ characterId, user, canEdit = true, onBack }) {
   const [character, setCharacter] = useState(null);
   const [attrDefs, setAttrDefs] = useState([]);
@@ -50,40 +53,51 @@ export default function CharacterSheet({ characterId, user, canEdit = true, onBa
     load();
   }, [load]);
 
+  // Sync en vivo: si llega characters:updated para ESTE personaje, refresca la ficha
+  // abierta (antes solo se recargaba la lista, no la ficha activa). El backend adjunta
+  // el character actualizado, pero recargamos para traer también attrDefs/slots frescos.
+  useEffect(() => {
+    const onUpdated = ({ characterId: id }) => {
+      if (Number(id) === Number(characterId)) load();
+    };
+    socket.on('characters:updated', onUpdated);
+    return () => socket.off('characters:updated', onUpdated);
+  }, [characterId, load]);
+
   if (!character) {
     return (
-      <div className="p-4 text-sm text-gray-500">
-        {error ? <span className="text-red-300">{error}</span> : 'Cargando ficha…'}
+      <div className="p-4 text-sm text-faint">
+        {error ? <span className="text-danger-text">{error}</span> : 'Cargando ficha…'}
       </div>
     );
   }
 
   const tabs = [
-    { id: 'attrs', label: '📊' },
-    { id: 'status', label: '❤️' },
-    { id: 'skills', label: '⚡' },
-    { id: 'equipment', label: '🛡️' },
-    { id: 'inventory', label: '🎒' },
+    { id: 'attrs', label: <Icon name="sliders" size={18} /> },
+    { id: 'status', label: <Icon name="heart" size={18} /> },
+    { id: 'skills', label: <Icon name="skills" size={18} /> },
+    { id: 'equipment', label: <Icon name="shield" size={18} /> },
+    { id: 'inventory', label: <Icon name="bag" size={18} /> },
   ];
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex flex-shrink-0 items-center gap-3 border-b border-ink-line px-4 py-3">
+      <div className="flex flex-shrink-0 items-center gap-3 border-b border-line px-4 py-3">
         {onBack && (
-          <Button variant="secondary" size="sm" onClick={onBack}>
-            ←
+          <Button variant="secondary" size="sm" onClick={onBack} aria-label="Volver">
+            <Icon name="arrow-left" size={16} />
           </Button>
         )}
         <div className="min-w-0">
-          <h2 className="truncate text-base font-semibold text-gold">{character.name}</h2>
+          <h2 className="truncate font-serif text-base font-semibold text-title">{character.name}</h2>
           {character.game_system_name && (
-            <p className="text-xs text-gray-400">{character.game_system_name}</p>
+            <p className="text-xs text-faint">{character.game_system_name}</p>
           )}
         </div>
       </div>
 
       {error && (
-        <p className="mx-4 mt-3 rounded-md bg-danger/20 px-3 py-2 text-sm text-red-300">{error}</p>
+        <p className="mx-4 mt-3 rounded-btn bg-danger-tint px-3 py-2 text-sm text-danger-text">{error}</p>
       )}
 
       <Tabs tabs={tabs} activeId={tab} onChange={setTab} className="flex-shrink-0" />
@@ -99,7 +113,9 @@ export default function CharacterSheet({ characterId, user, canEdit = true, onBa
             setError={setError}
           />
         )}
-        {tab === 'status' && <StatusTab character={character} attrDefs={attrDefs} />}
+        {tab === 'status' && (
+          <StatusTab character={character} attrDefs={attrDefs} user={user} canEdit={canEdit} onSaved={load} setError={setError} />
+        )}
         {tab === 'skills' && (
           <SkillsTab character={character} user={user} canEdit={canEdit} onChange={load} setError={setError} />
         )}
@@ -153,7 +169,7 @@ function AttributesTab({ character, attrDefs, user, canEdit, onSaved, setError }
   }
 
   if (attrDefs.length === 0) {
-    return <p className="py-8 text-center text-sm text-gray-500">Sin sistema de juego o sin atributos definidos.</p>;
+    return <p className="py-8 text-center text-sm text-faint">Sin sistema de juego o sin atributos definidos.</p>;
   }
 
   const grouped = attrDefs.reduce((acc, def) => {
@@ -165,12 +181,12 @@ function AttributesTab({ character, attrDefs, user, canEdit, onSaved, setError }
     <div className="flex flex-col gap-4">
       {Object.entries(grouped).map(([category, defs]) => (
         <Card key={category} className="p-4">
-          <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gold">{category}</h4>
+          <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-accent-text">{category}</h4>
           <div className="flex flex-col gap-3">
             {defs.map((def) => (
               <div key={def.id} className="flex items-center gap-3">
-                <label className="flex w-28 flex-shrink-0 items-center gap-1 text-sm text-gray-300">
-                  {def.is_core && <span className="text-gold" title="atributo principal">★</span>}
+                <label className="flex w-28 flex-shrink-0 items-center gap-1 text-sm text-sub">
+                  {def.is_core && <span className="text-accent-text" title="atributo principal">★</span>}
                   {def.name}
                 </label>
                 {def.type === 'boolean' ? (
@@ -182,7 +198,7 @@ function AttributesTab({ character, attrDefs, user, canEdit, onSaved, setError }
                       setDraft((p) => ({ ...p, [def.id]: String(e.target.checked) }));
                       setDirty(true);
                     }}
-                    className="h-4 w-4 accent-gold"
+                    className="h-4 w-4 accent-accent"
                   />
                 ) : def.has_max ? (
                   <div className="flex flex-1 items-center gap-1">
@@ -197,7 +213,7 @@ function AttributesTab({ character, attrDefs, user, canEdit, onSaved, setError }
                       }}
                       className={`flex-1 ${inputCls}`}
                     />
-                    <span className="text-gray-500">/</span>
+                    <span className="text-faint">/</span>
                     <input
                       disabled={!canEdit}
                       type={def.type === 'number' ? 'number' : 'text'}
@@ -236,38 +252,140 @@ function AttributesTab({ character, attrDefs, user, canEdit, onSaved, setError }
   );
 }
 
-// ── Estado (atributos is_core / has_max, tipo vida/foco) ──────────────────────
-function StatusTab({ character, attrDefs }) {
+// ── Estado (dot-tracker editable de atributos is_core / has_max) ──────────────
+// Cada atributo con máximo se muestra como una fila de "puntos" clickeables (rellenar =
+// subir el valor actual, vaciar = bajarlo), con controles +/- y edición del máx. Persiste
+// vía PUT /characters/:id/attributes (que emite characters:updated → sync a otras pestañas).
+const MAX_DOTS = 20; // por encima de esto se usa solo el input numérico (evita filas enormes).
+
+function StatusTab({ character, attrDefs, user, canEdit, onSaved, setError }) {
   const coreDefs = attrDefs.filter((d) => d.is_core || d.has_max);
   if (coreDefs.length === 0) {
-    return <p className="py-8 text-center text-sm text-gray-500">Este sistema no define atributos de estado.</p>;
+    return <p className="py-8 text-center text-sm text-faint">Este sistema no define atributos de estado.</p>;
   }
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-      {coreDefs.map((def) => {
-        const val = character.templateAttrs?.find((a) => a.attribute_template_id === def.id);
-        const current = val?.value ?? '—';
-        const max = def.has_max ? val?.max_value : null;
-        const num = Number(current);
-        const maxNum = Number(max);
-        const pct = def.has_max && maxNum > 0 ? Math.min(100, Math.round((num / maxNum) * 100)) : null;
-        return (
-          <Card key={def.id} className="p-3 text-center">
-            <p className="text-xs text-gray-400">{def.name}</p>
-            <p className="mt-1 text-lg font-bold text-gray-100">
-              {current}
-              {max ? <span className="text-sm text-gray-500">/{max}</span> : null}
-            </p>
-            {pct !== null && (
-              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-ink-900">
-                {/* Ancho en pasos de 10% vía clases Tailwind estáticas (sin estilo inline). */}
-                <div className={`h-1.5 rounded-full bg-danger ${barWidthClass(pct)}`} />
-              </div>
-            )}
-          </Card>
-        );
-      })}
+    <div className="flex flex-col gap-3">
+      {coreDefs.map((def) => (
+        <StatusRow
+          key={def.id}
+          def={def}
+          character={character}
+          user={user}
+          canEdit={canEdit}
+          onSaved={onSaved}
+          setError={setError}
+        />
+      ))}
     </div>
+  );
+}
+
+function StatusRow({ def, character, user, canEdit, onSaved, setError }) {
+  const val = character.templateAttrs?.find((a) => a.attribute_template_id === def.id);
+  const current = Number(val?.value ?? 0);
+  const [maxDraft, setMaxDraft] = useState(def.has_max ? (val?.max_value ?? '') : '');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setMaxDraft(def.has_max ? (val?.max_value ?? '') : '');
+  }, [val?.max_value, def.has_max]);
+
+  const maxNum = def.has_max ? Number(maxDraft) : NaN;
+  const hasNumericMax = def.has_max && Number.isFinite(maxNum) && maxNum > 0;
+  const pct = hasNumericMax ? Math.min(100, Math.round((current / maxNum) * 100)) : null;
+  const useDots = hasNumericMax && maxNum <= MAX_DOTS;
+
+  // Persiste el atributo (valor actual y, opcionalmente, máx) reutilizando el endpoint
+  // de atributos; el backend emite characters:updated → las otras pestañas se refrescan.
+  async function persist(nextValue, nextMax) {
+    setSaving(true);
+    setError('');
+    try {
+      await api.setCharacterAttributes(character.id, user.id, [
+        {
+          attribute_template_id: def.id,
+          value: String(Math.max(0, nextValue)),
+          ...(def.has_max ? { max_value: nextMax === '' ? '' : String(nextMax) } : {}),
+        },
+      ]);
+      await onSaved();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function setDot(index) {
+    if (!canEdit) return;
+    // Click en un punto ya relleno lo vacía (baja a index); en uno vacío lo llena (index+1).
+    const next = index + 1 === current ? index : index + 1;
+    persist(next, maxDraft);
+  }
+
+  return (
+    <Card className="p-3">
+      <div className="flex items-center justify-between">
+        <span className="flex items-center gap-1 text-sm text-sub">
+          {def.is_core && <span className="text-accent-text" title="atributo principal">★</span>}
+          {def.name}
+        </span>
+        <span className="num text-lg font-bold text-title">
+          {current}
+          {def.has_max && maxDraft !== '' ? <span className="text-sm text-faint">/{maxDraft}</span> : null}
+        </span>
+      </div>
+
+      {useDots && (
+        <div className="mt-2 flex flex-wrap gap-1">
+          {Array.from({ length: maxNum }, (_, i) => (
+            <button
+              key={i}
+              type="button"
+              disabled={!canEdit || saving}
+              onClick={() => setDot(i)}
+              aria-label={`${def.name} ${i + 1}`}
+              className={`h-4 w-4 rounded-full border transition-colors ${
+                i < current
+                  ? 'border-accent bg-accent'
+                  : 'border-line-hover bg-transparent hover:border-accent'
+              } ${!canEdit ? 'cursor-default' : ''}`}
+            />
+          ))}
+        </div>
+      )}
+
+      {!useDots && pct !== null && (
+        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-bg">
+          <div className={`h-1.5 rounded-full bg-accent ${barWidthClass(pct)}`} />
+        </div>
+      )}
+
+      {canEdit && (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <Button size="sm" variant="secondary" disabled={saving || current <= 0} onClick={() => persist(current - 1, maxDraft)}>
+            −
+          </Button>
+          <Button size="sm" variant="secondary" disabled={saving} onClick={() => persist(current + 1, maxDraft)}>
+            +
+          </Button>
+          {def.has_max && (
+            <label className="ml-auto flex items-center gap-1 text-xs text-faint">
+              Máx
+              <input
+                type="number"
+                min="0"
+                value={maxDraft}
+                onChange={(e) => setMaxDraft(e.target.value)}
+                onBlur={() => persist(current, maxDraft)}
+                className={`w-16 ${inputCls} px-2 py-1`}
+                aria-label={`Máximo de ${def.name}`}
+              />
+            </label>
+          )}
+        </div>
+      )}
+    </Card>
   );
 }
 
@@ -279,7 +397,6 @@ function SkillsTab({ character, user, canEdit, onChange, setError }) {
   const [manualName, setManualName] = useState('');
 
   useEffect(() => {
-    // El catálogo lo administra el DM; cualquiera puede listarlo para enlazar.
     api
       .listSkillFormats('', character.game_system_template_id ?? null)
       .then(({ formats: list }) => setFormats(list ?? []))
@@ -336,21 +453,21 @@ function SkillsTab({ character, user, canEdit, onChange, setError }) {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-gold">
+        <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-accent-text">
           Habilidades del catálogo ({character.skillLinks?.length ?? 0})
         </h4>
         {(character.skillLinks ?? []).length === 0 ? (
-          <p className="text-sm text-gray-500">Sin habilidades enlazadas.</p>
+          <p className="text-sm text-faint">Sin habilidades enlazadas.</p>
         ) : (
           <div className="flex flex-col gap-2">
             {character.skillLinks.map((sk) => (
               <div
                 key={sk.skill_id}
-                className="flex items-center justify-between rounded-md border border-ink-line bg-ink-900 px-3 py-2"
+                className="flex items-center justify-between rounded-btn border border-line bg-bg px-3 py-2"
               >
                 <div className="min-w-0">
-                  <span className="text-sm text-gray-100">{sk.skill_name}</span>
-                  <span className="ml-2 text-xs text-gray-500">
+                  <span className="text-sm text-title">{sk.skill_name}</span>
+                  <span className="ml-2 text-xs text-faint">
                     {sk.format_name}
                     {sk.rank ? ` · rango ${sk.rank}` : ''}
                   </span>
@@ -358,10 +475,10 @@ function SkillsTab({ character, user, canEdit, onChange, setError }) {
                 {canEdit && (
                   <button
                     onClick={() => toggle(sk.skill_id, true)}
-                    className="ml-3 flex-shrink-0 text-gray-500 hover:text-danger"
+                    className="ml-3 flex-shrink-0 text-faint hover:text-danger-text"
                     aria-label={`Quitar ${sk.skill_name}`}
                   >
-                    ✕
+                    <Icon name="x" size={15} />
                   </button>
                 )}
               </div>
@@ -371,8 +488,8 @@ function SkillsTab({ character, user, canEdit, onChange, setError }) {
       </div>
 
       {canEdit && (
-        <div className="border-t border-ink-line pt-4">
-          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-gold">Enlazar del catálogo</h4>
+        <div className="border-t border-line pt-4">
+          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-accent-text">Enlazar del catálogo</h4>
           <select value={selectedFormat} onChange={(e) => pickFormat(e.target.value)} className={`mb-2 w-full ${inputCls}`}>
             <option value="">— Selecciona un formato —</option>
             {formats.map((f) => (
@@ -384,17 +501,17 @@ function SkillsTab({ character, user, canEdit, onChange, setError }) {
           {selectedFormat && (
             <div className="flex max-h-56 flex-col gap-1 overflow-y-auto">
               {catalog.length === 0 ? (
-                <p className="py-2 text-center text-sm text-gray-500">Sin habilidades en este formato.</p>
+                <p className="py-2 text-center text-sm text-faint">Sin habilidades en este formato.</p>
               ) : (
                 catalog.map((sk) => {
                   const isLinked = linkedIds.has(sk.id);
                   return (
                     <label
                       key={sk.id}
-                      className="flex cursor-pointer items-center gap-2 rounded-md bg-ink-900 px-3 py-2 hover:bg-ink-500"
+                      className="flex cursor-pointer items-center gap-2 rounded-btn bg-bg px-3 py-2 hover:bg-hover"
                     >
-                      <input type="checkbox" checked={isLinked} onChange={() => toggle(sk.id, isLinked)} className="accent-gold" />
-                      <span className="text-sm text-gray-200">{sk.name}</span>
+                      <input type="checkbox" checked={isLinked} onChange={() => toggle(sk.id, isLinked)} className="accent-accent" />
+                      <span className="text-sm text-sub">{sk.name}</span>
                     </label>
                   );
                 })
@@ -404,26 +521,26 @@ function SkillsTab({ character, user, canEdit, onChange, setError }) {
         </div>
       )}
 
-      <div className="border-t border-ink-line pt-4">
-        <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-gold">
+      <div className="border-t border-line pt-4">
+        <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-accent-text">
           Habilidades manuales ({character.skills?.length ?? 0})
         </h4>
         {(character.skills ?? []).map((sk) => (
           <div
             key={sk.id}
-            className="mb-1 flex items-center justify-between rounded-md border border-ink-line bg-ink-900 px-3 py-2"
+            className="mb-1 flex items-center justify-between rounded-btn border border-line bg-bg px-3 py-2"
           >
-            <span className="text-sm text-gray-100">
+            <span className="text-sm text-title">
               {sk.name}
-              <span className="ml-2 text-xs text-gray-500">{sk.skill_list}</span>
+              <span className="ml-2 text-xs text-faint">{sk.skill_list}</span>
             </span>
             {canEdit && (
               <button
                 onClick={() => removeManual(sk.id)}
-                className="ml-3 flex-shrink-0 text-gray-500 hover:text-danger"
+                className="ml-3 flex-shrink-0 text-faint hover:text-danger-text"
                 aria-label={`Eliminar ${sk.name}`}
               >
-                ✕
+                <Icon name="x" size={15} />
               </button>
             )}
           </div>
@@ -437,7 +554,7 @@ function SkillsTab({ character, user, canEdit, onChange, setError }) {
               className={`flex-1 ${inputCls}`}
             />
             <Button size="sm" type="submit">
-              + Skill
+              <Icon name="plus" size={15} />
             </Button>
           </form>
         )}
@@ -457,7 +574,6 @@ function EquipmentTab({ character, slots, user, canEdit, onChange, setError }) {
     api
       .listItemFormats(user.id, character.game_system_template_id ?? null)
       .then(async ({ formats }) => {
-        // Reúne los item masters de todos los formatos del sistema.
         const all = [];
         for (const fmt of formats ?? []) {
           const { format } = await api.getItemFormat(fmt.id);
@@ -491,7 +607,7 @@ function EquipmentTab({ character, slots, user, canEdit, onChange, setError }) {
 
   if (slots.length === 0) {
     return (
-      <p className="py-8 text-center text-sm text-gray-500">
+      <p className="py-8 text-center text-sm text-faint">
         Sin slots de equipo. El DM debe configurarlos en el sistema de juego.
       </p>
     );
@@ -506,22 +622,22 @@ function EquipmentTab({ character, slots, user, canEdit, onChange, setError }) {
         return (
           <Card key={slot.id} className="p-3">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="w-28 flex-shrink-0 text-xs font-semibold uppercase text-gray-400">{slot.name}</span>
+              <span className="w-28 flex-shrink-0 text-xs font-semibold uppercase text-faint">{slot.name}</span>
               <div className="flex flex-1 flex-wrap items-center gap-2">
-                {equipped.length === 0 && !isAdding && <span className="text-xs italic text-gray-600">vacío</span>}
+                {equipped.length === 0 && !isAdding && <span className="text-xs italic text-muted">vacío</span>}
                 {equipped.map((e) => (
                   <span
                     key={e.id}
-                    className="flex items-center gap-1 rounded-full border border-ink-line bg-ink-900 px-3 py-1 text-xs text-gray-200"
+                    className="flex items-center gap-1 rounded-pill border border-line bg-bg px-3 py-1 text-xs text-sub"
                   >
-                    🗡️ {e.item_name}
+                    <Icon name="shield" size={13} className="text-faint" /> {e.item_name}
                     {canEdit && (
                       <button
                         onClick={() => unequip(e.id)}
-                        className="text-gray-500 hover:text-danger"
+                        className="text-faint hover:text-danger-text"
                         aria-label={`Desequipar ${e.item_name}`}
                       >
-                        ✕
+                        <Icon name="x" size={13} />
                       </button>
                     )}
                   </span>
@@ -532,9 +648,9 @@ function EquipmentTab({ character, slots, user, canEdit, onChange, setError }) {
                       setAddingSlot(slot.id);
                       setSelItem('');
                     }}
-                    className="rounded-full border border-gold/40 px-2 py-0.5 text-xs text-gold hover:border-gold"
+                    className="flex items-center gap-1 rounded-pill border border-accent/40 px-2 py-0.5 text-xs text-accent-text hover:border-accent"
                   >
-                    + Equipar
+                    <Icon name="plus" size={13} /> Equipar
                   </button>
                 )}
               </div>
@@ -552,8 +668,8 @@ function EquipmentTab({ character, slots, user, canEdit, onChange, setError }) {
                 <Button size="sm" disabled={!selItem} onClick={() => equip(slot.id)}>
                   Equipar
                 </Button>
-                <Button size="sm" variant="secondary" onClick={() => setAddingSlot(null)}>
-                  ✕
+                <Button size="sm" variant="secondary" onClick={() => setAddingSlot(null)} aria-label="Cancelar">
+                  <Icon name="x" size={15} />
                 </Button>
               </div>
             )}
@@ -576,6 +692,17 @@ function InventoryTab({ character, user, canEdit, onChange, setError }) {
       await api.addCharacterItem(character.id, user.id, { item_name: name.trim(), quantity: Number(qty) || 1 });
       setName('');
       setQty(1);
+      await onChange();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  // +/- cantidad reutilizando el PUT de inventario (F18: control de cantidad in situ).
+  async function changeQty(item, delta) {
+    const next = Math.max(1, (Number(item.quantity) || 1) + delta);
+    try {
+      await api.updateCharacterItem(character.id, user.id, item.id, { quantity: next });
       await onChange();
     } catch (err) {
       setError(err.message);
@@ -609,26 +736,49 @@ function InventoryTab({ character, user, canEdit, onChange, setError }) {
             className={`w-20 ${inputCls}`}
             aria-label="Cantidad"
           />
-          <Button type="submit">+</Button>
+          <Button type="submit" aria-label="Añadir objeto">
+            <Icon name="plus" size={16} />
+          </Button>
         </form>
       )}
       {(character.inventory ?? []).length === 0 ? (
-        <p className="py-8 text-center text-sm text-gray-500">Inventario vacío.</p>
+        <p className="py-8 text-center text-sm text-faint">Inventario vacío.</p>
       ) : (
         character.inventory.map((item) => (
           <div
             key={item.id}
-            className="flex items-center gap-3 rounded-md border border-ink-line bg-ink-900 px-3 py-2"
+            className="flex items-center gap-2 rounded-btn border border-line bg-bg px-3 py-2"
           >
-            <span className="flex-1 text-sm text-gray-100">{item.item_name}</span>
-            <span className="rounded-full bg-ink-600 px-2 py-0.5 text-xs text-gray-200">x{item.quantity}</span>
+            <span className="flex-1 text-sm text-title">{item.item_name}</span>
+            {canEdit ? (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => changeQty(item, -1)}
+                  disabled={(Number(item.quantity) || 1) <= 1}
+                  className="flex h-6 w-6 items-center justify-center rounded-btn border border-line text-sub hover:border-accent disabled:opacity-40"
+                  aria-label={`Menos ${item.item_name}`}
+                >
+                  −
+                </button>
+                <span className="num w-7 text-center text-xs text-sub">x{item.quantity}</span>
+                <button
+                  onClick={() => changeQty(item, 1)}
+                  className="flex h-6 w-6 items-center justify-center rounded-btn border border-line text-sub hover:border-accent"
+                  aria-label={`Más ${item.item_name}`}
+                >
+                  +
+                </button>
+              </div>
+            ) : (
+              <span className="rounded-pill bg-surface-2 px-2 py-0.5 text-xs text-sub">x{item.quantity}</span>
+            )}
             {canEdit && (
               <button
                 onClick={() => remove(item.id)}
-                className="text-gray-500 hover:text-danger"
+                className="text-faint hover:text-danger-text"
                 aria-label={`Eliminar ${item.item_name}`}
               >
-                ✕
+                <Icon name="trash" size={15} />
               </button>
             )}
           </div>

@@ -21,6 +21,7 @@ import locationsRouter from './routes/locations.js';
 import subLocationsRouter from './routes/subLocations.js';
 import eventTemplatesRouter from './routes/eventTemplates.js';
 import npcsRouter from './routes/npcs.js';
+import createNotesRouter from './routes/notes.js';
 import createRagRouter from './routes/rag.js';
 import statsRouter from './routes/stats.js';
 import { initSockets } from './sockets/index.js';
@@ -65,6 +66,9 @@ app.use('/api/locations', locationsRouter);
 app.use('/api/sub-locations', subLocationsRouter);
 app.use('/api/event-templates', eventTemplatesRouter);
 app.use('/api/npcs', npcsRouter);
+// Notas de sesión (F18): CRUD; emite notes:updated por socket (factory tras io).
+// Notas privadas visibles solo al DM; el socket emite señal sin bodies (ver notes.js).
+app.use('/api/notes', createNotesRouter(io));
 // RAG / IA (F6): docs por game system, búsqueda híbrida, IA y resumen de sesión.
 // Factory porque el resumen emite por socket. Rutas absolutas (montado en /api).
 app.use('/api', createRagRouter(io));

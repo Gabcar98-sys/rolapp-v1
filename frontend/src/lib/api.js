@@ -143,6 +143,19 @@ export const api = {
   unlinkNpcCampaign: (id, campaignId, dmId) =>
     request(`/npcs/${id}/campaigns/${campaignId}`, { method: 'DELETE', body: { dm_id: dmId } }),
 
+  // ── Notas de sesión (F18) ─────────────────────────────────────────────────────
+  // El backend filtra por rol: el DM ve todas, el jugador solo las públicas.
+  listNotes: (sessionId, userId) => request(`/notes?session_id=${sessionId}&user_id=${userId}`),
+  createNote: (sessionId, dmId, note) =>
+    request('/notes', { method: 'POST', body: { session_id: sessionId, dm_id: dmId, ...note } }),
+  updateNote: (id, dmId, fields) =>
+    request(`/notes/${id}`, { method: 'PUT', body: { dm_id: dmId, ...fields } }),
+  deleteNote: (id, dmId) => request(`/notes/${id}`, { method: 'DELETE', body: { dm_id: dmId } }),
+
+  // Resúmenes de sesiones anteriores de una campaña (checkbox "incluir sesiones anteriores").
+  listCampaignSummaries: (campaignId, excludeSessionId = null) =>
+    request(`/campaigns/${campaignId}/summaries${excludeSessionId ? `?exclude_session_id=${excludeSessionId}` : ''}`),
+
   // ── Sistemas de juego (F2) ──────────────────────────────────────────────────
   // Sin dmId devuelve TODOS los sistemas (útil para jugadores al crear personaje).
   listGameSystems: (dmId = null) => request(`/game-systems${dmId ? `?dm_id=${dmId}` : ''}`),

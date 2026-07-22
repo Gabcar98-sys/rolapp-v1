@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import db from '../db/index.js';
+import { getCampaignSummaries } from '../services/ai.js';
 
 const router = Router();
 
@@ -45,6 +46,18 @@ router.get('/:id', (req, res) => {
   const campaign = selectCampaign.get(req.params.id);
   if (!campaign) return res.status(404).json({ error: 'Campaña no encontrada' });
   res.json({ campaign });
+});
+
+// GET /api/campaigns/:id/summaries[?exclude_session_id=]  (F18)
+// Resúmenes de las sesiones de la campaña (alimenta el checkbox "incluir sesiones
+// anteriores" del asistente de IA). Compone sobre session_summaries existentes.
+router.get('/:id/summaries', (req, res) => {
+  const campaign = db.prepare('SELECT id FROM campaigns WHERE id = ?').get(req.params.id);
+  if (!campaign) return res.status(404).json({ error: 'Campaña no encontrada' });
+  const summaries = getCampaignSummaries(req.params.id, {
+    excludeSessionId: req.query.exclude_session_id ?? null,
+  });
+  res.json({ summaries });
 });
 
 // POST /api/campaigns  { name, dm_id, description?, game_system_id? }

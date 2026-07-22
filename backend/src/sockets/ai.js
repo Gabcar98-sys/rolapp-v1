@@ -1,4 +1,4 @@
-import { streamRulesQuestion, streamPlanning } from '../services/ai.js';
+import { streamRulesQuestion, streamPlanning, streamSessionPreset } from '../services/ai.js';
 
 // Handlers de streaming de IA por Socket.io. El AIPanel emite `ai:ask` (o
 // `ai:assist_planning`) y recibe tokens en tiempo real; al terminar llega `ai:done`
@@ -19,15 +19,26 @@ export function registerAiHandlers(io, socket) {
     }
   }
 
-  // ai:ask { requestId, query, gameSystemId, history? } → stream de respuesta citada.
-  // `history` (opcional) es la memoria corta de la conversación para follow-ups (F12 §4);
-  // el servicio la normaliza y acota (nº de turnos/tokens).
-  socket.on('ai:ask', ({ requestId, query, gameSystemId, history = [] }) => {
+  // ai:ask { requestId, query, gameSystemId, history?, sectionType? } → stream de respuesta citada.
+  // `history` (opcional) es la memoria corta de la conversación para follow-ups (F12 §4).
+  // `sectionType` (opcional, F18) filtra el retrieval por metadato para los "topics" de
+  // sistema (core/habilidades/items/NPCs); el REST ya lo soportaba, el socket ahora también.
+  socket.on('ai:ask', ({ requestId, query, gameSystemId, history = [], sectionType = null }) => {
     if (!query || !gameSystemId) {
       socket.emit('ai:error', { requestId, error: 'query y gameSystemId son requeridos' });
       return;
     }
-    run(streamRulesQuestion, { query, gameSystemId, history }, requestId, 'ai:answer_done');
+    run(streamRulesQuestion, { query, gameSystemId, history, sectionType }, requestId, 'ai:answer_done');
+  });
+
+  // ai:session_preset { requestId, sessionId, preset, includePrevious?, history? } (F18)
+  // Presets de sesión (Resumen/Cronología/Estado/Inventarios) por inyección de contexto.
+  socket.on('ai:session_preset', ({ requestId, sessionId, preset, includePrevious = false, history = [] }) => {
+    if (!sessionId || !preset) {
+      socket.emit('ai:error', { requestId, error: 'sessionId y preset son requeridos' });
+      return;
+    }
+    run(streamSessionPreset, { sessionId, preset, includePrevious, history }, requestId, 'ai:answer_done');
   });
 
   // ai:assist_planning { requestId, sessionId?, gameSystemId?, prompt, history? } → sugerencias.

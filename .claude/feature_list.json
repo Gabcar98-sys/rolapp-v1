@@ -164,7 +164,7 @@
     "phase": "F18 — Sesión en vivo completa",
     "title": "Notas de sesión, tabs por personaje (inventario/habilidades/equipo/estado/atributos), toolbar DM, presets del asistente IA",
     "priority": 20,
-    "status": "pending",
+    "status": "done",
     "description": "Recuperar la sesión en vivo completa de la v0 (pantallazos 15-17) con el estilo nuevo. (1) Notas de sesión: backend /api/notes (CRUD, session_id, título, body, event_type, flag pública/privada — privada solo DM) + panel Notas con sync socket. (2) Tabs por personaje en el panel derecho: Inventario (agregar/quitar, +/- cantidad, solo dueño o DM), Habilidades (lista con valores + modal detalle), Equipamiento (slots del sistema, equipar items equippable, modal detalle), Estado (dot tracker clickeable para HP/voluntad, máx y actual editables), Atributos (editables por categoría) — todo con sync socket (characters:updated). Portar atributos dinámicos de sesión si el schema los soporta. (3) Toolbar DM: Cambiar mapa, Nuevo Evento, Nuevo Evento NPC (desde catálogo F16), Reset, Finalizar; jugador: Salir. (4) AIPanel ampliado: modos Sesión/Sistema; presets de sesión (Resumen, Cronología, Estado de personajes, Inventarios, Pregunta libre) y topics de sistema (core, habilidades, items, NPCs); checkbox incluir sesiones anteriores; conservar streaming, citas, follow-ups y degradación de F9-F12. (5) Restyle de todo el panel derecho a tokens del handoff (tabs de iconos línea). Verificación: tests backend de notas y de presets IA con stubs, build+lint, smoke multi-tab de sync en tiempo real."
   },
   {

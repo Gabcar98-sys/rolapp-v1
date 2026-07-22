@@ -1,68 +1,85 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../../lib/api.js';
-import socket, { streamAiAsk } from '../../lib/socket.js';
+import socket, { streamAiAsk, streamSessionPreset } from '../../lib/socket.js';
 import Button from '../ui/Button.jsx';
 import Card from '../ui/Card.jsx';
+import Icon from '../ui/Icon.jsx';
 
 const inputCls =
-  'rounded-md border border-ink-line bg-ink-900 px-3 py-2 text-sm text-gray-100 outline-none focus:border-gold';
+  'rounded-btn border border-line bg-bg px-3 py-2 text-sm text-title outline-none focus:border-accent';
 
 // Memoria corta de conversación (follow-ups): nº de turnos que se mandan al backend.
-// El backend re-acota; aquí limitamos para no arrastrar historiales largos por socket.
 const MAX_HISTORY_TURNS = 6;
+
+// Presets del modo Sesión (contexto = sesión en vivo). "libre" es la pregunta abierta de
+// reglas de siempre (streaming intacto); el resto van por streamSessionPreset (inyección
+// de contexto de datos estructurados de la sesión). El preset lleva su query "canned"
+// para mostrarla como pregunta enviada.
+const SESSION_PRESETS = [
+  { id: 'libre', label: 'Pregunta libre' },
+  { id: 'resumen', label: 'Resumen', query: 'Resume lo ocurrido en la sesión.' },
+  { id: 'cronologia', label: 'Cronología', query: 'Ordena cronológicamente los eventos.' },
+  { id: 'estado', label: 'Estado de personajes', query: 'Estado actual de cada personaje.' },
+  { id: 'inventarios', label: 'Inventarios', query: 'Inventario de cada personaje.' },
+];
+
+// Topics del modo Sistema (contexto = reglas del sistema). Cada topic filtra el retrieval
+// por section_type y prefija la consulta. "core" no filtra (todas las secciones).
+const SYSTEM_TOPICS = [
+  { id: 'core', label: 'Reglas base', sectionType: null, prefix: '' },
+  { id: 'habilidades', label: 'Habilidades', sectionType: 'regla', prefix: 'Sobre habilidades: ' },
+  { id: 'items', label: 'Items', sectionType: 'tabla', prefix: 'Sobre objetos e items: ' },
+  { id: 'npcs', label: 'NPCs', sectionType: 'lore', prefix: 'Sobre NPCs y criaturas: ' },
+];
 
 // Badge del motor de IA activo. Deriva su etiqueta/color del estado de /ai/status.
 function EngineBadge({ status }) {
   if (!status) {
-    return (
-      <span className="rounded-full bg-ink-600 px-2 py-0.5 text-xs text-gray-400">Comprobando IA…</span>
-    );
+    return <span className="rounded-pill bg-surface-2 px-2 py-0.5 text-xs text-faint">Comprobando IA…</span>;
   }
   if (!status.ready) {
-    return (
-      <span className="rounded-full bg-danger/20 px-2 py-0.5 text-xs text-red-300">IA no disponible</span>
-    );
+    return <span className="rounded-pill bg-danger-tint px-2 py-0.5 text-xs text-danger-text">IA no disponible</span>;
   }
   const label = status.provider === 'api' ? 'API externa' : 'Ollama local';
   return (
-    <span className="rounded-full bg-success/30 px-2 py-0.5 text-xs text-green-300" title={status.model}>
+    <span className="rounded-pill bg-accent-tint px-2 py-0.5 text-xs text-accent-text" title={status.model}>
       {label} · {status.model}
-      {status.toolsEnabled && <span className="ml-1 text-gold" title="Tool-use activo">🛠️</span>}
     </span>
   );
 }
 
-// Formatea un score de fusión a 3 decimales; degrada si no viene.
 function fmtScore(score) {
   return typeof score === 'number' ? score.toFixed(3) : '—';
 }
 
-// Panel de IA dentro de la sesión (tab 🤖). Consulta reglas con respuesta en STREAMING
-// (tokens vía socket) y citas a la fuente con SCORE; permite REGENERAR y ver un panel de
-// depuración de retrieval (chunks recuperados con score/heading_path). Mantiene una
-// memoria corta de la conversación para follow-ups. El sistema de juego se deriva de los
-// personajes vinculados (RAG scoped por game_system_id). Degrada con elegancia si la IA
-// está caída. Muestra el motor activo (badge) y conserva el streaming de F9.
-export default function AIPanel({ sessionId, user }) {
+// Panel de IA dentro de la sesión (F18: modos Sesión/Sistema + presets/topics + checkbox
+// "incluir sesiones anteriores"). ENVUELVE el motor de F9-F12: conserva STREAMING (tokens
+// vía socket), CITAS con score, FOLLOW-UPS (memoria corta), REGENERAR y DEGRADACIÓN. El
+// modo/preset solo decide QUÉ evento de socket se dispara; el manejo de tokens/estado es
+// el mismo camino para todos.
+export default function AIPanel({ sessionId, user, campaignId = null }) {
   const isDM = user.role === 'dm';
+  const [mode, setMode] = useState('session'); // 'session' | 'system'
+  const [preset, setPreset] = useState('libre'); // preset de sesión activo
+  const [topic, setTopic] = useState('core'); // topic de sistema activo
+  const [includePrevious, setIncludePrevious] = useState(false);
   const [systems, setSystems] = useState([]); // [{ id, name }]
   const [gameSystemId, setGameSystemId] = useState('');
   const [query, setQuery] = useState('');
-  const [lastQuery, setLastQuery] = useState(''); // última consulta enviada (para regenerar)
-  const [answer, setAnswer] = useState(''); // texto acumulado del streaming
-  const [sources, setSources] = useState([]); // [{ doc_title, heading_path, snippet, score }]
-  const [conversation, setConversation] = useState([]); // [{ role, content }] memoria corta
+  const [lastRun, setLastRun] = useState(null); // { kind, ... } para regenerar
+  const [answer, setAnswer] = useState('');
+  const [sources, setSources] = useState([]);
+  const [conversation, setConversation] = useState([]); // memoria corta (solo pregunta libre)
   const [summary, setSummary] = useState(null);
   const [asking, setAsking] = useState(false);
   const [summarizing, setSummarizing] = useState(false);
   const [error, setError] = useState('');
-  const [aiStatus, setAiStatus] = useState(null); // { provider, model, ready, ... }
-  const [showDebug, setShowDebug] = useState(false); // panel de depuración de retrieval
-  const [debugChunks, setDebugChunks] = useState(null); // chunks crudos de /rag/search
+  const [aiStatus, setAiStatus] = useState(null);
+  const [showDebug, setShowDebug] = useState(false);
+  const [debugChunks, setDebugChunks] = useState(null);
   const [debugLoading, setDebugLoading] = useState(false);
   const cleanupRef = useRef(null);
 
-  // Consulta el estado de la IA para el badge y para decidir la degradación de la UX.
   useEffect(() => {
     api.aiStatus().then(setAiStatus).catch(() => setAiStatus({ ready: false }));
   }, []);
@@ -85,84 +102,104 @@ export default function AIPanel({ sessionId, user }) {
       .catch(() => {});
   }, [sessionId]);
 
-  // Carga el resumen existente y escucha el evento de resumen listo por socket.
   useEffect(() => {
-    api
-      .getSessionSummary(sessionId)
-      .then(({ summary: s }) => setSummary(s))
-      .catch(() => {});
-
+    api.getSessionSummary(sessionId).then(({ summary: s }) => setSummary(s)).catch(() => {});
     const onSummaryReady = ({ summary: s }) => setSummary(s);
     socket.on('session:summary_ready', onSummaryReady);
     return () => socket.off('session:summary_ready', onSummaryReady);
   }, [sessionId]);
 
-  // Limpia el listener de streaming al desmontar.
   useEffect(() => () => cleanupRef.current?.(), []);
 
-  // Lanza una consulta por streaming. `queryText` puede diferir del input (regenerar usa
-  // la última consulta). `history` acompaña la consulta para follow-ups conversacionales.
-  function runAsk(queryText, history) {
-    if (!gameSystemId) {
-      setError('No hay sistema de juego asociado a esta sesión.');
-      return;
-    }
+  // Camino de streaming común: recibe un `starter(callbacks) => cleanup` y una acción
+  // opcional `onComplete(finalAnswer)`. Centraliza el manejo de tokens/errores/estado para
+  // no duplicar la lógica entre pregunta libre, presets y topics (streaming intacto).
+  function runStream(starter, { onComplete } = {}) {
     setError('');
     setAnswer('');
     setSources([]);
     setAsking(true);
-    setLastQuery(queryText);
     cleanupRef.current?.();
+    cleanupRef.current = starter({
+      onToken: (token) => setAnswer((prev) => prev + token),
+      onDone: ({ answer: full, sources: srcs }) => {
+        const finalAnswer = full || '';
+        if (full) setAnswer(full);
+        setSources(srcs || []);
+        setAsking(false);
+        onComplete?.(finalAnswer);
+      },
+      onError: (message) => {
+        setError(message);
+        setAsking(false);
+      },
+    });
+  }
 
-    cleanupRef.current = streamAiAsk(
-      { query: queryText, gameSystemId, history },
+  // Pregunta libre de reglas (con follow-ups y, en modo sesión, opción de topic=null).
+  function runFreeAsk(queryText, history, sectionType = null) {
+    if (!gameSystemId) {
+      setError('No hay sistema de juego asociado a esta sesión.');
+      return;
+    }
+    setLastRun({ kind: 'free', queryText, sectionType });
+    runStream(
+      (cb) => streamAiAsk({ query: queryText, gameSystemId, history, sectionType }, cb),
       {
-        onToken: (token) => setAnswer((prev) => prev + token),
-        onDone: ({ answer: full, sources: srcs }) => {
-          const finalAnswer = full || '';
-          if (full) setAnswer(full);
-          setSources(srcs || []);
-          setAsking(false);
-          // Actualiza la memoria corta: añade el turno del usuario y del asistente,
-          // acotando a los últimos MAX_HISTORY_TURNS turnos.
+        onComplete: (finalAnswer) =>
           setConversation((prev) =>
             [...prev, { role: 'user', content: queryText }, { role: 'assistant', content: finalAnswer }].slice(
               -MAX_HISTORY_TURNS
             )
-          );
-        },
-        onError: (message) => {
-          setError(message);
-          setAsking(false);
-        },
+          ),
       }
     );
   }
 
+  // Preset de sesión (Resumen/Cronología/Estado/Inventarios).
+  function runPreset(presetId) {
+    setLastRun({ kind: 'preset', presetId });
+    runStream((cb) => streamSessionPreset({ sessionId, preset: presetId, includePrevious }, cb));
+  }
+
+  // Envío del formulario: según el modo/preset activo despacha el camino correcto.
   function ask(e) {
     e.preventDefault();
-    const q = query.trim();
-    if (!q) return;
-    // Follow-up: manda la conversación previa como memoria corta.
-    runAsk(q, conversation);
-    setQuery('');
+    if (mode === 'system') {
+      const q = query.trim();
+      if (!q) return;
+      const t = SYSTEM_TOPICS.find((x) => x.id === topic) ?? SYSTEM_TOPICS[0];
+      runFreeAsk(`${t.prefix}${q}`, [], t.sectionType);
+      setQuery('');
+      return;
+    }
+    // Modo sesión.
+    if (preset === 'libre') {
+      const q = query.trim();
+      if (!q) return;
+      runFreeAsk(q, conversation, null);
+      setQuery('');
+    } else {
+      runPreset(preset);
+    }
   }
 
-  // Regenera la última respuesta con la MISMA consulta y la conversación previa a ese
-  // turno (sin el último par usuario/asistente, para no duplicarlo).
   function regenerate() {
-    if (!lastQuery) return;
-    const priorHistory = conversation.slice(0, -2);
-    setConversation(priorHistory);
-    runAsk(lastQuery, priorHistory);
+    if (!lastRun) return;
+    if (lastRun.kind === 'preset') {
+      runPreset(lastRun.presetId);
+    } else {
+      const priorHistory = conversation.slice(0, -2);
+      setConversation(priorHistory);
+      runFreeAsk(lastRun.queryText, priorHistory, lastRun.sectionType);
+    }
   }
 
-  // Limpia la conversación (empezar de cero).
   function resetConversation() {
     setConversation([]);
     setAnswer('');
     setSources([]);
-    setLastQuery('');
+    setLastRun(null);
     setError('');
   }
 
@@ -179,10 +216,8 @@ export default function AIPanel({ sessionId, user }) {
     }
   }
 
-  // Panel de depuración: recupera los chunks crudos de /rag/search para la última
-  // consulta (o el input actual), mostrando score/heading_path sin pasar por el LLM.
   function inspectRetrieval() {
-    const q = (lastQuery || query).trim();
+    const q = (lastRun?.queryText || query).trim();
     if (!q || !gameSystemId) return;
     setDebugLoading(true);
     api
@@ -193,38 +228,91 @@ export default function AIPanel({ sessionId, user }) {
   }
 
   const aiDown = aiStatus && !aiStatus.ready;
+  const isPresetRun = mode === 'session' && preset !== 'libre';
+  const canRegenerate = lastRun && !asking;
 
   return (
     <div className="flex flex-col gap-4 overflow-y-auto p-3">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">Asistente IA</span>
+        <span className="text-xs font-semibold uppercase tracking-wider text-muted">Asistente IA</span>
         <EngineBadge status={aiStatus} />
       </div>
 
       {aiDown && (
-        <p className="rounded-md bg-ink-600 px-3 py-2 text-xs text-gray-400">
+        <p className="rounded-btn bg-surface-2 px-3 py-2 text-xs text-faint">
           La IA no está disponible. Inícialo con
-          <code className="mx-1 text-gold">docker compose --profile ai up</code>
+          <code className="mx-1 text-accent-text">docker compose --profile ai up</code>
           y descarga los modelos con
-          <code className="mx-1 text-gold">scripts/ai-bootstrap.sh</code>.
+          <code className="mx-1 text-accent-text">scripts/ai-bootstrap.sh</code>.
         </p>
       )}
-      {error && <p className="rounded-md bg-danger/20 px-3 py-2 text-sm text-red-300">{error}</p>}
+      {error && <p className="rounded-btn bg-danger-tint px-3 py-2 text-sm text-danger-text">{error}</p>}
 
       <Card className="p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-200">🤖 Preguntar reglas</h3>
-          {conversation.length > 0 && (
-            <button
-              type="button"
-              onClick={resetConversation}
-              className="text-xs text-gray-500 hover:text-gold"
-            >
+        {/* Selector de modo Sesión / Sistema */}
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div className="inline-flex rounded-btn border border-line p-0.5">
+            {[
+              { id: 'session', label: 'Sesión' },
+              { id: 'system', label: 'Sistema' },
+            ].map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => setMode(m.id)}
+                className={`rounded-[7px] px-3 py-1 text-xs font-medium transition-colors ${
+                  mode === m.id ? 'bg-accent text-bg' : 'text-sub hover:text-title'
+                }`}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+          {mode === 'session' && preset === 'libre' && conversation.length > 0 && (
+            <button type="button" onClick={resetConversation} className="text-xs text-faint hover:text-accent-text">
               Nueva conversación
             </button>
           )}
         </div>
-        {systems.length > 1 && (
+
+        {/* Chips de preset (Sesión) o topic (Sistema) */}
+        {mode === 'session' ? (
+          <div className="mb-3 flex flex-wrap gap-1.5">
+            {SESSION_PRESETS.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => setPreset(p.id)}
+                className={`rounded-pill px-2.5 py-1 text-xs transition-colors ${
+                  preset === p.id
+                    ? 'bg-accent-tint text-accent-text'
+                    : 'bg-surface-2 text-sub hover:text-title'
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="mb-3 flex flex-wrap gap-1.5">
+            {SYSTEM_TOPICS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setTopic(t.id)}
+                className={`rounded-pill px-2.5 py-1 text-xs transition-colors ${
+                  topic === t.id
+                    ? 'bg-accent-tint text-accent-text'
+                    : 'bg-surface-2 text-sub hover:text-title'
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {systems.length > 1 && mode === 'system' && (
           <select
             value={gameSystemId}
             onChange={(e) => setGameSystemId(e.target.value)}
@@ -232,67 +320,88 @@ export default function AIPanel({ sessionId, user }) {
             aria-label="Sistema de juego"
           >
             {systems.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
+              <option key={s.id} value={s.id}>{s.name}</option>
             ))}
           </select>
         )}
+
+        {/* Checkbox "incluir sesiones anteriores" (solo modo Sesión y con campaña) */}
+        {mode === 'session' && campaignId && (
+          <label className="mb-2 flex cursor-pointer items-center gap-1.5 text-xs text-sub">
+            <input
+              type="checkbox"
+              checked={includePrevious}
+              onChange={(e) => setIncludePrevious(e.target.checked)}
+              className="h-4 w-4 accent-accent"
+            />
+            Incluir sesiones anteriores
+          </label>
+        )}
+
         <form onSubmit={ask} className="flex flex-col gap-2">
-          <textarea
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={
-              conversation.length
-                ? 'Pregunta de seguimiento…'
-                : '¿Cómo funciona la iniciativa en combate?'
-            }
-            rows={2}
-            className={inputCls}
-          />
+          {!isPresetRun && (
+            <textarea
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={
+                mode === 'system'
+                  ? '¿Cómo funciona esta regla?'
+                  : conversation.length
+                    ? 'Pregunta de seguimiento…'
+                    : '¿Cómo funciona la iniciativa en combate?'
+              }
+              rows={2}
+              className={inputCls}
+            />
+          )}
           <div className="flex gap-2">
-            <Button type="submit" size="sm" disabled={asking || !systems.length}>
-              {asking ? 'Consultando…' : conversation.length ? 'Seguir' : 'Preguntar'}
+            <Button type="submit" size="sm" disabled={asking || (mode === 'system' && !systems.length)}>
+              {asking
+                ? 'Consultando…'
+                : isPresetRun
+                  ? `Generar ${SESSION_PRESETS.find((p) => p.id === preset)?.label ?? ''}`
+                  : mode === 'session' && conversation.length
+                    ? 'Seguir'
+                    : 'Preguntar'}
             </Button>
-            {lastQuery && !asking && (
+            {canRegenerate && (
               <Button type="button" size="sm" variant="secondary" onClick={regenerate}>
-                ↻ Regenerar
+                <Icon name="arrow-left" size={14} className="mr-1" /> Regenerar
               </Button>
             )}
           </div>
         </form>
-        {!systems.length && (
-          <p className="mt-2 text-xs text-gray-500">
+        {mode === 'system' && !systems.length && (
+          <p className="mt-2 text-xs text-faint">
             Vincula un personaje con sistema de juego para consultar sus reglas.
           </p>
         )}
 
         {(answer || asking) && (
           <div className="mt-3 flex flex-col gap-2">
-            <p className="whitespace-pre-wrap rounded-md bg-ink-900 px-3 py-2 text-sm text-gray-100">
+            <p className="whitespace-pre-wrap rounded-btn bg-bg px-3 py-2 text-sm text-title">
               {answer}
-              {asking && <span className="ml-0.5 animate-pulse text-gold">▍</span>}
+              {asking && <span className="ml-0.5 animate-pulse text-accent-text">▍</span>}
             </p>
             {sources.length > 0 && (
               <div className="flex flex-col gap-1">
-                <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-                  Fuentes
-                </span>
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted">Fuentes</span>
                 {sources.map((c, i) => (
-                  <div key={i} className="text-xs text-gray-400">
+                  <div key={i} className="text-xs text-sub">
                     <span className="flex items-center gap-1">
-                      <span className="flex-1">
-                        📖 {c.doc_title} › {c.heading_path}{' '}
-                        <span className="text-gray-600">({c.section_type})</span>
+                      <span className="flex flex-1 items-center gap-1">
+                        <Icon name="book" size={13} className="text-faint" />
+                        {c.doc_title} › {c.heading_path}{' '}
+                        <span className="text-faint">({c.section_type})</span>
                       </span>
                       <span
-                        className="rounded bg-ink-600 px-1.5 py-0.5 font-mono text-[10px] text-gold"
+                        className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[10px] text-accent-text"
                         title="Score de relevancia"
                       >
                         {fmtScore(c.score)}
                       </span>
                     </span>
-                    {c.snippet && <p className="mt-0.5 pl-4 italic text-gray-600">“{c.snippet}”</p>}
+                    {c.snippet && <p className="mt-0.5 pl-4 italic text-faint">“{c.snippet}”</p>}
                   </div>
                 ))}
               </div>
@@ -300,9 +409,9 @@ export default function AIPanel({ sessionId, user }) {
           </div>
         )}
 
-        {/* Panel de depuración de retrieval (colapsable): chunks crudos con score/heading. */}
+        {/* Panel de depuración de retrieval (colapsable) */}
         {systems.length > 0 && (
-          <div className="mt-3 border-t border-ink-line pt-2">
+          <div className="mt-3 border-t border-line pt-2">
             <button
               type="button"
               onClick={() => {
@@ -310,9 +419,10 @@ export default function AIPanel({ sessionId, user }) {
                 setShowDebug(next);
                 if (next && !debugChunks) inspectRetrieval();
               }}
-              className="text-xs text-gray-500 hover:text-gold"
+              className="flex items-center gap-1 text-xs text-faint hover:text-accent-text"
             >
-              {showDebug ? '▾' : '▸'} Depuración de retrieval
+              <Icon name={showDebug ? 'chevron-down' : 'chevron-right'} size={14} />
+              Depuración de retrieval
             </button>
             {showDebug && (
               <div className="mt-2 flex flex-col gap-2">
@@ -321,23 +431,21 @@ export default function AIPanel({ sessionId, user }) {
                   size="sm"
                   variant="ghost"
                   onClick={inspectRetrieval}
-                  disabled={debugLoading || !(lastQuery || query).trim()}
+                  disabled={debugLoading || !(lastRun?.queryText || query).trim()}
                 >
                   {debugLoading ? 'Recuperando…' : 'Recuperar chunks de la última consulta'}
                 </Button>
                 {debugChunks && debugChunks.length === 0 && (
-                  <p className="text-xs text-gray-500">Sin chunks recuperados.</p>
+                  <p className="text-xs text-faint">Sin chunks recuperados.</p>
                 )}
                 {debugChunks &&
                   debugChunks.map((c, i) => (
-                    <div key={i} className="rounded-md bg-ink-900 px-2 py-1.5 text-[11px] text-gray-400">
+                    <div key={i} className="rounded-btn bg-bg px-2 py-1.5 text-[11px] text-sub">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="truncate text-gray-300">
-                          {c.doc_title} › {c.heading_path}
-                        </span>
-                        <span className="shrink-0 font-mono text-gold">{fmtScore(c.score)}</span>
+                        <span className="truncate text-title">{c.doc_title} › {c.heading_path}</span>
+                        <span className="shrink-0 font-mono text-accent-text">{fmtScore(c.score)}</span>
                       </div>
-                      <p className="mt-0.5 line-clamp-2 text-gray-600">{c.text}</p>
+                      <p className="mt-0.5 line-clamp-2 text-faint">{c.text}</p>
                     </div>
                   ))}
               </div>
@@ -348,7 +456,9 @@ export default function AIPanel({ sessionId, user }) {
 
       <Card className="p-4">
         <div className="mb-2 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-200">📝 Resumen de sesión</h3>
+          <h3 className="flex items-center gap-1.5 text-sm font-semibold text-title">
+            <Icon name="file" size={15} className="text-accent-text" /> Resumen de sesión
+          </h3>
           {isDM && (
             <Button size="sm" variant="secondary" onClick={generateSummary} disabled={summarizing}>
               {summarizing ? 'Generando…' : 'Generar'}
@@ -356,12 +466,10 @@ export default function AIPanel({ sessionId, user }) {
           )}
         </div>
         {summary ? (
-          <p className="whitespace-pre-wrap text-sm text-gray-200">{summary.body}</p>
+          <p className="whitespace-pre-wrap text-sm text-sub">{summary.body}</p>
         ) : (
-          <p className="text-xs text-gray-500">
-            {isDM
-              ? 'Aún no hay resumen. Genera uno cuando quieras.'
-              : 'El DM aún no ha generado el resumen.'}
+          <p className="text-xs text-faint">
+            {isDM ? 'Aún no hay resumen. Genera uno cuando quieras.' : 'El DM aún no ha generado el resumen.'}
           </p>
         )}
       </Card>

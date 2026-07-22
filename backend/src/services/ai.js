@@ -393,8 +393,8 @@ function packWithinBudget(chunks, budget = CONTEXT_TOKEN_BUDGET) {
 // Recupera un pool amplio con el retrieval híbrido optimizado y lo empaqueta hasta el
 // presupuesto de tokens, priorizando relevancia. Solo los chunks empaquetados llegan al
 // prompt y se reportan como `sources`.
-async function retrieveRules({ query, gameSystemId, k = RETRIEVE_K, budget = CONTEXT_TOKEN_BUDGET }) {
-  const chunks = await hybridSearch({ query, gameSystemId, k });
+async function retrieveRules({ query, gameSystemId, k = RETRIEVE_K, budget = CONTEXT_TOKEN_BUDGET, sectionType = null }) {
+  const chunks = await hybridSearch({ query, gameSystemId, k, sectionType });
   return packWithinBudget(chunks, budget);
 }
 
@@ -590,7 +590,7 @@ function buildRulesPrompt(query, chunks, history = []) {
   return messages;
 }
 
-export async function answerRulesQuestion({ query, gameSystemId, history = [] }) {
+export async function answerRulesQuestion({ query, gameSystemId, history = [], sectionType = null }) {
   if (!query || !query.trim()) throw new Error('La consulta está vacía');
   if (!gameSystemId) throw new Error('game_system_id es requerido');
 
@@ -610,7 +610,7 @@ export async function answerRulesQuestion({ query, gameSystemId, history = [] })
   }
 
   // Fallback: inyección de contexto (comportamiento previo a F12).
-  const chunks = await retrieveRules({ query, gameSystemId, k: cfg.topK, budget: cfg.contextBudget });
+  const chunks = await retrieveRules({ query, gameSystemId, k: cfg.topK, budget: cfg.contextBudget, sectionType });
   const answer = await callLlm(buildRulesPrompt(query, chunks, turns), {
     model: cfg.model,
     temperature: cfg.temperature,
@@ -623,7 +623,7 @@ export async function answerRulesQuestion({ query, gameSystemId, history = [] })
 // Variante streaming: emite tokens vía onToken y devuelve { answer, sources }.
 // El streaming de tokens solo aplica a la ruta de inyección de contexto; con tool-use la
 // respuesta se produce tras el loop, así que se emite completa como un único token.
-export async function streamRulesQuestion({ query, gameSystemId, history = [] }, onToken) {
+export async function streamRulesQuestion({ query, gameSystemId, history = [], sectionType = null }, onToken) {
   if (!query || !query.trim()) throw new Error('La consulta está vacía');
   if (!gameSystemId) throw new Error('game_system_id es requerido');
 
@@ -642,7 +642,7 @@ export async function streamRulesQuestion({ query, gameSystemId, history = [] },
     return { answer, sources, citations: sources };
   }
 
-  const chunks = await retrieveRules({ query, gameSystemId, k: cfg.topK, budget: cfg.contextBudget });
+  const chunks = await retrieveRules({ query, gameSystemId, k: cfg.topK, budget: cfg.contextBudget, sectionType });
   const answer = await callLlmStream(buildRulesPrompt(query, chunks, turns), onToken, {
     model: cfg.model,
     temperature: cfg.temperature,
@@ -692,6 +692,148 @@ export async function summarizeSession(sessionId) {
 
 export function getSessionSummary(sessionId) {
   return db.prepare('SELECT * FROM session_summaries WHERE session_id = ?').get(sessionId) ?? null;
+}
+
+// ── (d) Presets de sesión (F18) ──────────────────────────────────────────────────
+// Componen sobre lo existente (callLlmStream + packWithinBudget + toSources) sin motor
+// nuevo. Con Ollama local (tool-use OFF) todo corre por INYECCIÓN DE CONTEXTO derivado
+// de datos ESTRUCTURADOS de la sesión (eventos, personajes, atributos, inventarios), no
+// de volcados de texto libre. Contrato de salida idéntico: { answer, sources }.
+
+const SESSION_SYSTEM =
+  'Eres el asistente de mesa del DM en una sesión de rol en vivo. Responde SIEMPRE en ' +
+  'español, de forma concisa y factual, usando ÚNICAMENTE la información del contexto de ' +
+  'la sesión que se te proporciona (eventos, personajes, atributos, inventarios, notas y ' +
+  'resúmenes previos). ' + NO_HALLUCINATION;
+
+// Inventarios de los personajes de la sesión (para el preset "Inventarios").
+export function getSessionInventories(sessionId) {
+  const chars = db
+    .prepare(`
+      SELECT ch.id, ch.name
+      FROM session_characters sc
+      JOIN characters ch ON ch.id = sc.character_id
+      WHERE sc.session_id = ?
+      ORDER BY ch.name ASC
+    `)
+    .all(sessionId);
+  const invStmt = db.prepare(
+    'SELECT item_name, quantity FROM character_inventory WHERE character_id = ? ORDER BY item_name ASC'
+  );
+  for (const ch of chars) ch.inventory = invStmt.all(ch.id);
+  return chars;
+}
+
+function renderInventories(inventories) {
+  if (!inventories.length) return '';
+  let out = '=== INVENTARIOS ===\n';
+  for (const ch of inventories) {
+    const items = ch.inventory.map((i) => `${i.item_name} x${i.quantity}`).join(', ') || '(vacío)';
+    out += `- ${ch.name}: ${items}\n`;
+  }
+  return out + '\n';
+}
+
+// Resúmenes de sesiones ANTERIORES cerradas de la misma campaña (checkbox "incluir
+// sesiones anteriores"). Excluye la sesión en curso. Acotado por presupuesto de tokens.
+export function getCampaignSummaries(campaignId, { excludeSessionId = null } = {}) {
+  return db
+    .prepare(`
+      SELECT s.id AS session_id, s.name, ss.body
+      FROM session_summaries ss
+      JOIN sessions s ON s.id = ss.session_id
+      WHERE s.campaign_id = ? ${excludeSessionId ? 'AND s.id != ?' : ''}
+      ORDER BY ss.generated_at ASC
+    `)
+    .all(...(excludeSessionId ? [campaignId, excludeSessionId] : [campaignId]));
+}
+
+function renderPriorSummaries(summaries) {
+  if (!summaries.length) return '';
+  // Acota cada resumen para no desbordar el contexto del LLM local (reusa el presupuesto).
+  const budget = CONTEXT_TOKEN_BUDGET;
+  let out = '=== SESIONES ANTERIORES (RESÚMENES) ===\n';
+  let used = 0;
+  for (const s of summaries) {
+    const block = `[${s.name}]\n${s.body}\n\n`;
+    const cost = estimateChunkTokens(block);
+    if (used && used + cost > budget) break;
+    out += block;
+    used += cost;
+  }
+  return out;
+}
+
+// Mapa de presets → { prompt, buildContext(sessionId) }. Cada preset arma el contexto
+// desde datos estructurados de la sesión. La "pregunta libre" NO usa este mapa (va por
+// streamRulesQuestion como hoy).
+const SESSION_PRESETS = {
+  resumen: {
+    prompt:
+      'Redacta un resumen breve de lo ocurrido hasta ahora en la sesión (Qué pasó / ' +
+      'Decisiones clave / Hilos abiertos), usando solo el contexto.',
+    buildContext: (sessionId) => {
+      const state = getSessionState(sessionId);
+      const events = getEventHistory(sessionId);
+      return `${renderEvents(events)}${renderSessionState(state)}`;
+    },
+  },
+  cronologia: {
+    prompt:
+      'Ordena cronológicamente los eventos de esta sesión en una lista numerada, con una ' +
+      'línea por evento (actor, ubicación y descripción breve). Usa solo el contexto.',
+    buildContext: (sessionId) => renderEvents(getEventHistory(sessionId)),
+  },
+  estado: {
+    prompt:
+      'Resume el estado actual de cada personaje (atributos principales, PV/voluntad si ' +
+      'aplican). Una línea por personaje. Usa solo el contexto.',
+    buildContext: (sessionId) => renderSessionState(getSessionState(sessionId)),
+  },
+  inventarios: {
+    prompt:
+      'Lista el inventario de cada personaje de la sesión, indicando cantidades. Usa solo ' +
+      'el contexto.',
+    buildContext: (sessionId) => renderInventories(getSessionInventories(sessionId)),
+  },
+};
+
+export const SESSION_PRESET_KEYS = Object.keys(SESSION_PRESETS);
+
+// streamSessionPreset({ sessionId, preset, includePrevious?, history? }, onToken)
+// Deriva el contexto estructurado del preset, opcionalmente inyecta resúmenes de
+// sesiones anteriores de la campaña, y genera por streaming. Devuelve { answer, sources }.
+// Los presets de sesión no citan reglas (sources vacío) salvo que se amplíe en el futuro.
+export async function streamSessionPreset({ sessionId, preset, includePrevious = false, history = [] }, onToken) {
+  if (!sessionId) throw new Error('session_id es requerido');
+  const spec = SESSION_PRESETS[preset];
+  if (!spec) throw new Error(`Preset de sesión no soportado: ${preset}`);
+
+  const state = getSessionState(sessionId);
+  if (!state) throw new Error('Sesión no encontrada');
+
+  const cfg = resolveTaskConfig('summary');
+  const turns = normalizeHistory(history);
+
+  let priorBlock = '';
+  if (includePrevious) {
+    const session = db.prepare('SELECT campaign_id FROM sessions WHERE id = ?').get(sessionId);
+    if (session?.campaign_id) {
+      const summaries = getCampaignSummaries(session.campaign_id, { excludeSessionId: sessionId });
+      priorBlock = renderPriorSummaries(summaries);
+    }
+  }
+
+  const context = spec.buildContext(sessionId);
+  const messages = [{ role: 'system', content: SESSION_SYSTEM }];
+  for (const turn of turns) messages.push(turn);
+  messages.push({
+    role: 'user',
+    content: `${priorBlock}${context}=== PETICIÓN ===\n${spec.prompt}`,
+  });
+
+  const answer = await callLlmStream(messages, onToken, { model: cfg.model, temperature: cfg.temperature });
+  return { answer, sources: [], citations: [] };
 }
 
 // ── (c) Asistente de planificación (reglas + estado) ─────────────────────────────
