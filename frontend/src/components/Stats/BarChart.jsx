@@ -14,7 +14,7 @@ function widthClass(ratio) {
 
 export default function BarChart({ data = [], emptyLabel = 'Sin datos' }) {
   if (!data.length) {
-    return <p className="text-sm text-gray-500">{emptyLabel}</p>;
+    return <p className="text-sm text-faint">{emptyLabel}</p>;
   }
   const max = Math.max(...data.map((d) => d.value), 1);
 
@@ -22,13 +22,13 @@ export default function BarChart({ data = [], emptyLabel = 'Sin datos' }) {
     <ul className="flex flex-col gap-2">
       {data.map((d) => (
         <li key={d.label} className="flex items-center gap-3">
-          <span className="w-28 flex-shrink-0 truncate text-xs text-gray-300" title={d.label}>
+          <span className="w-28 flex-shrink-0 truncate text-xs text-sub" title={d.label}>
             {d.label}
           </span>
-          <span className="relative h-4 flex-1 overflow-hidden rounded-md bg-ink-900">
-            <span className={`block h-full rounded-md bg-gold transition-all ${widthClass(d.value / max)}`} />
+          <span className="relative h-4 flex-1 overflow-hidden rounded-btn bg-bg">
+            <span className={`block h-full rounded-btn bg-accent transition-all ${widthClass(d.value / max)}`} />
           </span>
-          <span className="w-8 flex-shrink-0 text-right text-xs font-semibold text-gray-200">
+          <span className="num w-8 flex-shrink-0 text-right text-xs font-semibold text-title">
             {d.value}
           </span>
         </li>

@@ -7,6 +7,7 @@ import Modal from '../ui/Modal.jsx';
 import Tabs from '../ui/Tabs.jsx';
 import Icon from '../ui/Icon.jsx';
 import EventFlowGraph from '../DMMaster/EventFlowGraph.jsx';
+import { FiredEventCard } from './SessionEventsPanel.jsx';
 
 const inputCls =
   'rounded-btn border border-line bg-bg px-3 py-2 text-sm text-title outline-none focus:border-accent';
@@ -451,51 +452,9 @@ export default function PlanningPanel({ sessionId, user, session }) {
                 Sin eventos disparados en esta sesión.
               </p>
             )}
-            {firedEvents.map((evt, i) => {
-              let payload = {};
-              try {
-                payload = JSON.parse(evt.payload);
-              } catch {
-                payload = {};
-              }
-              const cat = eventCategoryClasses(evt.type);
-              const isNpc = payload.actor_type === 'npc';
-              const hasSpecific =
-                payload.participant_type === 'specific' &&
-                Array.isArray(payload.participants) &&
-                payload.participants.length > 0;
-              return (
-                <div
-                  key={evt.id ?? i}
-                  className={`flex flex-col gap-1 rounded-btn border bg-bg p-2 ${
-                    isNpc ? 'border-l-2 border-accent' : 'border-line'
-                  }`}
-                >
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    {isNpc && (
-                      <span className="flex items-center gap-0.5 rounded-pill border border-accent px-1.5 text-[0.66rem] text-accent-text">
-                        <Icon name="user" size={11} /> NPC
-                      </span>
-                    )}
-                    <span className={`rounded-pill px-2 py-0.5 text-[0.66rem] ${cat.badgeClass}`}>{cat.label}</span>
-                    <span className="text-sm font-semibold text-sub">{payload.title || evt.type}</span>
-                  </div>
-                  {payload.description && (
-                    <p className="text-xs leading-snug text-sub">{payload.description}</p>
-                  )}
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[0.68rem] text-muted">
-                      {isNpc ? payload.npc_name || 'NPC' : evt.actor_username || 'sistema'}
-                    </span>
-                    {hasSpecific && (
-                      <span className="text-[0.68rem] text-cat-social-text">
-                        Solo: {payload.participants.map((p) => p.name ?? p).join(', ')}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+            {firedEvents.map((evt, i) => (
+              <FiredEventCard key={evt.id ?? i} event={evt} />
+            ))}
           </>
         )}
 

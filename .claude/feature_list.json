@@ -172,7 +172,7 @@
     "phase": "F19 — Historial: detalle de sesión finalizada",
     "title": "Detalle de sesión finalizada con tabs Notas / Eventos / Resumen / IA",
     "priority": 21,
-    "status": "pending",
+    "status": "done",
     "description": "Completar el historial (v0 SessionHistory): desde la página Sesiones Finalizadas (F14), Ver resumen→ abre el detalle con tabs: Notas (públicas para jugadores, todas para DM, con badge de tipo), Eventos (log de eventos disparados con tipo/actor/ubicación/participantes, badge NPC), Resumen (resumen IA de cierre), IA (AIPanel en modo consulta sobre la sesión finalizada, incluye stats de F7). Mantener búsqueda y filtro por campaña. Estilo handoff (timeline + tarjetas + tabs). Verificación: build+lint+tests, smoke con una sesión cerrada con notas/eventos/resumen."
   }
 ]

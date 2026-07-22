@@ -130,6 +130,28 @@ const ICONS = {
     </>
   ),
   chart: <path d="M5 20v-8M11 20V5M17 20v-11M3 20h18" />,
+  // Estadísticas (F19): rayo (eventos), espadas (encuentros), bocadillo (mensajes), dado (sesiones).
+  zap: <path d="M13 2L4 14h7l-1 8 9-12h-7z" />,
+  dice: (
+    <>
+      <rect x="4" y="4" width="16" height="16" rx="3" />
+      <circle cx="8.5" cy="8.5" r="1.1" />
+      <circle cx="15.5" cy="8.5" r="1.1" />
+      <circle cx="12" cy="12" r="1.1" />
+      <circle cx="8.5" cy="15.5" r="1.1" />
+      <circle cx="15.5" cy="15.5" r="1.1" />
+    </>
+  ),
+  swords: (
+    <>
+      <path d="M14.5 17.5L3 6V3h3l11.5 11.5" />
+      <path d="M13 19l6-6M16 16l4 4M19 21l2-2M21 3h-3L6.5 14.5" />
+      <path d="M11 19l-6-6M8 16l-4 4M5 21l-2-2" />
+    </>
+  ),
+  message: (
+    <path d="M21 12a8 8 0 01-11.6 7.1L4 20l1-4.4A8 8 0 1121 12z" />
+  ),
 };
 
 // Nombres disponibles, exportados para poder validar la config de navegación en tests.

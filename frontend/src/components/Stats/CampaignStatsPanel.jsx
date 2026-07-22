@@ -34,10 +34,10 @@ export default function CampaignStatsPanel({ campaignId }) {
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatTile label="Sesiones" value={stats.sessions_played ?? 0} icon="🎲" />
-        <StatTile label="Cerradas" value={stats.sessions_closed ?? 0} icon="✅" />
-        <StatTile label="Eventos" value={stats.total_events ?? 0} icon="📜" />
-        <StatTile label="Encuentros" value={stats.encounters ?? 0} icon="⚔️" />
+        <StatTile label="Sesiones" value={stats.sessions_played ?? 0} icon="dice" />
+        <StatTile label="Cerradas" value={stats.sessions_closed ?? 0} icon="check" />
+        <StatTile label="Eventos" value={stats.total_events ?? 0} icon="zap" />
+        <StatTile label="Encuentros" value={stats.encounters ?? 0} icon="swords" />
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

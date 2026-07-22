@@ -33,10 +33,10 @@ export default function CharacterStatsPanel({ characterId }) {
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatTile label="Sesiones" value={stats.sessions_played ?? 0} icon="🎲" />
-        <StatTile label="Eventos" value={stats.events_participated ?? 0} icon="📜" />
-        <StatTile label="Habilidades" value={stats.skill_count ?? 0} icon="⚡" />
-        <StatTile label="Objetos" value={stats.item_count ?? 0} icon="🎒" />
+        <StatTile label="Sesiones" value={stats.sessions_played ?? 0} icon="dice" />
+        <StatTile label="Eventos" value={stats.events_participated ?? 0} icon="zap" />
+        <StatTile label="Habilidades" value={stats.skill_count ?? 0} icon="skills" />
+        <StatTile label="Objetos" value={stats.item_count ?? 0} icon="bag" />
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

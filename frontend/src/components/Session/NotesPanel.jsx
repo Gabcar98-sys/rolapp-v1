@@ -13,8 +13,14 @@ const inputCls =
 // las ve todas; el jugador ve SOLO las públicas. Sincroniza por socket: al recibir
 // `notes:updated` (señal sin bodies), re-consulta por REST, que filtra por rol. Así el
 // cuerpo de una nota privada nunca llega al jugador por socket.
-export default function NotesPanel({ sessionId, user }) {
+//
+// `readOnly` (F19): en el detalle de una sesión finalizada, oculta el formulario y las
+// acciones de edición/borrado — solo lectura. La visibilidad por rol se mantiene (el
+// backend sigue filtrando: el jugador ve solo públicas; el DM ve todas con su badge).
+export default function NotesPanel({ sessionId, user, readOnly = false }) {
+  // Un DM en modo lectura no gestiona notas, pero sí conserva su visibilidad completa.
   const isDM = user.role === 'dm';
+  const canManage = isDM && !readOnly;
   const [notes, setNotes] = useState([]);
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -90,7 +96,7 @@ export default function NotesPanel({ sessionId, user }) {
     <div className="flex h-full flex-col overflow-hidden">
       <div className="flex flex-shrink-0 items-center justify-between px-3 py-2.5">
         <span className="text-xs font-semibold uppercase tracking-wider text-muted">Notas</span>
-        {isDM && !showForm && (
+        {canManage && !showForm && (
           <Button size="sm" onClick={() => { resetForm(); setShowForm(true); }}>
             <Icon name="plus" size={16} className="mr-1" /> Nota
           </Button>
@@ -102,7 +108,7 @@ export default function NotesPanel({ sessionId, user }) {
       )}
 
       <div className="flex flex-1 flex-col gap-2 overflow-y-auto px-3 pb-3">
-        {isDM && showForm && (
+        {canManage && showForm && (
           <Card className="p-3">
             <form onSubmit={save} className="flex flex-col gap-2">
               <input
@@ -154,7 +160,11 @@ export default function NotesPanel({ sessionId, user }) {
 
         {notes.length === 0 && !showForm && (
           <p className="mt-4 text-center text-sm text-faint">
-            {isDM ? 'Sin notas. Crea la primera.' : 'El DM aún no ha publicado notas.'}
+            {readOnly
+              ? 'Esta sesión no tiene notas.'
+              : isDM
+                ? 'Sin notas. Crea la primera.'
+                : 'El DM aún no ha publicado notas.'}
           </p>
         )}
 
@@ -179,7 +189,7 @@ export default function NotesPanel({ sessionId, user }) {
                     <p className="mt-1 whitespace-pre-wrap text-sm leading-snug text-sub">{note.body}</p>
                   )}
                 </div>
-                {isDM && (
+                {canManage && (
                   <div className="flex flex-shrink-0 gap-1">
                     <button
                       onClick={() => startEdit(note)}

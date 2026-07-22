@@ -11,8 +11,8 @@ import Card from '../components/ui/Card.jsx';
 import Icon from '../components/ui/Icon.jsx';
 import Page from '../components/layout/Page.jsx';
 import PageHeader from '../components/layout/PageHeader.jsx';
-import SessionStatsPanel from '../components/Stats/SessionStatsPanel.jsx';
 import CampaignStatsPanel from '../components/Stats/CampaignStatsPanel.jsx';
+import SessionDetail from './SessionDetail.jsx';
 
 // Punto del timeline: borde en el color de acento de la campaña de la sesión
 // (clases estáticas para el JIT; índice estable de metrics.js; -1 = sin campaña).
@@ -37,15 +37,16 @@ function Meta({ icon, iconClass, children }) {
   );
 }
 
-// Sesiones Finalizadas (F14): timeline vertical con búsqueda por texto y filtro
-// por campaña. "Ver resumen" expande el resumen completo + stats (detalle con tabs
-// llega en F19). Estadísticas de campaña (F7) accesibles arriba (solo DM).
+// Sesiones Finalizadas (F14 + F19): timeline vertical con búsqueda por texto y filtro
+// por campaña. "Ver detalle →" abre el detalle de la sesión con tabs (Notas / Eventos /
+// Resumen / IA); al volver, la búsqueda y el filtro se conservan (viven en este estado).
+// Estadísticas de campaña (F7) accesibles arriba (solo DM).
 export default function HistoryPage({ user }) {
   const isDM = user.role === 'dm';
   const [closedSessions, setClosedSessions] = useState([]);
   const [query, setQuery] = useState('');
   const [campaignId, setCampaignId] = useState('');
-  const [openSessionId, setOpenSessionId] = useState(null);
+  const [selectedSession, setSelectedSession] = useState(null);
   const [statsCampaignId, setStatsCampaignId] = useState('');
   const [showCampaignStats, setShowCampaignStats] = useState(false);
   const [error, setError] = useState('');
@@ -70,6 +71,17 @@ export default function HistoryPage({ user }) {
   }, [closedSessions]);
 
   const filtered = filterClosedSessions(closedSessions, { query, campaignId });
+
+  // Detalle de una sesión seleccionada: sustituye el timeline por la vista de tabs.
+  if (selectedSession) {
+    return (
+      <SessionDetail
+        session={selectedSession}
+        user={user}
+        onBack={() => setSelectedSession(null)}
+      />
+    );
+  }
 
   return (
     <Page maxWidthClass="max-w-[920px]">
@@ -164,7 +176,6 @@ export default function HistoryPage({ user }) {
           {filtered.map((session) => {
             const idx = campaignAccentIndex(session.campaign_id);
             const dot = idx === -1 ? 'border-[#5A5348]' : DOT_CLASSES[idx];
-            const open = openSessionId === session.id;
             return (
               <div key={session.id} className="relative mb-4">
                 <span
@@ -198,23 +209,13 @@ export default function HistoryPage({ user }) {
                     </Meta>
                     <button
                       type="button"
-                      onClick={() => setOpenSessionId(open ? null : session.id)}
+                      onClick={() => setSelectedSession(session)}
                       className="ml-auto flex items-center gap-1 text-[12.5px] font-semibold text-accent-text hover:text-accent-hover"
                     >
-                      {open ? 'Ocultar resumen' : 'Ver resumen'}
-                      <Icon name={open ? 'chevron-down' : 'arrow-right'} size={12} />
+                      Ver detalle
+                      <Icon name="arrow-right" size={12} />
                     </button>
                   </div>
-                  {open && (
-                    <div className="mt-4 border-t border-line-2 pt-4">
-                      {session.summary && (
-                        <p className="mb-4 text-[13.5px] leading-relaxed text-sub">
-                          {session.summary}
-                        </p>
-                      )}
-                      <SessionStatsPanel sessionId={session.id} />
-                    </div>
-                  )}
                 </Card>
               </div>
             );
