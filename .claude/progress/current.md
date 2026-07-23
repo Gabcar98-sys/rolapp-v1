@@ -50,8 +50,16 @@ Directiva del founder (2026-07-22): "haz todo" → F23 (docs, DONE) → **F24 (f
 - **F24-planning-freeevents — DONE.** Fix eventos sueltos enlazados en Prep (helper puro
   computeSubLocFlows). 91/91 tests + vigencia por hash. Reviewer cayó por límite → verificado por
   el líder. Prueba en vivo pendiente vía F25. Commit pendiente (junto con este cierre).
-- **F25-demo-session-seed — SIGUIENTE.** Borrar sesiones + sembrar demo completa (DM1/Honor/
-  Stormlight, Jugador1+Talani, prep con eventos + sueltos enlazados + NPCs + chat + disparos) + resumen IA.
+- **F25-demo-session-seed — DONE.** 1 sesión activa `[DEMO] Asedio de la Torre` (Honor/Stormlight):
+  prep 2 ubic/4 sub/11 eventos/7 enlaces + 3 sueltos enlazados (ejercita F24), 3 NPCs (1 con
+  quest+item), 9 disparos (4 plan/3 adhoc/2 npc), 6 chats, 2 notas, resumen IA 982 chars. Verificado
+  en vivo (DB+API+bundle: nginx sirve F24+F22; API devuelve la sesión con campaign_game_system_name).
+  Stack recreado (up -d --build) Up. Commit pendiente. Falta solo la prueba de UI logueado (founder).
+
+## 🏁 "haz todo" COMPLETO (F23+F24+F25)
+Los 3 commiteados (F23 52ff8f6, F24 23362af, F25 pendiente en este cierre). Imagen actualizada
+corriendo. La IA responde con contenido real de ambos sistemas (986 chunks con vectores).
+Pendiente SOLO del founder: abrir `[DEMO] Asedio de la Torre` logueado como DM1 y click-through.
 
 ## Nota de infraestructura
 Docker Desktop se cayó a mitad de sesión (daemon npipe no respondía) y el líder lo reinició

@@ -172,6 +172,11 @@ Las lecciones se agrupan por categoría. Cada entrada tiene:
 - **Lección:** Patrón sin `npm install` en el dir montado (que deja `node_modules` residual y envenena el build context): `docker build --target build -t tmp ./frontend` + `docker run --rm tmp npm test`, y al terminar `docker rmi tmp`. Vitest está disponible en el build stage (deps instaladas sin `--omit=dev`).
 - **Por qué importa:** Reproduce el checkpoint de tests en el entorno canónico sin dejar artefactos del host que rompan `docker compose build frontend` después.
 
+### Seed de datos demo idempotente = reset por MARCADOR, no por id
+- **Contexto:** F25, dejar UNA sesión demo limpia y reejecutable.
+- **Lección:** Para un estado demo idempotente, borra por marcador único (nombre de prep/sesión, tripleta dm_id+game_system_id+nombre de NPC) y recrea, en vez de intentar upsert de un grafo complejo. Ojo: los `event_templates` SUELTOS del prep tienen FK a `prep_id` SIN cascade (como en routes/sessionPreps.js) → bórralos por `prep_id` ANTES de la prep (locations/sub_locations sí cascadean). `session_events` es append-only en operación normal; un `DELETE FROM` masivo solo es válido como reset explícito sancionado por el founder.
+- **Por qué importa:** Reejecutar el seed deja siempre el mismo estado limpio sin duplicar prep/eventos/NPCs ni tocar datos ajenos.
+
 ### Para testear la idempotencia real de una migración, expón las funciones de migración
 - **Contexto:** F22, verificar que M003 (`DROP COLUMN`) es idempotente y que M001/M002 no cambiaron.
 - **Lección:** Exporta el array de migraciones (`export const MIGRATIONS = [[name, (db) => …], …]`) con funciones que reciben `db` por parámetro (en vez de cerrar sobre el `db` del módulo). Así el test ejercita la **función REAL** sobre una DB `better-sqlite3(':memory:')` aislada: aplica dos veces y asserta que no lanza y que el estado (PRAGMA table_info) no cambia. Cubre además el fresh install verificando que la DB cargada (schema+migraciones) tiene el estado final y que la migración quedó registrada en `_migrations`.
