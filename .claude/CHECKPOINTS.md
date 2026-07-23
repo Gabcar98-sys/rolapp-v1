@@ -24,6 +24,14 @@
 - [ ] No hay dependencias circulares entre módulos.
 
 ### Tests
+- [ ] **La imagen Docker refleja el código ACTUAL antes de correr los tests.** El servicio
+      `backend` NO monta `src/` como volumen (el código va horneado), así que hay que
+      `docker compose build backend` ANTES de `docker compose run … npm test`. Un cache-hit
+      NO es prueba suficiente por sí solo y el timestamp de `docker images` NO es fiable
+      (BuildKit). **Confirmar currency** comparando hashes host↔imagen de al menos un archivo
+      cambiado — p. ej. `sha256sum backend/src/db/index.js` vs `docker compose run --rm --no-deps
+      backend sha256sum src/db/index.js` — o rebuild con `--no-cache` si hay cualquier duda.
+      Recién con la imagen probada al día, se confía en el resultado de los tests.
 - [ ] Existe al menos un test por función/módulo público nuevo no trivial.
 - [ ] Todos los tests pasan (`npm test`).
 - [ ] Los tests cubren el caso feliz y al menos un caso de error.
@@ -48,6 +56,7 @@
 El reviewer rechaza sin negociación si:
 - `npm run lint` o `npm run build` fallan.
 - Hay tests en rojo.
+- Los tests se corrieron sin confirmar que la imagen refleja el código actual (imagen posiblemente vieja/cacheada; currency no verificada por hash o rebuild).
 - Se modificaron archivos fuera del scope declarado de la feature.
 - Falta el reporte del implementer en `.claude/progress/`.
 - Hay estilos inline (`const s = {…}`) o `window.innerWidth` en frontend nuevo.
