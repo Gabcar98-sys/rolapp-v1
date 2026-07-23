@@ -127,6 +127,11 @@ Las lecciones se agrupan por categoría. Cada entrada tiene:
 - **Lección:** Con flat config de ESLint 9 + JSX, `no-unused-vars` marca como sin usar los componentes que solo aparecen en JSX. Falta la regla `react/jsx-uses-vars` de `eslint-plugin-react`. La próxima feature que toque frontend debe añadir `eslint-plugin-react` y habilitar `react/jsx-uses-vars` (o usar su config recomendada) para eliminar los falsos positivos.
 - **Por qué importa:** El ruido de warnings falsos puede ocultar warnings reales y erosiona la confianza en el checkpoint de lint.
 
+### Dos vistas de los mismos datos deben derivar de la MISMA fuente (grafo vs lista)
+- **Contexto:** F24, la pestaña Flujo (grafo) pintaba los eventos sueltos enlazados pero la pestaña Prep (lista) los perdía.
+- **Lección:** Cuando dos vistas renderizan el mismo conjunto de entidades por caminos distintos, es fácil que una rama olvide un subconjunto (aquí: la rama `hasLinks` de la lista ignoraba `freeEvents`). Extrae el cálculo a un helper puro compartido y haz que ambas vistas (y todas las ramas de render) lo consuman. Al arreglar una vista que "pierde" datos, revisa que TODAS las ramas (`hasLinks` vs `!hasLinks`) cubran el mismo conjunto.
+- **Por qué importa:** El bug pasa build/lint/tests unitarios y solo se ve USANDO la app; divergencias entre vistas erosionan la confianza en la feature.
+
 ### Colores dinámicos por entidad: lista de clases estáticas + índice estable, nunca clases interpoladas
 - **Contexto:** F14, franja de acento por campaña y puntos del timeline con color derivado del id.
 - **Lección:** El JIT de Tailwind solo genera clases que aparecen LITERALES en el código. Para colorear por entidad: define una lista estática de juegos de clases (`const ACCENTS = ['bg-cat-combat', …]`) y elige con un índice estable (hash del id). Ni `style={{}}` (prohibido) ni template strings tipo `bg-${color}` (el JIT no las ve).

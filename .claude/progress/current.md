@@ -45,10 +45,18 @@ Backlog nuevo (aprobado por el founder, hacer los 4): **F20** evento rápido →
 Directiva del founder (2026-07-22): "haz todo" → F23 (docs, DONE) → **F24 (fix eventos, SIGUIENTE)**
 → F25 (sesión demo completa) → commit + imagen actualizada corriendo. Una a la vez.
 
-- **F23-full-docs-ingest — DONE.** 14 MDs de ambos sistemas ingeridos para todos los DMs (986
-  chunks con vectores). Verificado en vivo por el líder (RAG por sistema correcto). Commit pendiente.
-- **F24-planning-freeevents — pendiente.** Fix: eventos sueltos enlazados invisibles en Prep.
-- **F25-demo-session-seed — pendiente.** Borrar sesiones + sembrar una demo completa + resumen IA.
+- **F23-full-docs-ingest — DONE + commit `52ff8f6`.** 14 MDs ingeridos para todos los DMs (986
+  chunks con vectores). Verificado en vivo (RAG por sistema correcto).
+- **F24-planning-freeevents — DONE.** Fix eventos sueltos enlazados en Prep (helper puro
+  computeSubLocFlows). 91/91 tests + vigencia por hash. Reviewer cayó por límite → verificado por
+  el líder. Prueba en vivo pendiente vía F25. Commit pendiente (junto con este cierre).
+- **F25-demo-session-seed — SIGUIENTE.** Borrar sesiones + sembrar demo completa (DM1/Honor/
+  Stormlight, Jugador1+Talani, prep con eventos + sueltos enlazados + NPCs + chat + disparos) + resumen IA.
+
+## Nota de infraestructura
+Docker Desktop se cayó a mitad de sesión (daemon npipe no respondía) y el líder lo reinició
+(`Start-Process "Docker Desktop.exe"` + poll `docker info`); los contenedores volvieron solos
+por `restart: unless-stopped`. Stack Up de nuevo (backend/frontend/ollama).
 
 **Runtime IA YA ARRIBA:** Ollama + qwen2.5:3b + nomic-embed-text, ready:true, vectores activos.
 Nota: nginx da 504 en /api/ai/ask (LLM CPU lento); el streaming por socket del AIPanel sí funciona.

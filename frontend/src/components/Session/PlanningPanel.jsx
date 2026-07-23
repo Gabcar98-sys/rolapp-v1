@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import socket from '../../lib/socket.js';
 import { api } from '../../lib/api.js';
-import { eventCategoryClasses, isPlanningEvent, EVENT_CATEGORIES } from '../../lib/planning.js';
+import { eventCategoryClasses, isPlanningEvent, EVENT_CATEGORIES, computeSubLocFlows } from '../../lib/planning.js';
 import Button from '../ui/Button.jsx';
 import Modal from '../ui/Modal.jsx';
 import Tabs from '../ui/Tabs.jsx';
@@ -201,67 +201,20 @@ export default function PlanningPanel({ sessionId, user, session }) {
     }
   }
 
-  // ── Flujos independientes por sub-ubicación (inicio + próximos según links) ──
-  const { subLocFlows, hasLinks } = useMemo(() => {
-    if (!hierarchy) return { subLocFlows: [], hasLinks: false };
-
-    const linksExist = eventLinks.length > 0;
-    const flows = [];
-
-    for (const loc of hierarchy.locations) {
-      for (const sub of loc.sub_locations ?? []) {
-        // IDs de eventos que pertenecen a esta sub-ubicación.
-        const eventIds = new Set();
-        for (const [id, entry] of allEventsMap) {
-          if (entry.locName === loc.name && entry.subLocName === sub.name) eventIds.add(id);
-        }
-        if (eventIds.size === 0) continue;
-
-        const subLinks = eventLinks.filter(
-          (l) => eventIds.has(l.from_event_id) && eventIds.has(l.to_event_id)
-        );
-        const incomingInSub = new Set(subLinks.map((l) => l.to_event_id));
-
-        // Eventos raíz: sin enlace entrante en la sub-ubicación y que no son ramas.
-        const initialEntries = [...eventIds]
-          .filter((id) => !incomingInSub.has(id))
-          .map((id) => allEventsMap.get(id))
-          .filter((e) => e && !e.event.parent_event_id);
-
-        const subFired = new Set([...firedTemplateIds].filter((id) => eventIds.has(id)));
-
-        if (subFired.size === 0) {
-          flows.push({ locName: loc.name, subLocName: sub.name, mode: 'initial', initialEntries, nextEntries: [] });
-          continue;
-        }
-
-        // Hoja disparada = sin sucesor disparado dentro de la sub-ubicación.
-        const leafFiredIds = new Set();
-        for (const firedId of subFired) {
-          const hasFiredSuccessor = subLinks.some(
-            (l) => l.from_event_id === firedId && subFired.has(l.to_event_id)
-          );
-          if (!hasFiredSuccessor) leafFiredIds.add(firedId);
-        }
-
-        // Próximos = enlazados desde una hoja disparada y aún no disparados.
-        const seen = new Set();
-        const nextEntries = [];
-        for (const link of subLinks) {
-          if (leafFiredIds.has(link.from_event_id) && !subFired.has(link.to_event_id)) {
-            if (!seen.has(link.to_event_id)) {
-              seen.add(link.to_event_id);
-              const entry = allEventsMap.get(link.to_event_id);
-              if (entry) nextEntries.push({ ...entry, linkLabel: link.label });
-            }
-          }
-        }
-
-        flows.push({ locName: loc.name, subLocName: sub.name, mode: 'active', initialEntries, nextEntries });
-      }
-    }
-
-    return { subLocFlows: flows, hasLinks: linksExist };
+  // ── Flujos independientes por grupo (sub-ubicaciones + "Sin ubicación") ──
+  // La lógica de inicio/próximos vive en un helper puro (planning.js) para poder
+  // testearla sin DOM (lección F20). Incluye los eventos sueltos enlazados como su
+  // propio grupo, que antes de F24 se caían de esta vista.
+  const hasLinks = eventLinks.length > 0;
+  const subLocFlows = useMemo(() => {
+    if (!hierarchy) return [];
+    return computeSubLocFlows({
+      locations: hierarchy.locations,
+      freeEvents: hierarchy.freeEvents,
+      eventLinks,
+      allEventsMap,
+      firedTemplateIds,
+    });
   }, [allEventsMap, eventLinks, firedTemplateIds, hierarchy]);
 
   // ── Subcomponentes ───────────────────────────────────────────────────────────
@@ -342,12 +295,23 @@ export default function PlanningPanel({ sessionId, user, session }) {
                     Sin eventos en esta preparación.
                   </p>
                 )}
-                {subLocFlows.map(({ locName, subLocName, mode, initialEntries, nextEntries }) => (
-                  <div key={`${locName}|||${subLocName}`} className="mb-1 flex flex-col gap-1">
-                    <div className="flex items-center gap-1 rounded-btn bg-surface px-2 py-1 text-sm font-bold text-accent-text">
-                      <Icon name="pin" size={13} /> {locName}
-                    </div>
-                    <div className="px-1 text-xs font-semibold text-sub">{subLocName}</div>
+                {subLocFlows.map(({ kind, locName, subLocName, mode, initialEntries, nextEntries }) => (
+                  <div
+                    key={kind === 'free' ? 'free|||sin-ubicacion' : `${locName}|||${subLocName}`}
+                    className="mb-1 flex flex-col gap-1"
+                  >
+                    {kind === 'free' ? (
+                      <div className="rounded-btn bg-surface px-2 py-1 text-sm font-bold text-accent-text">
+                        Sin ubicación
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-1 rounded-btn bg-surface px-2 py-1 text-sm font-bold text-accent-text">
+                          <Icon name="pin" size={13} /> {locName}
+                        </div>
+                        <div className="px-1 text-xs font-semibold text-sub">{subLocName}</div>
+                      </>
+                    )}
 
                     <span className="self-start rounded-pill bg-surface-2 px-2 py-0.5 text-[0.69rem] font-bold text-accent-text">
                       Inicio

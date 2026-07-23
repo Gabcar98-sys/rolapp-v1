@@ -200,3 +200,102 @@ export function computeGraphLayout(events, edges, opts = {}) {
     nodeH,
   };
 }
+
+// ── Flujos Inicio/Próximo de la vista "Prep." (cuando hay enlaces) ───────────────
+// Calcula el flujo de UN grupo de eventos (una sub-ubicación o el grupo "Sin
+// ubicación") a partir de sus enlaces internos y de qué plantillas se han disparado.
+// Devuelve { mode: 'initial'|'active', initialEntries, nextEntries } donde cada entry
+// es el valor de allEventsMap ({ event, locName, subLocName }).
+function computeGroupFlow(eventIds, eventLinks, allEventsMap, firedTemplateIds) {
+  // Enlaces cuyos dos extremos viven dentro del grupo.
+  const groupLinks = eventLinks.filter(
+    (l) => eventIds.has(l.from_event_id) && eventIds.has(l.to_event_id)
+  );
+  const incoming = new Set(groupLinks.map((l) => l.to_event_id));
+
+  // Eventos raíz (Inicio): sin enlace entrante en el grupo y que no son ramas.
+  const initialEntries = [...eventIds]
+    .filter((id) => !incoming.has(id))
+    .map((id) => allEventsMap.get(id))
+    .filter((e) => e && !e.event.parent_event_id);
+
+  const firedInGroup = new Set([...firedTemplateIds].filter((id) => eventIds.has(id)));
+
+  if (firedInGroup.size === 0) {
+    return { mode: 'initial', initialEntries, nextEntries: [] };
+  }
+
+  // Hoja disparada = sin sucesor disparado dentro del grupo.
+  const leafFiredIds = new Set();
+  for (const firedId of firedInGroup) {
+    const hasFiredSuccessor = groupLinks.some(
+      (l) => l.from_event_id === firedId && firedInGroup.has(l.to_event_id)
+    );
+    if (!hasFiredSuccessor) leafFiredIds.add(firedId);
+  }
+
+  // Próximos = enlazados desde una hoja disparada y aún no disparados.
+  const seen = new Set();
+  const nextEntries = [];
+  for (const link of groupLinks) {
+    if (leafFiredIds.has(link.from_event_id) && !firedInGroup.has(link.to_event_id)) {
+      if (!seen.has(link.to_event_id)) {
+        seen.add(link.to_event_id);
+        const entry = allEventsMap.get(link.to_event_id);
+        if (entry) nextEntries.push({ ...entry, linkLabel: link.label });
+      }
+    }
+  }
+
+  return { mode: 'active', initialEntries, nextEntries };
+}
+
+// Recorre eventos + sus ramas acumulando ids en un Set.
+function collectEventIds(events, into) {
+  for (const e of events) {
+    into.add(e.id);
+    if (e.branches?.length) collectEventIds(e.branches, into);
+  }
+}
+
+// Construye los flujos de la pestaña "Prep." cuando hay enlaces: un grupo por
+// sub-ubicación (con eventos) MÁS un grupo "Sin ubicación" (`kind: 'free'`) para los
+// eventos sueltos enlazados, con la misma lógica Inicio/Próximo por enlaces que las
+// sub-ubicaciones (consistente con el grafo de la pestaña Flujo). Antes de F24 los
+// eventos sueltos enlazados no aparecían en esta vista.
+//
+// Helper PURO (sin DOM) para poder testear la lógica sin jsdom (lección F20). El
+// useMemo de PlanningPanel es solo un wrapper que lo llama.
+export function computeSubLocFlows({
+  locations = [],
+  freeEvents = [],
+  eventLinks = [],
+  allEventsMap = new Map(),
+  firedTemplateIds = new Set(),
+} = {}) {
+  const flows = [];
+
+  for (const loc of locations) {
+    for (const sub of loc.sub_locations ?? []) {
+      // Ids de eventos que pertenecen a esta sub-ubicación (según el mapa).
+      const eventIds = new Set();
+      for (const [id, entry] of allEventsMap) {
+        if (entry.locName === loc.name && entry.subLocName === sub.name) eventIds.add(id);
+      }
+      if (eventIds.size === 0) continue;
+
+      const flow = computeGroupFlow(eventIds, eventLinks, allEventsMap, firedTemplateIds);
+      flows.push({ kind: 'subloc', locName: loc.name, subLocName: sub.name, ...flow });
+    }
+  }
+
+  // Grupo "Sin ubicación": eventos sueltos (y sus ramas), tratados como su propio flujo.
+  const freeIds = new Set();
+  collectEventIds(freeEvents, freeIds);
+  if (freeIds.size > 0) {
+    const flow = computeGroupFlow(freeIds, eventLinks, allEventsMap, firedTemplateIds);
+    flows.push({ kind: 'free', locName: '', subLocName: '', ...flow });
+  }
+
+  return flows;
+}
