@@ -69,6 +69,16 @@ Las lecciones se agrupan por categoría. Cada entrada tiene:
 
 ## RAG / embeddings / sqlite-vec
 
+### Los docs de reglas son contenido compartido: ingerir por NOMBRE de sistema, no por el del DM
+- **Contexto:** F23, los MDs de Stormlight/Dragonbane no llegaban a todos los DMs.
+- **Lección:** Cada DM tiene su propia copia del game_system (misma `name`, distinto `dm_id`). El seed histórico ingería docs solo en el sistema del `--dm` objetivo → los demás DMs quedaban sin reglas. Ingerir por nombre: `SELECT id FROM game_system_templates WHERE name = ?` y `ensureDoc` en CADA sistema. (Nota de modelo pendiente: los game systems son per-DM; el founder quiere que sean para todos — evaluar hacerlos globales/compartidos, no duplicados.)
+- **Por qué importa:** Con varios DMs, la IA respondía "sin contenido" para unos y bien para otros, sin causa evidente.
+
+### Un doc ya ingerido SIN Ollama queda con chunks pero sin vectores: hay que REINDEXAR, no reingerir
+- **Contexto:** F23, la guía de Stormlight (ingerida en F10 sin Ollama) tenía 62 chunks con embedding NULL.
+- **Lección:** `ingestDoc` salta el trabajo si el `content_hash` coincide ("sin cambios") → reingerir el MISMO contenido NUNCA genera vectores. Para cerrar la brecha hay que **reindexar** explícitamente (`POST /api/game-systems/:id/docs/:docId/reindex`), que re-embebe sin re-chunkear. Tras encender Ollama, conviene un chequeo "chunks sin vector" y reindexar esos docs.
+- **Por qué importa:** El doc parece ingerido pero el retrieval vectorial no lo ve; degrada a solo-FTS de forma silenciosa.
+
 ### Negar una frase en un system prompt puede primarla en modelos pequeños
 - **Contexto:** F21, quitar el lenguaje doc-céntrico de los prompts de sesión/resumen para que la IA deje de responder "no hay documento".
 - **Lección:** No prohíbas literalmente una frase (`Nunca menciones "documentos cargados"`): (1) reintroduce en el prompt justo el texto a evitar y (2) con un modelo pequeño la negación puede *primar* lo prohibido. Formula el alcance en POSITIVO ("tu única fuente es el contexto de la sesión"). Además, endurecer la abstención ("REGLA CRÍTICA… es preferible abstenerse") hace que un modelo 3B sobre-abstenga y recite frases enlatadas; prefiere tono natural + anti-alucinación acotado a afirmaciones factuales.
@@ -176,6 +186,11 @@ Las lecciones se agrupan por categoría. Cada entrada tiene:
 - **Lección:** `backend/` y `frontend/` tienen `.dockerignore` (node_modules, dist, data, .git). No corras `npm install`/`vitest` directamente en el directorio del proyecto montado si vas a buildear la imagen después; usa `docker compose exec`/build stage. Si aparece un node_modules residual, bórralo antes de verificar el build.
 - **Por qué importa:** El build context sin filtrar arrastra artefactos del host; en Windows los symlinks de `.bin` rompen el `COPY . .` del Dockerfile.
 
+### nginx da 504 en `/api/ai/ask` con el LLM local en CPU; el streaming por socket sí funciona
+- **Contexto:** F23, verificar el answer end-to-end del LLM local (qwen2.5:3b en CPU es lento).
+- **Lección:** El `/api/ai/ask` (REST, no streaming) puede superar el `proxy_read_timeout` de nginx → 504, aunque la generación funcione. El AIPanel usa **streaming por socket.io** (tokens incrementales), que NO sufre este timeout, así que el usuario está bien. Para verificar por REST, pégale al backend directo (`docker compose exec backend` → `curl localhost:3001`) o sube el timeout del proxy; el retrieval (`/api/rag/search`) es la prueba rápida y determinista.
+- **Por qué importa:** Un 504 en `/ai/ask` puede leerse como "la IA está rota" cuando en realidad es timeout de proxy; el camino real (socket) funciona.
+
 ### El servicio `backend` de compose NO monta `src/` como volumen: reconstruir antes de verificar
 - **Contexto:** F21, verificar cambios en `services/ai.js`; el primer `docker compose run backend npm test` corrió código VIEJO.
 - **Lección:** El servicio `backend` del compose solo monta `./data` y `./game-packs`, NO `src/` (el código va horneado en la imagen). Tras cambiar backend, **reconstruye** (`docker compose build backend`) ANTES de `docker compose run --rm --no-deps backend npm test`, o correrás la versión anterior. Síntoma engañoso: los tests muestran nombres/asserts viejos y "pasan" sobre el código previo.
@@ -228,3 +243,4 @@ Las lecciones se agrupan por categoría. Cada entrada tiene:
 - 2026-07-22 — líder agregó tras cerrar F21: "Negar una frase en un system prompt puede primarla en modelos pequeños" (RAG/embeddings) y "El servicio backend de compose NO monta src/: reconstruir antes de verificar" (Docker/infra).
 - 2026-07-22 — líder agregó tras cerrar F22: "Eliminar una columna legacy: DROP COLUMN idempotente con guard PRAGMA + actualizar schema.sql" (Base de datos/SQLite) y "Para testear la idempotencia real de una migración, exporta el array de migraciones con fns que reciben db" (Testing).
 - 2026-07-22 — líder agregó "Prueba que la imagen está al día por HASH, no por timestamp ni por cache hit" (Docker/infra) + checkpoint y criterio de rechazo en CHECKPOINTS.md, a pedido del founder tras detectar razonamiento flojo sobre la vigencia de la imagen.
+- 2026-07-22 — líder agregó tras cerrar F23: "Los docs de reglas son contenido compartido: ingerir por NOMBRE de sistema" y "Un doc ingerido sin Ollama queda sin vectores: reindexar" (RAG), y "nginx da 504 en /api/ai/ask con LLM CPU; el streaming por socket sí funciona" (Docker/infra).

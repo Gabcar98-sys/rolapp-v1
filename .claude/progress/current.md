@@ -42,10 +42,16 @@ Backlog nuevo (aprobado por el founder, hacer los 4): **F20** evento rápido →
 
 ## Feature en progreso
 
-**NINGUNA — 🏁 backlog del feedback del founder (F20–F22) COMPLETO.** Las tres features `done`
-+ doc del modelo. Re-verificado EN VIVO por el líder (no solo por reportes de subagentes):
-backend 147 pass/0 fail/1 skip + lint OK, frontend build OK + 85 tests, todo en Docker.
-Commit hecho (F20+F21+F22+doc). Ver "Cerradas esta sesión".
+Directiva del founder (2026-07-22): "haz todo" → F23 (docs, DONE) → **F24 (fix eventos, SIGUIENTE)**
+→ F25 (sesión demo completa) → commit + imagen actualizada corriendo. Una a la vez.
+
+- **F23-full-docs-ingest — DONE.** 14 MDs de ambos sistemas ingeridos para todos los DMs (986
+  chunks con vectores). Verificado en vivo por el líder (RAG por sistema correcto). Commit pendiente.
+- **F24-planning-freeevents — pendiente.** Fix: eventos sueltos enlazados invisibles en Prep.
+- **F25-demo-session-seed — pendiente.** Borrar sesiones + sembrar una demo completa + resumen IA.
+
+**Runtime IA YA ARRIBA:** Ollama + qwen2.5:3b + nomic-embed-text, ready:true, vectores activos.
+Nota: nginx da 504 en /api/ai/ask (LLM CPU lento); el streaming por socket del AIPanel sí funciona.
 
 ## PENDIENTE (solo del founder, runtime IA — no código)
 - **Runtime IA:** `docker compose --profile ai up -d --build` + `... run --rm ai-bootstrap` +
