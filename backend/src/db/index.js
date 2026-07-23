@@ -61,6 +61,39 @@ try {
 }
 
 // ── Migraciones (baseline vacío; se llenan desde F1) ────────────────────────────
+// Cada migración es `[name, fn(db)]`. Recibe la conexión por parámetro (en vez de
+// cerrar sobre el `db` del módulo) para poder ejercitarla en tests sobre una DB
+// aislada. Todas deben ser idempotentes: verifican el estado con PRAGMA antes de
+// alterar (lección SQLite/F1), de modo que reejecutar el arreglo sea un no-op.
+export const MIGRATIONS = [
+  // F16: columna disposition en npcs para instalaciones previas al baseline nuevo.
+  ['M001_npcs_disposition', (db) => {
+    const cols = db.prepare('PRAGMA table_info(npcs)').all();
+    if (cols.some((c) => c.name === 'disposition')) return;
+    db.exec(
+      "ALTER TABLE npcs ADD COLUMN disposition TEXT NOT NULL DEFAULT 'neutral' " +
+        "CHECK(disposition IN ('ally','neutral','hostile'))"
+    );
+  }],
+  // F18: session_notes es editable (UPDATE), a diferencia de session_events. Se añade
+  // updated_at para reflejar la última edición.
+  ['M002_session_notes_updated_at', (db) => {
+    const cols = db.prepare('PRAGMA table_info(session_notes)').all();
+    if (cols.some((c) => c.name === 'updated_at')) return;
+    // SQLite no admite DEFAULT no-constante en ALTER; se añade sin default y se rellena.
+    db.exec('ALTER TABLE session_notes ADD COLUMN updated_at INTEGER');
+    db.exec('UPDATE session_notes SET updated_at = created_at WHERE updated_at IS NULL');
+  }],
+  // F22: elimina el campo legacy campaigns.game_system (TEXT). El sistema de juego se
+  // referencia siempre por game_system_id (FK); el TEXT quedó muerto (ningún código lo
+  // lee ni escribe — verificado por grep en F22). Idempotente: solo hace DROP si existe.
+  ['M003_drop_campaigns_game_system', (db) => {
+    const cols = db.prepare('PRAGMA table_info(campaigns)').all();
+    if (!cols.some((c) => c.name === 'game_system')) return;
+    db.exec('ALTER TABLE campaigns DROP COLUMN game_system');
+  }],
+];
+
 runMigrations();
 
 function runMigrations() {
@@ -73,35 +106,11 @@ function runMigrations() {
   `);
 
   const ran = new Set(db.prepare('SELECT name FROM _migrations').all().map(r => r.name));
-
-  // Las migraciones estructurales se agregan aquí desde F1 en adelante.
-  const migrations = [
-    // F16: columna disposition en npcs para instalaciones previas al baseline nuevo.
-    // Idempotente: verifica con PRAGMA antes de ALTER (lección SQLite/F1).
-    ['M001_npcs_disposition', () => {
-      const cols = db.prepare('PRAGMA table_info(npcs)').all();
-      if (cols.some((c) => c.name === 'disposition')) return;
-      db.exec(
-        "ALTER TABLE npcs ADD COLUMN disposition TEXT NOT NULL DEFAULT 'neutral' " +
-          "CHECK(disposition IN ('ally','neutral','hostile'))"
-      );
-    }],
-    // F18: session_notes es editable (UPDATE), a diferencia de session_events. Se añade
-    // updated_at para reflejar la última edición. Idempotente: verifica con PRAGMA antes.
-    ['M002_session_notes_updated_at', () => {
-      const cols = db.prepare('PRAGMA table_info(session_notes)').all();
-      if (cols.some((c) => c.name === 'updated_at')) return;
-      // SQLite no admite DEFAULT no-constante en ALTER; se añade sin default y se rellena.
-      db.exec('ALTER TABLE session_notes ADD COLUMN updated_at INTEGER');
-      db.exec('UPDATE session_notes SET updated_at = created_at WHERE updated_at IS NULL');
-    }],
-  ];
-
   const insert = db.prepare('INSERT INTO _migrations (name) VALUES (?)');
-  for (const [name, fn] of migrations) {
+  for (const [name, fn] of MIGRATIONS) {
     if (ran.has(name)) continue;
     db.transaction(() => {
-      fn();
+      fn(db);
       insert.run(name);
     })();
     console.log(`Migración aplicada: ${name}`);

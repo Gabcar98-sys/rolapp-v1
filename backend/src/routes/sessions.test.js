@@ -285,3 +285,31 @@ test('GET /  las cerradas incluyen summary y duration_seconds (y NULL si no exis
   assert.equal(empty.summary, null);
   assert.equal(empty.duration_seconds, null);
 });
+
+// ── F22: la sesión expone el sistema de juego HEREDADO de su campaña ──────────────
+
+test('GET /:id  incluye campaign_game_system_id y campaign_game_system_name de la campaña', async () => {
+  const router = createSessionsRouter(makeFakeIo());
+  const sysId = db.prepare('INSERT INTO game_system_templates (name, dm_id) VALUES (?, ?)')
+    .run('Dragonbane', dmId).lastInsertRowid;
+  const campId = db.prepare('INSERT INTO campaigns (name, dm_id, game_system_id) VALUES (?, ?, ?)')
+    .run('Camp con sistema', dmId, sysId).lastInsertRowid;
+  const sessionId = db.prepare('INSERT INTO sessions (name, dm_id, campaign_id) VALUES (?, ?, ?)')
+    .run('Mesa', dmId, campId).lastInsertRowid;
+
+  const res = await invokeWithParams(router, 'get', '/:id', { id: String(sessionId) });
+  assert.equal(res.status, 200);
+  assert.equal(res.data.session.campaign_game_system_id, sysId);
+  assert.equal(res.data.session.campaign_game_system_name, 'Dragonbane');
+});
+
+test('GET /:id  sesión sin campaña deja el sistema de juego en NULL', async () => {
+  const router = createSessionsRouter(makeFakeIo());
+  const sessionId = db.prepare('INSERT INTO sessions (name, dm_id) VALUES (?, ?)')
+    .run('Sin campaña', dmId).lastInsertRowid;
+
+  const res = await invokeWithParams(router, 'get', '/:id', { id: String(sessionId) });
+  assert.equal(res.status, 200);
+  assert.equal(res.data.session.campaign_game_system_id, null);
+  assert.equal(res.data.session.campaign_game_system_name, null);
+});

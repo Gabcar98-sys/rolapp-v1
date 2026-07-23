@@ -228,6 +228,12 @@ export default function DashboardPage({ user, onEnterSession, onNavigate }) {
               {busy ? 'Creando…' : 'Crear'}
             </Button>
           </form>
+          {/* El sistema de juego se hereda de la campaña (modelo canónico F22). Una sesión
+              sin campaña queda sin sistema y, por tanto, sin IA de reglas ni validación. */}
+          <p className="mt-3 text-xs text-faint">
+            El sistema de juego se hereda de la campaña. Una sesión sin campaña (con sistema
+            asignado) no tendrá IA de reglas ni validación de personajes por sistema.
+          </p>
         </Card>
       )}
 

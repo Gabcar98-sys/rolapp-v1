@@ -22,11 +22,65 @@ El líder orquesta; no escribe código. Ciclo por feature: implementer → revie
   `game_mechanics`/`game_mechanic_params`). El frontend `AttributesPage` (+1047) debe cablearse a eso.
 - **`npcs.js` ya existe** en backend → F16 podría estar parcialmente hecho (verificar al llegar).
 
+## Sesión actual (2026-07-22) — feedback del founder post-backlog
+
+El founder reportó 3 asuntos tras revisar la app (con un diagrama del modelo de sistema de
+juego). Diagnóstico hecho por el líder con lectura directa (los subagentes murieron por
+límite de sesión, no por el repo). Consolidado:
+
+1. **Modelo de sistema de juego** — falta que la sesión resuelva su sistema vía campaña de
+   forma consistente (la IA lo saca de los personajes, AIPanel.jsx:94) + campo legacy
+   `campaigns.game_system` muerto. **Decisión del founder: sistema SIEMPRE vía campaña**
+   (no se agrega game_system_id a sessions). Modelo canónico → `.claude/docs/game_system_model.md`.
+2. **Disparar eventos** — backend ya soporta ad-hoc (POST /events sin template_id); falta el
+   modal de "evento rápido" en la toolbar (hoy 'Nuevo Evento' solo abre Planificación).
+3. **IA robótica ('no hay documento')** — cláusula NO_HALLUCINATION única y agresiva (ai.js:315)
+   pegada a todos los prompts + modelo 3b que sobre-obedece + retrieval flaco (docs solo FTS).
+
+Backlog nuevo (aprobado por el founder, hacer los 4): **F20** evento rápido → **F21** tono IA →
+**F22** coherencia del modelo. **F23 (doc del modelo) ya hecho por el líder** (game_system_model.md).
+
 ## Feature en progreso
 
-**NINGUNA — 🏁 BACKLOG F0–F19 COMPLETO.** Todas las features `done`.
-Esta sesión autónoma cerró F15 (saneada), F16, F17, F18 y F19 (ciclo implementer→reviewer cada una).
-La app tiene todas las features para llevar una sesión de rol completa.
+**NINGUNA — 🏁 backlog del feedback del founder (F20–F22) COMPLETO.** Las tres features `done`
++ doc del modelo. Re-verificado EN VIVO por el líder (no solo por reportes de subagentes):
+backend 147 pass/0 fail/1 skip + lint OK, frontend build OK + 85 tests, todo en Docker.
+Commit hecho (F20+F21+F22+doc). Ver "Cerradas esta sesión".
+
+## PENDIENTE (solo del founder, runtime IA — no código)
+- **Runtime IA:** `docker compose --profile ai up -d --build` + `... run --rm ai-bootstrap` +
+  `curl localhost:3001/api/ai/status` (esperar ready:true) + **reindexar cada doc** + subir los
+  `.md` por sistema. Sin esto, F21 mejora el TONO pero el retrieval sigue vacío.
+
+## Scout F22 (hecho por el líder, lectura pura)
+- `GET /api/sessions/:id` YA devuelve `campaign_game_system_id` (sessions.js:44) y el listado
+  también (sessions.js:21). El AIPanel (AIPanel.jsx:88-103) NO lo usa: deriva el sistema solo
+  de `character.game_system_template_id`. Arreglo = resolver desde la campaña primero,
+  personajes como fallback.
+- Campo legacy `campaigns.game_system` (TEXT) MUERTO: campaigns.js solo lee/escribe
+  `game_system_id` (SELECT c.* lo arrastra pero nada lo consume). Limpieza de bajo riesgo.
+- Nombre del sistema: la query de sesión NO trae el nombre; opcional añadir
+  `gs.name AS campaign_game_system_name` al join, o el frontend cae a `Sistema {id}`.
+- Renombrar `game_system_template_id` → NO (toca demasiado, poco valor). Solo documentar.
+
+## Cerradas esta sesión (2026-07-22)
+- **F20-quick-event** — APROBADA. Modal de evento rápido en la toolbar (crea-y-dispara al
+  instante), frontend puro sobre el POST /events existente. docker build frontend exit 0,
+  79/79 tests. 2 lecciones nuevas (vitest sin jsdom → helpers puros; correr tests frontend
+  en Docker sin ensuciar el host).
+- **F21-ai-tone** — APROBADA. Prompts de IA por tarea (menos robótica). Backend puro (ai.js
+  + 2 tests). lint exit 0 + 144 tests en Docker. 2 lecciones nuevas (negar una frase la prima
+  en modelos chicos; el backend de compose no monta src/ → rebuild antes de testear).
+  Deuda menor: la frase vieja sobrevive en un comentario histórico (ai.js:313-315), sin efecto.
+- **F22-system-model-coherence** — APROBADA (reviewer independiente, pasada limpia; re-verificada
+  en vivo por el líder). La IA resuelve el sistema desde la CAMPAÑA (helper resolveSessionGameSystems,
+  personajes fallback); GET sessions expone campaign_game_system_name (JOIN 1:1); Dashboard avisa
+  sin-campaña; legacy campaigns.game_system eliminado con migración idempotente M003; sessions SIN
+  game_system_id. backend 148 tests + frontend 85. 2 lecciones nuevas (DROP COLUMN legacy con guard
+  PRAGMA + schema; MIGRATIONS exportable para testear idempotencia).
+
+## Backlog F0–F19 (contexto): COMPLETO
+Todas `done`. La sesión autónoma previa cerró F15 (saneada), F16, F17, F18 y F19.
 
 ## Pendiente SOLO del founder (runtime IA, no código)
 Para que la IA generativa funcione en vivo (hoy degrada limpio sin ella):

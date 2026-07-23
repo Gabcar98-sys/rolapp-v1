@@ -60,9 +60,19 @@ Las lecciones se agrupan por categoría. Cada entrada tiene:
 - **Lección:** Al consolidar columnas que en la v0 venían de migraciones (`ALTER TABLE`), confirma con `PRAGMA table_info(tabla)` dentro del contenedor que cada columna quedó en el baseline. Leer el .sql no basta. En un mismo `db.exec` con varios CREATE TABLE, SQLite tolera FKs hacia tablas declaradas más abajo, así que el orden de bloques puede priorizar legibilidad.
 - **Por qué importa:** Una columna migrada que se olvida en el baseline rompe queries de features posteriores de forma silenciosa.
 
+### Eliminar una columna legacy: `DROP COLUMN` idempotente con guard PRAGMA + actualizar schema.sql
+- **Contexto:** F22, quitar el campo muerto `campaigns.game_system` (TEXT).
+- **Lección:** `ALTER TABLE … DROP COLUMN` funciona en better-sqlite3 11.x. Antes de eliminar: (1) confirma CERO consumidores reales con `rg --pcre2 'game_system(?!_id|_name|_template|s)\b'` (ripgrep necesita `--pcre2` para look-ahead) y `rg --pcre2 '\.game_system(?![_a-zA-Z])'`; (2) migración idempotente que hace el DROP solo si `PRAGMA table_info` encuentra la columna; (3) elimina también la columna de `schema.sql` (fresh install) y comenta el porqué. Cubre AMBOS caminos en tests: upgrade (DB aislada CON la columna → drop → reejecutar no-op) y fresh install (schema sin la columna → M00x no-op pero registrada en `_migrations`).
+- **Por qué importa:** Sin el guard, reejecutar la migración lanza; sin tocar schema.sql, las instalaciones nuevas recrean la columna muerta; sin cubrir ambos caminos, el upgrade real del founder queda sin verificar.
+
 ---
 
 ## RAG / embeddings / sqlite-vec
+
+### Negar una frase en un system prompt puede primarla en modelos pequeños
+- **Contexto:** F21, quitar el lenguaje doc-céntrico de los prompts de sesión/resumen para que la IA deje de responder "no hay documento".
+- **Lección:** No prohíbas literalmente una frase (`Nunca menciones "documentos cargados"`): (1) reintroduce en el prompt justo el texto a evitar y (2) con un modelo pequeño la negación puede *primar* lo prohibido. Formula el alcance en POSITIVO ("tu única fuente es el contexto de la sesión"). Además, endurecer la abstención ("REGLA CRÍTICA… es preferible abstenerse") hace que un modelo 3B sobre-abstenga y recite frases enlatadas; prefiere tono natural + anti-alucinación acotado a afirmaciones factuales.
+- **Por qué importa:** Un prompt bienintencionado pero mal formulado produce justo la respuesta robótica que se quería eliminar.
 
 ### La tabla virtual vec0 no puede vivir en schema.sql
 - **Contexto:** F1, al consolidar el esquema con la tabla de vectores de sqlite-vec.
@@ -137,6 +147,21 @@ Las lecciones se agrupan por categoría. Cada entrada tiene:
 
 ## Testing
 
+### El runner de vitest del frontend no tiene jsdom: testea helpers puros, no clics
+- **Contexto:** F20, cubrir la lógica del modal de evento rápido en `session.test.jsx`.
+- **Lección:** Los tests de frontend montan con `renderToStaticMarkup` (SSR, sin efectos ni DOM interactivo); no hay `jsdom` ni testing-library. Para cubrir lógica load-bearing de handlers, **extrae un helper puro exportado** (p. ej. `buildQuickEventPayload({...})`) y testéalo directamente, en vez de simular clics. Añadir jsdom/testing-library mete dependencias pesadas y arriesga el build context de Docker; no lo hagas solo para un test.
+- **Por qué importa:** Intentar simular interacción con el runner actual falla o obliga a deps nuevas; el helper puro cubre la lógica real sin coste.
+
+### Correr los tests del frontend en Docker sin ensuciar el host
+- **Contexto:** F20, verificar vitest en el entorno canónico (el Dockerfile del frontend solo tiene stage lint+build, no test).
+- **Lección:** Patrón sin `npm install` en el dir montado (que deja `node_modules` residual y envenena el build context): `docker build --target build -t tmp ./frontend` + `docker run --rm tmp npm test`, y al terminar `docker rmi tmp`. Vitest está disponible en el build stage (deps instaladas sin `--omit=dev`).
+- **Por qué importa:** Reproduce el checkpoint de tests en el entorno canónico sin dejar artefactos del host que rompan `docker compose build frontend` después.
+
+### Para testear la idempotencia real de una migración, expón las funciones de migración
+- **Contexto:** F22, verificar que M003 (`DROP COLUMN`) es idempotente y que M001/M002 no cambiaron.
+- **Lección:** Exporta el array de migraciones (`export const MIGRATIONS = [[name, (db) => …], …]`) con funciones que reciben `db` por parámetro (en vez de cerrar sobre el `db` del módulo). Así el test ejercita la **función REAL** sobre una DB `better-sqlite3(':memory:')` aislada: aplica dos veces y asserta que no lanza y que el estado (PRAGMA table_info) no cambia. Cubre además el fresh install verificando que la DB cargada (schema+migraciones) tiene el estado final y que la migración quedó registrada en `_migrations`.
+- **Por qué importa:** Duplicar el `ALTER` en el test no prueba la migración real; exponer la fn permite testear el código que de verdad corre en producción y evita regresiones al refactorizar el runner.
+
 ### Al insertar en tablas puente en tests, actualizar el DELETE del beforeEach compartido
 - **Contexto:** F14, tests nuevos insertaban en `session_members` y `session_summaries`; las FKs rompieron la limpieza de tests vecinos.
 - **Lección:** Si un test nuevo inserta en una tabla puente (session_members, session_summaries, etc.), añade su `DELETE FROM` al `beforeEach` del archivo. El síntoma de olvidarlo es engañoso: `hookFailed` en tests AJENOS, no en el tuyo.
@@ -150,6 +175,11 @@ Las lecciones se agrupan por categoría. Cada entrada tiene:
 - **Contexto:** F8b, `docker compose build frontend` falló porque el implementer dejó un `frontend/node_modules` residual (de correr vitest en el dir montado); sin `.dockerignore` entró al build context y un symlink de Windows (`.bin/acorn`) abortó el build con "invalid file request".
 - **Lección:** `backend/` y `frontend/` tienen `.dockerignore` (node_modules, dist, data, .git). No corras `npm install`/`vitest` directamente en el directorio del proyecto montado si vas a buildear la imagen después; usa `docker compose exec`/build stage. Si aparece un node_modules residual, bórralo antes de verificar el build.
 - **Por qué importa:** El build context sin filtrar arrastra artefactos del host; en Windows los symlinks de `.bin` rompen el `COPY . .` del Dockerfile.
+
+### El servicio `backend` de compose NO monta `src/` como volumen: reconstruir antes de verificar
+- **Contexto:** F21, verificar cambios en `services/ai.js`; el primer `docker compose run backend npm test` corrió código VIEJO.
+- **Lección:** El servicio `backend` del compose solo monta `./data` y `./game-packs`, NO `src/` (el código va horneado en la imagen). Tras cambiar backend, **reconstruye** (`docker compose build backend`) ANTES de `docker compose run --rm --no-deps backend npm test`, o correrás la versión anterior. Síntoma engañoso: los tests muestran nombres/asserts viejos y "pasan" sobre el código previo.
+- **Por qué importa:** Un checkpoint puede darse por verde sobre código que no es el que cambiaste; el fallo real queda oculto hasta runtime.
 
 ### El lint/test debe poder correr en el entorno canónico (Docker), no "en teoría"
 - **Contexto:** F4, `docker compose exec backend npm run lint` falló con `eslint: not found`.
@@ -189,3 +219,6 @@ Las lecciones se agrupan por categoría. Cada entrada tiene:
 - 2026-06-29 — líder agregó tras cerrar F8b: "Cada servicio con imagen Docker necesita .dockerignore" (Docker/infra).
 - 2026-07-02 — líder agregó tras cerrar F14: "Colores dinámicos por entidad: lista de clases estáticas + índice estable" (Frontend) y "Al insertar en tablas puente en tests, actualizar el DELETE del beforeEach" (Testing).
 - 2026-07-20 — líder agregó tras cerrar F17 (sesión autónoma): "`style={{}}` inline SÍ se permite para geometría computada", "Extender un componente compartido = props opcionales retrocompatibles" y "Vistas de trabajo intensivo van full-bleed (rail 62px)" — las tres en Frontend.
+- 2026-07-22 — líder agregó tras cerrar F20: "El runner de vitest del frontend no tiene jsdom: testea helpers puros" y "Correr los tests del frontend en Docker sin ensuciar el host" — ambas en Testing.
+- 2026-07-22 — líder agregó tras cerrar F21: "Negar una frase en un system prompt puede primarla en modelos pequeños" (RAG/embeddings) y "El servicio backend de compose NO monta src/: reconstruir antes de verificar" (Docker/infra).
+- 2026-07-22 — líder agregó tras cerrar F22: "Eliminar una columna legacy: DROP COLUMN idempotente con guard PRAGMA + actualizar schema.sql" (Base de datos/SQLite) y "Para testear la idempotencia real de una migración, exporta el array de migraciones con fns que reciben db" (Testing).

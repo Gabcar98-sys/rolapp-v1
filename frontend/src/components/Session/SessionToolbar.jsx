@@ -8,12 +8,34 @@ import Icon from '../ui/Icon.jsx';
 const inputCls =
   'w-full rounded-btn border border-line bg-bg px-3 py-2 text-sm text-title outline-none focus:border-accent';
 
-// Toolbar de la sesión en vivo (F18). Expone como barra las acciones ya existentes:
-//   DM: Cambiar mapa (modal), Nuevo Evento (abre el tab Planificación), Nuevo Evento NPC
-//       (modal con catálogo F16), Reset, Finalizar.
+// Construye el payload de un EVENTO RÁPIDO ad-hoc (sin template ni NPC): el DM crea y
+// dispara un evento genérico al instante. Se exporta aparte del componente para poder
+// testear la forma del payload sin montar la UI (no hay jsdom en el runner de vitest).
+export function buildQuickEventPayload({ user, form, partType, chars, selectedIds }) {
+  const participants =
+    partType === 'specific'
+      ? chars.filter((c) => selectedIds.has(c.id)).map((c) => ({ id: c.id, name: c.name }))
+      : [];
+  return {
+    dm_id: user.id,
+    title: form.title.trim(),
+    category: form.category,
+    description: form.description,
+    participant_type: partType,
+    participants,
+    actor_type: 'dm',
+  };
+}
+
+// Toolbar de la sesión en vivo (F18 + F20). Expone como barra las acciones ya existentes:
+//   DM: Cambiar mapa (modal), Nuevo Evento (modal de evento rápido: crear-y-disparar al
+//       instante, F20), Nuevo Evento NPC (modal con catálogo F16), Reset, Finalizar.
 //   Jugador: Salir.
-// No dispara su propia lógica de planificación (eso vive en PlanningPanel): "Nuevo Evento"
-// solo navega al panel; el evento NPC sí se lanza aquí porque es un flujo corto y aislado.
+// El evento rápido y el evento NPC se disparan aquí porque son flujos cortos y aislados;
+// el disparo de eventos YA planificados sigue viviendo en PlanningPanel, accesible desde
+// el enlace secundario "¿Evento planificado?" del modal de evento rápido (onOpenPlanning).
+// `characters` es opcional: si el consumidor ya la tiene, se pasa como prop para evitar el
+// fetch; si no, se carga con api.getSession (mismo patrón que PlanningPanel).
 export default function SessionToolbar({
   session,
   user,
@@ -23,6 +45,7 @@ export default function SessionToolbar({
   onReset,
   onClose,
   onLeave,
+  characters = null,
 }) {
   const isDM = user.role === 'dm';
   const [showMap, setShowMap] = useState(false);
@@ -31,12 +54,39 @@ export default function SessionToolbar({
   const [npcs, setNpcs] = useState([]);
   const [npcForm, setNpcForm] = useState({ npc_id: '', category: 'general', title: '', description: '' });
   const [npcBusy, setNpcBusy] = useState(false);
+
+  // Evento rápido (F20): crear-y-disparar un evento genérico al instante.
+  const [showQuick, setShowQuick] = useState(false);
+  const [quickForm, setQuickForm] = useState({ title: '', category: 'general', description: '' });
+  const [quickBusy, setQuickBusy] = useState(false);
+  const [quickPartType, setQuickPartType] = useState('all');
+  const [quickPartSelected, setQuickPartSelected] = useState(new Set());
+  const [sessionChars, setSessionChars] = useState([]);
+
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (!isDM || !user?.id) return;
     api.listNpcs(user.id).then(({ npcs: list }) => setNpcs(list ?? [])).catch(() => {});
   }, [isDM, user?.id]);
+
+  // Personajes de la sesión (selector de participantes específicos del evento rápido).
+  // Si el consumidor ya la aporta como prop, la usamos sin volver a pedirla.
+  useEffect(() => {
+    if (!isDM) return;
+    if (characters) {
+      setSessionChars(characters.map((c) => ({ id: c.id, name: c.name })));
+      return;
+    }
+    let active = true;
+    api
+      .getSession(session.id)
+      .then(({ characters: list }) => active && setSessionChars((list ?? []).map((c) => ({ id: c.id, name: c.name }))))
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [isDM, session.id, characters]);
 
   function openMap() {
     setImageDraft(currentImageUrl ?? '');
@@ -48,6 +98,54 @@ export default function SessionToolbar({
     e.preventDefault();
     onSetImage(imageDraft.trim());
     setShowMap(false);
+  }
+
+  function resetQuick() {
+    setQuickForm({ title: '', category: 'general', description: '' });
+    setQuickPartType('all');
+    setQuickPartSelected(new Set());
+  }
+
+  function openQuick() {
+    resetQuick();
+    setError('');
+    setShowQuick(true);
+  }
+
+  function toggleQuickParticipant(id) {
+    setQuickPartSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function submitQuick() {
+    if (!quickForm.title.trim()) {
+      setError('Escribe el título del evento');
+      return;
+    }
+    setQuickBusy(true);
+    setError('');
+    try {
+      await api.firePlanningEvent(
+        session.id,
+        buildQuickEventPayload({
+          user,
+          form: quickForm,
+          partType: quickPartType,
+          chars: sessionChars,
+          selectedIds: quickPartSelected,
+        })
+      );
+      setShowQuick(false);
+      resetQuick();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setQuickBusy(false);
+    }
   }
 
   async function submitNpc() {
@@ -86,7 +184,7 @@ export default function SessionToolbar({
           <Button variant="secondary" size="sm" onClick={openMap}>
             <Icon name="map" size={15} className="mr-1" /> Cambiar mapa
           </Button>
-          <Button variant="secondary" size="sm" onClick={onOpenPlanning}>
+          <Button variant="secondary" size="sm" onClick={openQuick}>
             <Icon name="plus" size={15} className="mr-1" /> Nuevo Evento
           </Button>
           <Button variant="secondary" size="sm" onClick={() => { setShowNpc(true); setError(''); }}>
@@ -131,6 +229,97 @@ export default function SessionToolbar({
             <Button type="submit" size="sm">Fijar fondo</Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Modal Evento rápido (F20): crear y disparar un evento ad-hoc al instante. */}
+      <Modal open={showQuick} onClose={() => setShowQuick(false)} title="Nuevo Evento">
+        <div className="flex flex-col gap-2.5">
+          {error && <p className="rounded-btn bg-danger-tint px-3 py-2 text-sm text-danger-text">{error}</p>}
+          <input
+            value={quickForm.title}
+            onChange={(e) => setQuickForm((f) => ({ ...f, title: e.target.value }))}
+            placeholder="Título del evento"
+            className={inputCls}
+            aria-label="Título del evento"
+            autoFocus
+          />
+          <select
+            value={quickForm.category}
+            onChange={(e) => setQuickForm((f) => ({ ...f, category: e.target.value }))}
+            className={inputCls}
+            aria-label="Categoría"
+          >
+            {EVENT_CATEGORIES.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+          <textarea
+            value={quickForm.description}
+            onChange={(e) => setQuickForm((f) => ({ ...f, description: e.target.value }))}
+            placeholder="Descripción (opcional)"
+            rows={2}
+            className={`resize-y ${inputCls}`}
+          />
+
+          {/* Participantes: todo el grupo o específicos (patrón de PlanningPanel). */}
+          <div className="flex gap-4">
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-sub">
+              <input
+                type="radio"
+                className="accent-accent"
+                checked={quickPartType === 'all'}
+                onChange={() => {
+                  setQuickPartType('all');
+                  setQuickPartSelected(new Set());
+                }}
+              />
+              <span>Todo el grupo</span>
+            </label>
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-sub">
+              <input
+                type="radio"
+                className="accent-accent"
+                checked={quickPartType === 'specific'}
+                onChange={() => setQuickPartType('specific')}
+              />
+              <span>Específicos</span>
+            </label>
+          </div>
+          {quickPartType === 'specific' && (
+            <div className="flex max-h-36 flex-col gap-2 overflow-y-auto">
+              {sessionChars.length === 0 && (
+                <p className="text-xs italic text-muted">Sin personajes en sesión.</p>
+              )}
+              {sessionChars.map((c) => (
+                <label key={c.id} className="flex cursor-pointer items-center gap-2 text-sm text-sub">
+                  <input
+                    type="checkbox"
+                    className="accent-accent"
+                    checked={quickPartSelected.has(c.id)}
+                    onChange={() => toggleQuickParticipant(c.id)}
+                  />
+                  <span>{c.name}</span>
+                </label>
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => { setShowQuick(false); onOpenPlanning(); }}
+              className="text-xs text-sub underline decoration-dotted underline-offset-2 transition-colors hover:text-title"
+            >
+              ¿Evento planificado? Abrir Planificación
+            </button>
+            <div className="flex gap-2">
+              <Button variant="secondary" size="sm" onClick={() => setShowQuick(false)}>Cancelar</Button>
+              <Button size="sm" onClick={submitQuick} disabled={quickBusy}>
+                {quickBusy ? 'Creando…' : 'Crear y disparar'}
+              </Button>
+            </div>
+          </div>
+        </div>
       </Modal>
 
       {/* Modal Nuevo Evento NPC (catálogo F16). */}

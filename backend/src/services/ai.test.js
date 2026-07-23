@@ -264,7 +264,7 @@ test('fallback: con tools deshabilitadas usa inyección de contexto (comportamie
   setLlmToolsClient(null);
 });
 
-test('prompts: el system prompt de reglas obliga a citar-o-abstenerse', async () => {
+test('prompts: el system prompt de reglas es natural, cita y no inventa reglas oficiales', async () => {
   await ingestDoc({
     gameSystemId: systemId,
     title: 'Core',
@@ -279,8 +279,32 @@ test('prompts: el system prompt de reglas obliga a citar-o-abstenerse', async ()
   });
 
   await answerRulesQuestion({ query: 'salud', gameSystemId: systemId });
-  assert.match(systemPrompt, /no inventes/i, 'instruye a no inventar');
-  assert.match(systemPrompt, /No encuentro esa información|absten/i, 'instruye a abstenerse');
+  // F21: tono natural en lugar de la frase enlatada doc-céntrica.
+  assert.match(systemPrompt, /regla oficial/i, 'no presenta como oficial algo sin respaldo');
+  assert.match(systemPrompt, /natural/i, 'pide tono natural, no robótico');
+  assert.match(systemPrompt, /sugerencia NO oficial|no oficial/i, 'ofrece orientación marcada como no oficial');
+  assert.doesNotMatch(
+    systemPrompt,
+    /No encuentro esa información en los documentos cargados/i,
+    'ya no lleva la frase enlatada robótica'
+  );
+
+  setLlmClient(null);
+});
+
+test('prompts: sin contexto, el prompt de reglas pide ayuda honesta (no rechazo robótico)', async () => {
+  // Sin ingerir docs: chunks vacío → la instrucción del mensaje user cambia de tono.
+  let userMsg = '';
+  setLlmClient(async (messages) => {
+    const user = Array.isArray(messages) ? messages.filter((m) => m.role === 'user').pop() : null;
+    userMsg = user ? user.content : String(messages);
+    return 'ok';
+  });
+
+  const result = await answerRulesQuestion({ query: 'algo que no está en las reglas', gameSystemId: systemId });
+  assert.equal(result.sources.length, 0, 'no hay fuentes cuando no se recupera nada');
+  assert.match(userMsg, /orientación general|no oficial/i, 'pide orientación útil en vez de rechazo seco');
+  assert.doesNotMatch(userMsg, /REGLAS RECUPERADAS/, 'sin bloque de reglas cuando no hay contexto');
 
   setLlmClient(null);
 });

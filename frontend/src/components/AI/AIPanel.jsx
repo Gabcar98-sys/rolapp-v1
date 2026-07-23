@@ -52,6 +52,40 @@ function fmtScore(score) {
   return typeof score === 'number' ? score.toFixed(3) : '—';
 }
 
+// Resuelve los sistemas de juego disponibles para una sesión siguiendo el modelo canónico
+// (docs/game_system_model.md): el sistema se hereda SIEMPRE de la CAMPAÑA; los personajes
+// en sesión son solo un fallback/complemento. Devuelve la lista deduplicada por id
+// (campaña primero) y el `defaultId` a preseleccionar. Sin campaña-con-sistema ni
+// personajes-con-sistema → `{ systems: [], defaultId: '' }`. Helper puro para poder
+// testearlo sin DOM (lección F20: vitest del frontend no tiene jsdom).
+export function resolveSessionGameSystems({ session, characters = [] } = {}) {
+  const seen = new Map();
+
+  // 1) Sistema de la campaña de la sesión (fuente principal por diseño).
+  const campaignSystemId = session?.campaign_game_system_id;
+  if (campaignSystemId) {
+    seen.set(
+      campaignSystemId,
+      session.campaign_game_system_name || `Sistema ${campaignSystemId}`
+    );
+  }
+
+  // 2) Sistemas derivados de los personajes en sesión (fallback si no hay campaña con
+  //    sistema, o complemento si algún personaje trae otro sistema).
+  for (const c of characters) {
+    if (c.game_system_template_id && !seen.has(c.game_system_template_id)) {
+      seen.set(
+        c.game_system_template_id,
+        c.game_system_name || `Sistema ${c.game_system_template_id}`
+      );
+    }
+  }
+
+  const systems = [...seen.entries()].map(([id, name]) => ({ id, name }));
+  const defaultId = systems.length ? String(systems[0].id) : '';
+  return { systems, defaultId };
+}
+
 // Panel de IA dentro de la sesión (F18: modos Sesión/Sistema + presets/topics + checkbox
 // "incluir sesiones anteriores"). ENVUELVE el motor de F9-F12: conserva STREAMING (tokens
 // vía socket), CITAS con score, FOLLOW-UPS (memoria corta), REGENERAR y DEGRADACIÓN. El
@@ -84,22 +118,23 @@ export default function AIPanel({ sessionId, user, campaignId = null }) {
     api.aiStatus().then(setAiStatus).catch(() => setAiStatus({ ready: false }));
   }, []);
 
-  // Deriva los sistemas de juego presentes en la sesión a partir de los personajes.
+  // Resuelve el sistema de juego de la sesión desde la CAMPAÑA (modelo canónico), con los
+  // personajes en sesión como fallback. La campaña llega en la sesión (campaign_game_system_id
+  // / _name, expuestos por GET /api/sessions/:id); los personajes traen su propio sistema.
   useEffect(() => {
-    api
-      .listSessionCharacters(sessionId)
-      .then(({ characters }) => {
-        const seen = new Map();
-        for (const c of characters) {
-          if (c.game_system_template_id && !seen.has(c.game_system_template_id)) {
-            seen.set(c.game_system_template_id, c.game_system_name || `Sistema ${c.game_system_template_id}`);
-          }
-        }
-        const list = [...seen.entries()].map(([id, name]) => ({ id, name }));
-        setSystems(list);
-        if (list.length) setGameSystemId(String(list[0].id));
-      })
-      .catch(() => {});
+    let cancelled = false;
+    Promise.all([
+      api.getSession(sessionId).catch(() => ({ session: null })),
+      api.listSessionCharacters(sessionId).catch(() => ({ characters: [] })),
+    ]).then(([{ session }, { characters }]) => {
+      if (cancelled) return;
+      const { systems: list, defaultId } = resolveSessionGameSystems({ session, characters });
+      setSystems(list);
+      setGameSystemId(defaultId);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [sessionId]);
 
   useEffect(() => {
@@ -373,7 +408,8 @@ export default function AIPanel({ sessionId, user, campaignId = null }) {
         </form>
         {mode === 'system' && !systems.length && (
           <p className="mt-2 text-xs text-faint">
-            Vincula un personaje con sistema de juego para consultar sus reglas.
+            Esta sesión no tiene sistema de juego. Asígnale una campaña con sistema para
+            consultar sus reglas.
           </p>
         )}
 

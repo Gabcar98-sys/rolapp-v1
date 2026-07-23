@@ -98,6 +98,20 @@ test('streamSessionPreset(estado) incluye a los personajes de la sesión', async
   setLlmStreamClient(null);
 });
 
+test('F21: el system prompt de sesión razona sobre datos de sesión y NO menciona documentos', async () => {
+  let systemPrompt = '';
+  setLlmStreamClient(async function* (messages) {
+    const sys = messages.find((m) => m.role === 'system');
+    systemPrompt = sys ? sys.content : '';
+    yield 'ok';
+  });
+  await streamSessionPreset({ sessionId, preset: 'resumen' }, () => {});
+  assert.match(systemPrompt, /contexto de la sesión/i, 'razona sobre el contexto de sesión');
+  assert.doesNotMatch(systemPrompt, /documentos cargados/i, 'nunca habla de documentos cargados');
+  assert.match(systemPrompt, /natural/i, 'pide tono natural');
+  setLlmStreamClient(null);
+});
+
 test('streamSessionPreset con includePrevious inyecta resúmenes de sesiones anteriores', async () => {
   // Sesión anterior cerrada con resumen en la misma campaña.
   const prevSession = db.prepare('INSERT INTO sessions (name, dm_id, campaign_id, status) VALUES (?, ?, ?, ?)')

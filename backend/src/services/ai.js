@@ -309,34 +309,49 @@ async function callLlmStream(prompt, onToken, opts = {}) {
   }
 }
 
-// ── Prompts endurecidos en español (citar-o-abstenerse; cero alucinación) ─────────
-// Cláusula anti-alucinación reutilizable: obliga a apoyarse en el contexto/tools y a
-// abstenerse cuando la información no está disponible.
-const NO_HALLUCINATION =
-  'REGLA CRÍTICA: no inventes. Usa ÚNICAMENTE la información del contexto recuperado ' +
-  '(o de las tools). Si el contexto no cubre la pregunta, dilo explícitamente ("No ' +
-  'encuentro esa información en los documentos cargados") en vez de especular. Cero ' +
-  'alucinación: es preferible abstenerse a inventar una regla.';
+// ── Prompts por tarea: anti-alucinación adaptada al tipo de dato (F21) ─────────────
+// Antes había UNA sola cláusula (NO_HALLUCINATION) doc-céntrica pegada a todos los system
+// prompts; forzaba la frase enlatada "No encuentro esa información en los documentos
+// cargados" incluso en tareas que razonan sobre datos de sesión (resumen/estado/…), y con
+// el modelo local pequeño el modelo la recitaba de más. Ahora cada tarea lleva su propia
+// guía: las de REGLAS mantienen el anti-alucinación sobre reglas oficiales (con tono
+// natural, sin frase fija); las de SESIÓN/RESUMEN razonan SOLO sobre el contexto de sesión
+// y nunca hablan de "documentos"; PLANIFICACIÓN es creativa y siempre propone.
+
+// Anti-alucinación para tareas de REGLAS: apóyate en lo recuperado, cita la sección y, si
+// no hay respaldo, matiza con naturalidad (nunca una frase robótica ni una regla inventada
+// como oficial).
+const RULES_GROUNDING =
+  'Apóyate en las reglas recuperadas del contexto y cita entre corchetes la sección que ' +
+  'respalda cada afirmación, p. ej. [Combate > Iniciativa]. Nunca presentes como regla ' +
+  'oficial algo que no esté en el contexto. Si lo que se pregunta no aparece en las reglas ' +
+  'cargadas, dilo con naturalidad y, si te sirve, ofrece una orientación general dejando ' +
+  'claro que es una sugerencia NO oficial; evita rechazos secos y frases enlatadas.';
 
 const RULES_SYSTEM =
-  'Eres el asistente de reglas de una mesa de rol. Responde SIEMPRE en español, de forma ' +
-  'directa y factual. Cita la sección que respalda cada afirmación entre corchetes, p. ej. ' +
-  '[Combate > Iniciativa]. ' + NO_HALLUCINATION;
+  'Eres el asistente de reglas de una mesa de rol. Responde SIEMPRE en español con un tono ' +
+  'natural, conversacional y útil (nada robótico). Cuando tengas reglas recuperadas, sé ' +
+  'directo y factual. ' + RULES_GROUNDING;
 
 const SUMMARY_SYSTEM =
-  'Eres el cronista de una mesa de rol. Resume la sesión en español con esta estructura, ' +
-  'usando SOLO la información del contexto:\n' +
+  'Eres el cronista de una mesa de rol. Resume la sesión en español con un tono natural y ' +
+  'cercano, razonando ÚNICAMENTE sobre el contexto de la sesión que se te da (eventos, ' +
+  'personajes, atributos, inventarios, notas y resúmenes previos), que es tu única fuente. ' +
+  'Estructura:\n' +
   '**Qué pasó:** los eventos importantes en orden.\n' +
   '**Decisiones clave:** qué decidieron los personajes y sus consecuencias.\n' +
   '**Hilos abiertos:** tramas o preguntas sin resolver para la próxima sesión.\n' +
-  'Sé conciso y concreto. ' + NO_HALLUCINATION;
+  'Sé conciso y concreto y no inventes hechos que no estén en el contexto. Si la sesión ' +
+  'apenas comienza y aún no hay actividad que resumir, dilo en una sola línea breve y ' +
+  'natural, sin frases enlatadas.';
 
 const PLANNING_SYSTEM =
-  'Eres el asistente de planificación del DM. Responde en español con sugerencias concretas ' +
-  'y accionables (encuentros, eventos, giros, NPCs), apoyadas en las reglas recuperadas y en ' +
-  'el estado actual de la sesión. Cita las reglas relevantes entre corchetes. No inventes ' +
-  'reglas del juego; si algo no está en el contexto, propónlo como idea abierta y márcalo ' +
-  'como sugerencia (no como regla oficial). ' + NO_HALLUCINATION;
+  'Eres el asistente de planificación del DM. Responde en español con un tono natural y ' +
+  'creativo, y PROPÓN SIEMPRE ideas concretas y accionables (encuentros, eventos, giros, ' +
+  'NPCs) apoyadas en el estado actual de la sesión y en las reglas recuperadas. Cita entre ' +
+  'corchetes las reglas relevantes cuando las uses. No presentes como regla oficial algo ' +
+  'que no esté en las reglas: ofrece esas ideas marcadas como sugerencia. Nunca te niegues ' +
+  'a proponer ni recites frases de rechazo; tu trabajo es inspirar al DM.';
 
 // Presupuesto de tokens para el contexto de reglas que se manda al LLM (F11 §5).
 // Estimación simple ~= chars/4 (misma heurística que el chunker). Configurable por env.
@@ -581,11 +596,18 @@ function dedupChunksToSources(chunks) {
 function buildRulesPrompt(query, chunks, history = []) {
   const messages = [{ role: 'system', content: RULES_SYSTEM }];
   for (const turn of history) messages.push(turn);
+  // Con contexto: responde factual y cita. Sin contexto (chunks vacío): en vez de "responde
+  // solo con las reglas recuperadas" a secas (que empuja al rechazo robótico), pide una
+  // respuesta útil y honesta que reconozca la ausencia y ofrezca orientación no oficial.
+  const instruction = chunks.length
+    ? 'Responde la pregunta apoyándote en las reglas recuperadas y cita las secciones entre corchetes.'
+    : 'No se recuperaron reglas para esta consulta. Reconoce con naturalidad que eso no ' +
+      'aparece en las reglas cargadas y, si puedes, ofrece una orientación general útil ' +
+      'marcada claramente como sugerencia NO oficial. No inventes una regla como si fuera ' +
+      'oficial ni respondas con una frase enlatada de rechazo.';
   messages.push({
     role: 'user',
-    content:
-      `${renderRules(chunks)}=== PREGUNTA ===\n${query}\n\n` +
-      'Responde la pregunta basándote únicamente en las reglas recuperadas y cita las secciones.',
+    content: `${renderRules(chunks)}=== PREGUNTA ===\n${query}\n\n${instruction}`,
   });
   return messages;
 }
@@ -702,9 +724,12 @@ export function getSessionSummary(sessionId) {
 
 const SESSION_SYSTEM =
   'Eres el asistente de mesa del DM en una sesión de rol en vivo. Responde SIEMPRE en ' +
-  'español, de forma concisa y factual, usando ÚNICAMENTE la información del contexto de ' +
-  'la sesión que se te proporciona (eventos, personajes, atributos, inventarios, notas y ' +
-  'resúmenes previos). ' + NO_HALLUCINATION;
+  'español, con un tono natural y útil, de forma concisa y factual, razonando ÚNICAMENTE ' +
+  'sobre el contexto de la sesión que se te proporciona (eventos, personajes, atributos, ' +
+  'inventarios, notas y resúmenes previos), que es tu única fuente; no inventes datos que ' +
+  'no estén en el contexto. Si la sesión tiene poca actividad todavía, dilo en una sola ' +
+  'línea breve y natural (p. ej. "La sesión apenas comienza; aún no hay eventos que ' +
+  'resumir"), sin frases enlatadas.';
 
 // Inventarios de los personajes de la sesión (para el preset "Inventarios").
 export function getSessionInventories(sessionId) {

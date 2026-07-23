@@ -19,12 +19,14 @@ export default function createSessionsRouter(io) {
         SELECT s.*, u.username AS dm_username,
                c.name AS campaign_name,
                c.game_system_id AS campaign_game_system_id,
+               gs.name AS campaign_game_system_name,
                COUNT(sm.user_id) AS member_count,
                ss.body AS summary,
                json_extract(st.payload, '$.duration_seconds') AS duration_seconds
         FROM sessions s
         JOIN users u ON s.dm_id = u.id
         LEFT JOIN campaigns c ON s.campaign_id = c.id
+        LEFT JOIN game_system_templates gs ON gs.id = c.game_system_id
         LEFT JOIN session_members sm ON s.id = sm.session_id
         LEFT JOIN session_summaries ss ON ss.session_id = s.id
         LEFT JOIN session_stats st ON st.session_id = s.id
@@ -41,10 +43,12 @@ export default function createSessionsRouter(io) {
     const session = db
       .prepare(`
         SELECT s.*, u.username AS dm_username, c.name AS campaign_name,
-               c.game_system_id AS campaign_game_system_id
+               c.game_system_id AS campaign_game_system_id,
+               gs.name AS campaign_game_system_name
         FROM sessions s
         JOIN users u ON s.dm_id = u.id
         LEFT JOIN campaigns c ON s.campaign_id = c.id
+        LEFT JOIN game_system_templates gs ON gs.id = c.game_system_id
         WHERE s.id = ?
       `)
       .get(req.params.id);

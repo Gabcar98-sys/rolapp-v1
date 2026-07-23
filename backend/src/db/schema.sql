@@ -26,11 +26,12 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 -- ── Campañas ──────────────────────────────────────────────────────────────────
+-- El sistema de juego se referencia SIEMPRE por game_system_id (FK). El antiguo
+-- campo TEXT `game_system` se eliminó en F22 (migración M003); estaba muerto.
 CREATE TABLE IF NOT EXISTS campaigns (
   id             INTEGER PRIMARY KEY AUTOINCREMENT,
   name           TEXT    NOT NULL,
   dm_id          INTEGER NOT NULL REFERENCES users(id),
-  game_system    TEXT    NOT NULL DEFAULT '',
   game_system_id INTEGER REFERENCES game_system_templates(id) ON DELETE SET NULL,
   description    TEXT    NOT NULL DEFAULT '',
   created_at     INTEGER NOT NULL DEFAULT (unixepoch())
