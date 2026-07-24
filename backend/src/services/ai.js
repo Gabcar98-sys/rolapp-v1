@@ -52,9 +52,15 @@ function numEnv(name, fallback) {
   return Number.isFinite(v) ? v : fallback;
 }
 
+// Default de temperatura por tarea. F26: 'rules' arranca más bajo (respuestas más
+// deterministas y secas, para no divagar) que el resto. AI_TEMPERATURE (general) y
+// AI_TEMPERATURE_<TAREA> siguen teniendo prioridad sobre este default de tarea.
+const TASK_DEFAULT_TEMP = { rules: 0.2, summary: 0.4, planning: 0.4 };
+
 export function resolveTaskConfig(task) {
   const key = TASK_KEYS[task] || 'RULES';
-  const generalTemp = numEnv('AI_TEMPERATURE', 0.4);
+  const taskDefaultTemp = TASK_DEFAULT_TEMP[task] ?? 0.4;
+  const generalTemp = numEnv('AI_TEMPERATURE', taskDefaultTemp);
   return {
     model: process.env[`AI_MODEL_${key}`] || AI_MODEL,
     temperature: numEnv(`AI_TEMPERATURE_${key}`, generalTemp),
@@ -318,6 +324,19 @@ async function callLlmStream(prompt, onToken, opts = {}) {
 // natural, sin frase fija); las de SESIÓN/RESUMEN razonan SOLO sobre el contexto de sesión
 // y nunca hablan de "documentos"; PLANIFICACIÓN es creativa y siempre propone.
 
+// ── Estilo compartido F26: respuestas DIRECTAS y EXACTAS ──────────────────────────
+// El founder reportó respuestas con "chachara": preámbulos ("aquí te muestro algunas…",
+// "basándome en las reglas…") y cierres de cortesía ("espero que esto te ayude…", "no
+// dudes en preguntar…"). Esta cláusula se concatena a los CUATRO system prompts (reglas,
+// sesión, planificación, resumen). Se formula EN POSITIVO a propósito: la negación literal
+// de una frase la PRIMA en modelos pequeños (lección F21), así que describimos el estilo
+// deseado (empezar por la respuesta, ir al grano, cerrar al completar) en vez de listar
+// las frases de relleno prohibidas.
+const DIRECT_STYLE =
+  'Estilo directo y exacto: abre con la respuesta misma y responde únicamente lo que se ' +
+  'pregunta, usando frases cortas o listas. Cada frase debe aportar información concreta. ' +
+  'Da la respuesta por terminada en cuanto quede completa.';
+
 // Anti-alucinación para tareas de REGLAS: apóyate en lo recuperado, cita la sección y, si
 // no hay respaldo, matiza con naturalidad (nunca una frase robótica ni una regla inventada
 // como oficial).
@@ -329,9 +348,8 @@ const RULES_GROUNDING =
   'claro que es una sugerencia NO oficial; evita rechazos secos y frases enlatadas.';
 
 const RULES_SYSTEM =
-  'Eres el asistente de reglas de una mesa de rol. Responde SIEMPRE en español con un tono ' +
-  'natural, conversacional y útil (nada robótico). Cuando tengas reglas recuperadas, sé ' +
-  'directo y factual. ' + RULES_GROUNDING;
+  'Eres el asistente de reglas de una mesa de rol. Responde SIEMPRE en español de forma ' +
+  'directa y factual (nada robótico, sin divagar). ' + RULES_GROUNDING + ' ' + DIRECT_STYLE;
 
 const SUMMARY_SYSTEM =
   'Eres el cronista de una mesa de rol. Resume la sesión en español con un tono natural y ' +
@@ -343,7 +361,7 @@ const SUMMARY_SYSTEM =
   '**Hilos abiertos:** tramas o preguntas sin resolver para la próxima sesión.\n' +
   'Sé conciso y concreto y no inventes hechos que no estén en el contexto. Si la sesión ' +
   'apenas comienza y aún no hay actividad que resumir, dilo en una sola línea breve y ' +
-  'natural, sin frases enlatadas.';
+  'natural, sin frases enlatadas. ' + DIRECT_STYLE;
 
 const PLANNING_SYSTEM =
   'Eres el asistente de planificación del DM. Responde en español con un tono natural y ' +
@@ -351,7 +369,7 @@ const PLANNING_SYSTEM =
   'NPCs) apoyadas en el estado actual de la sesión y en las reglas recuperadas. Cita entre ' +
   'corchetes las reglas relevantes cuando las uses. No presentes como regla oficial algo ' +
   'que no esté en las reglas: ofrece esas ideas marcadas como sugerencia. Nunca te niegues ' +
-  'a proponer ni recites frases de rechazo; tu trabajo es inspirar al DM.';
+  'a proponer ni recites frases de rechazo; tu trabajo es inspirar al DM. ' + DIRECT_STYLE;
 
 // Presupuesto de tokens para el contexto de reglas que se manda al LLM (F11 §5).
 // Estimación simple ~= chars/4 (misma heurística que el chunker). Configurable por env.
@@ -729,7 +747,7 @@ const SESSION_SYSTEM =
   'inventarios, notas y resúmenes previos), que es tu única fuente; no inventes datos que ' +
   'no estén en el contexto. Si la sesión tiene poca actividad todavía, dilo en una sola ' +
   'línea breve y natural (p. ej. "La sesión apenas comienza; aún no hay eventos que ' +
-  'resumir"), sin frases enlatadas.';
+  'resumir"), sin frases enlatadas. ' + DIRECT_STYLE;
 
 // Inventarios de los personajes de la sesión (para el preset "Inventarios").
 export function getSessionInventories(sessionId) {

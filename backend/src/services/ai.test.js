@@ -11,9 +11,19 @@ process.env.DB_PATH = join(tmpDir, 'ai-test.db');
 let db;
 let answerRulesQuestion, summarizeSession, getSessionSummary, getSessionState, setLlmClient;
 let streamRulesQuestion, setLlmStreamClient, getAiStatus;
-let setLlmToolsClient, normalizeHistory, resolveTaskConfig;
+let setLlmToolsClient, normalizeHistory, resolveTaskConfig, assistPlanning;
 let ingestDoc, setEmbeddingProvider, EMBEDDING_DIMS;
 let dmId, systemId, sessionId;
+
+// F26: verifica que un system prompt lleve la cláusula de estilo directo compartida
+// (empezar por la respuesta = sin preámbulo; cerrar al completar = sin cortesía final).
+function assertDirectStyle(prompt, label = '') {
+  assert.match(prompt, /directo/i, `${label} pide estilo directo`);
+  assert.match(prompt, /abre con la respuesta|empieza (por|con) la respuesta/i, `${label} empieza por la respuesta (sin preámbulo)`);
+  assert.match(prompt, /lo que se pregunta/i, `${label} responde solo lo que se pregunta`);
+  assert.match(prompt, /frases cortas|listas/i, `${label} usa frases cortas o listas`);
+  assert.match(prompt, /por terminada|quede completa/i, `${label} cierra al completar (sin cortesía final)`);
+}
 
 function deterministicEmbedding(text, dims) {
   const v = new Array(dims).fill(0);
@@ -31,7 +41,7 @@ before(async () => {
   ({
     answerRulesQuestion, summarizeSession, getSessionSummary, getSessionState, setLlmClient,
     streamRulesQuestion, setLlmStreamClient, getAiStatus,
-    setLlmToolsClient, normalizeHistory, resolveTaskConfig,
+    setLlmToolsClient, normalizeHistory, resolveTaskConfig, assistPlanning,
   } = await import('./ai.js'));
   ({ ingestDoc } = await import('./rag.js'));
   ({ setEmbeddingProvider, EMBEDDING_DIMS } = await import('./embeddings.js'));
@@ -264,7 +274,7 @@ test('fallback: con tools deshabilitadas usa inyección de contexto (comportamie
   setLlmToolsClient(null);
 });
 
-test('prompts: el system prompt de reglas es natural, cita y no inventa reglas oficiales', async () => {
+test('prompts: el system prompt de reglas es directo/factual, cita y no inventa reglas oficiales', async () => {
   await ingestDoc({
     gameSystemId: systemId,
     title: 'Core',
@@ -279,16 +289,49 @@ test('prompts: el system prompt de reglas es natural, cita y no inventa reglas o
   });
 
   await answerRulesQuestion({ query: 'salud', gameSystemId: systemId });
-  // F21: tono natural en lugar de la frase enlatada doc-céntrica.
+  // F21 (conservado): anti-alucinación + orientación no oficial, sin la frase enlatada.
   assert.match(systemPrompt, /regla oficial/i, 'no presenta como oficial algo sin respaldo');
-  assert.match(systemPrompt, /natural/i, 'pide tono natural, no robótico');
   assert.match(systemPrompt, /sugerencia NO oficial|no oficial/i, 'ofrece orientación marcada como no oficial');
   assert.doesNotMatch(
     systemPrompt,
     /No encuentro esa información en los documentos cargados/i,
     'ya no lleva la frase enlatada robótica'
   );
+  // F26: tono directo y factual; ya NO invita a divagar (conversacional).
+  assert.match(systemPrompt, /directa y factual|directo|factual/i, 'pide tono directo y factual');
+  assert.doesNotMatch(systemPrompt, /conversacional/i, 'ya no dice "conversacional" (invitaba a divagar)');
+  // F26: cláusula de estilo directo compartida (sin preámbulo ni cierre de cortesía).
+  assertDirectStyle(systemPrompt, 'reglas:');
 
+  setLlmClient(null);
+});
+
+test('F26: los system prompts de resumen y planificación exigen estilo directo', async () => {
+  // Resumen: capturamos el system prompt vía summarizeSession.
+  db.prepare(
+    "INSERT INTO session_events (session_id, type, actor_id, payload) VALUES (?, 'encounter', ?, ?)"
+  ).run(sessionId, dmId, JSON.stringify({ title: 'Emboscada', description: 'Goblins atacan' }));
+  let summarySystem = '';
+  setLlmClient(async (messages) => {
+    const sys = messages.find((m) => m.role === 'system');
+    summarySystem = sys ? sys.content : '';
+    return 'resumen';
+  });
+  await summarizeSession(sessionId);
+  assertDirectStyle(summarySystem, 'resumen:');
+  setLlmClient(null);
+
+  // Planificación: capturamos el system prompt vía assistPlanning (sin sistema ni sesión).
+  let planningSystem = '';
+  setLlmClient(async (messages) => {
+    const sys = messages.find((m) => m.role === 'system');
+    planningSystem = sys ? sys.content : '';
+    return 'idea';
+  });
+  await assistPlanning({ prompt: 'dame una idea de encuentro' });
+  assertDirectStyle(planningSystem, 'planificación:');
+  // No perdemos el carácter propositivo de la planificación (F21).
+  assert.match(planningSystem, /propón/i, 'planificación sigue proponiendo ideas');
   setLlmClient(null);
 });
 
@@ -371,6 +414,25 @@ test('resolveTaskConfig respeta env por tarea con fallback al general', () => {
   assert.ok(rules.topK > 0 && rules.contextBudget > 0);
   delete process.env.AI_TEMPERATURE;
   delete process.env.AI_TEMPERATURE_SUMMARY;
+});
+
+test('F26: rules usa un default de temperatura más bajo, con overrides con prioridad', () => {
+  delete process.env.AI_TEMPERATURE;
+  delete process.env.AI_TEMPERATURE_RULES;
+  // Por default, rules es más determinista (seco) que las tareas creativas.
+  const rules = resolveTaskConfig('rules');
+  const planning = resolveTaskConfig('planning');
+  assert.ok(rules.temperature < planning.temperature, 'rules arranca más bajo que planning');
+
+  // AI_TEMPERATURE_RULES manda sobre el default de la tarea.
+  process.env.AI_TEMPERATURE_RULES = '0.9';
+  assert.equal(resolveTaskConfig('rules').temperature, 0.9, 'AI_TEMPERATURE_RULES tiene prioridad');
+  delete process.env.AI_TEMPERATURE_RULES;
+
+  // AI_TEMPERATURE (general) también manda sobre el default de tarea de rules.
+  process.env.AI_TEMPERATURE = '0.5';
+  assert.equal(resolveTaskConfig('rules').temperature, 0.5, 'el general manda sobre el default de rules');
+  delete process.env.AI_TEMPERATURE;
 });
 
 test('cleanup', () => {

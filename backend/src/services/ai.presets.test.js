@@ -24,6 +24,15 @@ function deterministicEmbedding(text, dims) {
   return v.map((x) => x / norm);
 }
 
+// F26: la cláusula de estilo directo compartida debe llegar también al prompt de sesión.
+function assertDirectStyle(prompt, label = '') {
+  assert.match(prompt, /directo/i, `${label} pide estilo directo`);
+  assert.match(prompt, /abre con la respuesta|empieza (por|con) la respuesta/i, `${label} empieza por la respuesta (sin preámbulo)`);
+  assert.match(prompt, /lo que se pregunta/i, `${label} responde solo lo que se pregunta`);
+  assert.match(prompt, /frases cortas|listas/i, `${label} usa frases cortas o listas`);
+  assert.match(prompt, /por terminada|quede completa/i, `${label} cierra al completar (sin cortesía final)`);
+}
+
 before(async () => {
   db = (await import('../db/index.js')).default;
   ({
@@ -109,6 +118,21 @@ test('F21: el system prompt de sesión razona sobre datos de sesión y NO mencio
   assert.match(systemPrompt, /contexto de la sesión/i, 'razona sobre el contexto de sesión');
   assert.doesNotMatch(systemPrompt, /documentos cargados/i, 'nunca habla de documentos cargados');
   assert.match(systemPrompt, /natural/i, 'pide tono natural');
+  setLlmStreamClient(null);
+});
+
+test('F26: el system prompt de sesión exige estilo directo (sin preámbulo ni cierre)', async () => {
+  let systemPrompt = '';
+  setLlmStreamClient(async function* (messages) {
+    const sys = messages.find((m) => m.role === 'system');
+    systemPrompt = sys ? sys.content : '';
+    yield 'ok';
+  });
+  await streamSessionPreset({ sessionId, preset: 'resumen' }, () => {});
+  assertDirectStyle(systemPrompt, 'sesión:');
+  // F21 (conservado): sigue razonando sobre el contexto de sesión, sin lenguaje doc-céntrico.
+  assert.match(systemPrompt, /contexto de la sesión/i, 'sigue razonando sobre el contexto de sesión');
+  assert.doesNotMatch(systemPrompt, /documentos cargados/i, 'sigue sin hablar de documentos cargados');
   setLlmStreamClient(null);
 });
 

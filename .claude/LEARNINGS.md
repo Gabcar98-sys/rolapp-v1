@@ -69,6 +69,11 @@ Las lecciones se agrupan por categoría. Cada entrada tiene:
 
 ## RAG / embeddings / sqlite-vec
 
+### Concisión en modelos pequeños: cláusula de estilo compartida, en positivo, temperatura baja
+- **Contexto:** F26, la IA (qwen2.5:3b) divagaba (preámbulos + cierres de cortesía) pese al anti-alucinación de F21.
+- **Lección:** Para respuestas directas, concatena UNA cláusula de estilo compartida a todos los system prompts, redactada en POSITIVO — "abre con la respuesta, ve al grano, cierra al completar" — en vez de prohibir frases ("no digas 'espero que te ayude'"), que en modelos chicos las prima. Combínalo con temperatura baja para la tarea factual (rules a 0.2). Testeable con `assert.match` de las frases presentes (no `doesNotMatch`). Mete el default de temperatura por tarea como fallback de `numEnv('AI_TEMPERATURE', taskDefault)` para no romper el test de precedencia de env.
+- **Por qué importa:** El mismo modelo local pasa de un párrafo con relleno a una respuesta de una línea con cita, sin tocar retrieval ni el modelo.
+
 ### Los docs de reglas son contenido compartido: ingerir por NOMBRE de sistema, no por el del DM
 - **Contexto:** F23, los MDs de Stormlight/Dragonbane no llegaban a todos los DMs.
 - **Lección:** Cada DM tiene su propia copia del game_system (misma `name`, distinto `dm_id`). El seed histórico ingería docs solo en el sistema del `--dm` objetivo → los demás DMs quedaban sin reglas. Ingerir por nombre: `SELECT id FROM game_system_templates WHERE name = ?` y `ensureDoc` en CADA sistema. (Nota de modelo pendiente: los game systems son per-DM; el founder quiere que sean para todos — evaluar hacerlos globales/compartidos, no duplicados.)

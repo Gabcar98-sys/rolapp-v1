@@ -56,7 +56,12 @@ Directiva del founder (2026-07-22): "haz todo" → F23 (docs, DONE) → **F24 (f
   en vivo (DB+API+bundle: nginx sirve F24+F22; API devuelve la sesión con campaign_game_system_name).
   Stack recreado (up -d --build) Up. Commit pendiente. Falta solo la prueba de UI logueado (founder).
 
-## 🏁 "haz todo" COMPLETO (F23+F24+F25)
+- **F26-ai-concise — DONE.** IA directa (DIRECT_STYLE en positivo, rules temp 0.2, sin
+  'conversacional'; citas + anti-alucinación intactos). 151 tests. Verificado EN VIVO: respuesta
+  de reglas ahora es una línea con cita, sin preámbulo ni cierre de cortesía. Backend recreado.
+  Commit pendiente en este cierre.
+
+## 🏁 "haz todo" COMPLETO (F23+F24+F25) + F26 (concisión IA)
 Los 3 commiteados (F23 52ff8f6, F24 23362af, F25 pendiente en este cierre). Imagen actualizada
 corriendo. La IA responde con contenido real de ambos sistemas (986 chunks con vectores).
 Pendiente SOLO del founder: abrir `[DEMO] Asedio de la Torre` logueado como DM1 y click-through.
