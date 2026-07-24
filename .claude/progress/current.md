@@ -58,8 +58,25 @@ iniciado: no había `impl_F28` ni `review_F28`; la única línea sin commitear e
   Commit pendiente en este cierre. **PENDIENTE solo del founder (runtime, no código):** correr
   `docker compose exec backend node scripts/seed-dragonbane-catalog.js` contra la DB real (no requiere
   Ollama) y ver las páginas Habilidades/Items de Dragonbane pobladas.
-- Follow-on OPCIONAL identificado: **magia de Dragonbane** (`DRAGONBANE_MAGIA_DETALLADA.md`) NO entró
-  en F28 a propósito; candidata a F29 si el founder la quiere en el catálogo.
+- **F29-dragonbane-magic — EN CURSO.** El founder pidió (2026-07-23) que quede COMPLETA la info de los
+  MDs en el catálogo. Dos huecos: (1) magia sin estructurar, (2) items parciales (F28 metió 61 de muchos).
+  Scout del líder: NO hay concepto 'spell' en el schema → representar la magia como NUEVO `skill_format`
+  'Magia' con campos dinámicos (escuela/rango/prerequisito/requisito/tiempo/alcance/duracion; efecto en
+  description) y ~50 hechizos (4 escuelas + trucos) desde `DRAGONBANE_MAGIA_DETALLADA.md`; + completar los
+  items restantes del MD de equipo. Patrón F28 (dragonbane.json fuente de verdad + seed idempotente por
+  NOMBRE de sistema, sin Ollama). FUERA: bestiario (ya en RAG; NPCs son otro concepto).
+  **DONE + APROBADA** (reviewer independiente en Docker): skill_format 'Magia' con **56 hechizos**
+  (filtrable por escuela) + items **61→136**; seed reutilizado (genérico por formato) + 2 tests.
+  lint 0 + 160 tests (159/1 skip/0 fail), vigencia por hash. Lección nueva en LEARNINGS (Arquitectura:
+  seed genérico-por-formato absorbe formatos nuevos data-only). Sembrado en DB real (líder). Commit en
+  este cierre. Follow-on documentado: escuelas como skills en 'Habilidades' (no hecho, opcional).
+
+- **F30-charsheet-iscore-zero — EN 2ª ITERACIÓN.** Bug reportado en vivo por el founder (pantallazo,
+  incógnito → NO caché): la ficha pinta un '0' pegado a los atributos no-core. Causa: guards `{intFlag &&
+  <span/>}` con enteros 0/1 de SQLite (is_core, has_max) → React pinta el 0 literal. Fix (frontend puro,
+  helper coreMarker + Boolean): is_core en 189/330 OK, pero el reviewer RECHAZÓ por un 3er caso sin barrer
+  (has_max en línea 381, pestaña Estado). Implementer rematando esa línea + test has_max=0. Corre EN
+  PARALELO con F29 (disjunto: F30 solo frontend). Al cerrar → rebuild frontend para el founder.
 
 ## Feature en progreso (contexto histórico del lote previo)
 

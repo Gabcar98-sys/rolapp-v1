@@ -1,4 +1,4 @@
-// Seed idempotente del CATÁLOGO de Dragonbane (Habilidades + Equipo) — F28.
+// Seed idempotente del CATÁLOGO de Dragonbane — F28 (Habilidades + Equipo), F29 (Magia + más items).
 //
 // Contexto: importGamePack solo puebla skills/items al CREAR un sistema nuevo. Los sistemas
 // "Dragonbane" ya existen (uno por DM, copias per-DM — ver LEARNINGS "ingerir por NOMBRE de
@@ -6,8 +6,12 @@
 // el formato + sus fields e insertamos las skills/items FALTANTES por nombre, con sus valores
 // de fields dinámicos.
 //
+// La lógica es GENÉRICA sobre los formatos del pack: itera todos los skill_formats e
+// item_formats. Por eso F29 solo añadió el skill_format "Magia" (56 hechizos) y más items al
+// pack (fuente de verdad); este seed los recoge sin cambios de lógica.
+//
 // Idempotencia:
-//   - El formato se busca por (game_system_id, name); se crea si falta.
+//   - El formato se busca por (game_system_id, name); se crea si falta (p. ej. "Magia" nueva).
 //   - Los fields se añaden solo si su field_name no existe aún (aditivo).
 //   - Skills/items se insertan solo si no existe uno con ese nombre en el formato.
 //   - Los valores de fields se insertan con INSERT OR IGNORE respetando el UNIQUE

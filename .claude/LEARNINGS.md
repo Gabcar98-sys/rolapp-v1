@@ -161,6 +161,11 @@ Las lecciones se agrupan por categoría. Cada entrada tiene:
 
 ## Arquitectura
 
+### Un seed de catálogo genérico-por-formato absorbe formatos nuevos sin tocar código
+- **Contexto:** F29, añadir toda la MAGIA de Dragonbane (un `skill_format` entero nuevo, "Magia", con 56 hechizos) al catálogo.
+- **Lección:** Si el seed de catálogo itera **todos** los `skill_formats`/`item_formats` del pack y asegura cada formato por `(game_system_id, name)` (en vez de hardcodear "Habilidades"/"Equipo"), añadir un formato COMPLETO nuevo es puramente un cambio de **datos** en el pack JSON: el seed lo crea e inserta idempotentemente sin cambio de lógica. Diseña los seeds de catálogo genéricos-por-formato desde el principio. Bonus UI: si el frontend deriva el chip de filtro del **primer field** del formato vía una lista tipo `TYPE_FIELD_NAMES` (que incluye `category`), pon el campo discriminante (p. ej. la escuela de magia) como primer field y queda filtrable sin código nuevo.
+- **Por qué importa:** Ampliar el catálogo (magia, nuevas categorías) se vuelve data-only, sin re-tocar el seed ni el frontend; menos superficie de bug y features de contenido casi sin código.
+
 ### Enriquecer el catálogo de un sistema YA existente ≠ importar un game pack
 - **Contexto:** F28, poblar Habilidades/Items de Dragonbane (systems 4 y 6, uno por DM) que ya existían casi vacíos.
 - **Lección:** `importGamePack` solo puebla skills/items al **CREAR** un sistema nuevo; sobre sistemas ya existentes es no-op para el catálogo. Para rellenar entidades faltantes en sistemas existentes (varios, uno por DM) hace falta un **seed dedicado** que: (1) asegure el `skill_format`/`item_format` + sus fields por `game_system_id` (aditivo por `field_name`, sin renombrar ni borrar los previos); (2) inserte entidades faltantes **por nombre** (idempotente, sin duplicar); (3) rellene los values con `INSERT OR IGNORE` sobre el `UNIQUE(entity, field)` — nunca UPDATE ni DELETE, para no clobbering ediciones del DM. Opera **por NOMBRE de sistema** (`WHERE name='X'`) para alcanzar todas las copias per-DM (ver lección de F23). Mantén el pack JSON como **única fuente de verdad** y que el seed lo lea (DRY); no hardcodees los datos en el script.
@@ -269,3 +274,4 @@ Las lecciones se agrupan por categoría. Cada entrada tiene:
 - 2026-07-22 — líder agregó tras cerrar F23: "Los docs de reglas son contenido compartido: ingerir por NOMBRE de sistema" y "Un doc ingerido sin Ollama queda sin vectores: reindexar" (RAG), y "nginx da 504 en /api/ai/ask con LLM CPU; el streaming por socket sí funciona" (Docker/infra).
 - 2026-07-22 — líder agregó tras cerrar F25 "Seed de datos demo idempotente = reset por marcador" (Testing); tras F26 "Concisión en modelos pequeños: cláusula compartida en positivo + temp baja" (RAG); tras F27 "SPA en nginx: index.html no-cache, assets immutable" (Docker/infra).
 - 2026-07-23 — líder agregó tras cerrar F28 "Enriquecer el catálogo de un sistema YA existente ≠ importar un game pack" (Arquitectura).
+- 2026-07-23 — líder agregó tras cerrar F29 "Un seed de catálogo genérico-por-formato absorbe formatos nuevos sin tocar código" (Arquitectura).
