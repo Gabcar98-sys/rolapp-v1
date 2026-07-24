@@ -40,7 +40,28 @@ límite de sesión, no por el repo). Consolidado:
 Backlog nuevo (aprobado por el founder, hacer los 4): **F20** evento rápido → **F21** tono IA →
 **F22** coherencia del modelo. **F23 (doc del modelo) ya hecho por el líder** (game_system_model.md).
 
-## Feature en progreso
+## Sesión actual (2026-07-23) — retomar F28 (tras cambio de cuenta)
+
+El founder retoma la sesión ("seguir con lo que tenías"). Estado consolidado por el líder:
+**F0–F27 done y commiteadas** (el lote "haz todo" F23+F24+F25 + F26 + F27, todo cerrado).
+Único hilo abierto = **F28-dragonbane-catalog** (`in_progress` en el backlog pero SIN trabajo
+iniciado: no había `impl_F28` ni `review_F28`; la única línea sin commitear era el marcado
+`in_progress` en feature_list.json). Es la continuación directa de "cargar información".
+
+- **F28-dragonbane-catalog — DONE + APROBADA** (reviewer independiente, ejecutado en Docker).
+  Dragonbane: 6 skills/2 items → **35 habilidades + 61 items**. game-packs/dragonbane.json como
+  fuente de verdad (fields attribute/category/type/notes + fields de arma/equipo, aditivos; legacy
+  Espada/Antorcha y 6 skills preservadas; mapeo FUE→Fuerza/AGI→Destreza/INT→Inteligencia/CAR→Carisma).
+  Seed dedicado idempotente `backend/scripts/seed-dragonbane-catalog.js` (por NOMBRE de sistema →
+  systems 4 y 6, todos los DMs, SIN Ollama) + test 6 casos. lint 0 + 158 tests (157/1 skip/0 fail),
+  vigencia por hash. Lección nueva en LEARNINGS (Arquitectura: enriquecer catálogo existente ≠ importar pack).
+  Commit pendiente en este cierre. **PENDIENTE solo del founder (runtime, no código):** correr
+  `docker compose exec backend node scripts/seed-dragonbane-catalog.js` contra la DB real (no requiere
+  Ollama) y ver las páginas Habilidades/Items de Dragonbane pobladas.
+- Follow-on OPCIONAL identificado: **magia de Dragonbane** (`DRAGONBANE_MAGIA_DETALLADA.md`) NO entró
+  en F28 a propósito; candidata a F29 si el founder la quiere en el catálogo.
+
+## Feature en progreso (contexto histórico del lote previo)
 
 Directiva del founder (2026-07-22): "haz todo" → F23 (docs, DONE) → **F24 (fix eventos, SIGUIENTE)**
 → F25 (sesión demo completa) → commit + imagen actualizada corriendo. Una a la vez.

@@ -161,7 +161,10 @@ Las lecciones se agrupan por categoría. Cada entrada tiene:
 
 ## Arquitectura
 
-> Aún no hay lecciones en esta categoría.
+### Enriquecer el catálogo de un sistema YA existente ≠ importar un game pack
+- **Contexto:** F28, poblar Habilidades/Items de Dragonbane (systems 4 y 6, uno por DM) que ya existían casi vacíos.
+- **Lección:** `importGamePack` solo puebla skills/items al **CREAR** un sistema nuevo; sobre sistemas ya existentes es no-op para el catálogo. Para rellenar entidades faltantes en sistemas existentes (varios, uno por DM) hace falta un **seed dedicado** que: (1) asegure el `skill_format`/`item_format` + sus fields por `game_system_id` (aditivo por `field_name`, sin renombrar ni borrar los previos); (2) inserte entidades faltantes **por nombre** (idempotente, sin duplicar); (3) rellene los values con `INSERT OR IGNORE` sobre el `UNIQUE(entity, field)` — nunca UPDATE ni DELETE, para no clobbering ediciones del DM. Opera **por NOMBRE de sistema** (`WHERE name='X'`) para alcanzar todas las copias per-DM (ver lección de F23). Mantén el pack JSON como **única fuente de verdad** y que el seed lo lea (DRY); no hardcodees los datos en el script.
+- **Por qué importa:** Reimportar el pack no rellena catálogos existentes (silencioso), y un seed que haga UPDATE/DELETE pisaría el trabajo del DM o duplicaría al reejecutar.
 
 ---
 
@@ -265,3 +268,4 @@ Las lecciones se agrupan por categoría. Cada entrada tiene:
 - 2026-07-22 — líder agregó "Prueba que la imagen está al día por HASH, no por timestamp ni por cache hit" (Docker/infra) + checkpoint y criterio de rechazo en CHECKPOINTS.md, a pedido del founder tras detectar razonamiento flojo sobre la vigencia de la imagen.
 - 2026-07-22 — líder agregó tras cerrar F23: "Los docs de reglas son contenido compartido: ingerir por NOMBRE de sistema" y "Un doc ingerido sin Ollama queda sin vectores: reindexar" (RAG), y "nginx da 504 en /api/ai/ask con LLM CPU; el streaming por socket sí funciona" (Docker/infra).
 - 2026-07-22 — líder agregó tras cerrar F25 "Seed de datos demo idempotente = reset por marcador" (Testing); tras F26 "Concisión en modelos pequeños: cláusula compartida en positivo + temp baja" (RAG); tras F27 "SPA en nginx: index.html no-cache, assets immutable" (Docker/infra).
+- 2026-07-23 — líder agregó tras cerrar F28 "Enriquecer el catálogo de un sistema YA existente ≠ importar un game pack" (Arquitectura).
