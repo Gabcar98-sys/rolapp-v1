@@ -7,7 +7,7 @@ const TldrawCanvas = lazy(() => import('./TldrawCanvas.jsx'));
 // Fondo de respaldo: la imagen compartida centrada, o un aviso si no hay lienzo.
 function CanvasFallback({ imageUrl, message }) {
   return (
-    <div className="flex h-full w-full items-center justify-center overflow-hidden bg-ink-800">
+    <div className="flex h-full w-full items-center justify-center overflow-hidden bg-rail">
       {imageUrl ? (
         <img
           src={imageUrl}
@@ -15,7 +15,7 @@ function CanvasFallback({ imageUrl, message }) {
           className="max-h-full max-w-full object-contain"
         />
       ) : (
-        <p className="px-4 text-center text-sm text-gray-600">
+        <p className="px-4 text-center text-sm text-muted">
           {message ?? 'Sin imagen compartida.'}
         </p>
       )}
@@ -52,7 +52,7 @@ class CanvasErrorBoundary extends Component {
 // una falla de carga degrade con gracia sin tumbar la vista de sesión.
 export default function CanvasBoard({ sessionId, imageUrl }) {
   return (
-    <div className="h-full w-full overflow-hidden rounded-card border border-ink-line bg-ink-800">
+    <div className="h-full w-full overflow-hidden rounded-card border border-line bg-rail">
       <CanvasErrorBoundary imageUrl={imageUrl}>
         <Suspense fallback={<CanvasFallback imageUrl={imageUrl} message="Cargando lienzo…" />}>
           <TldrawCanvas sessionId={sessionId} imageUrl={imageUrl} />
