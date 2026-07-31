@@ -115,7 +115,28 @@ Estado del lote (2026-07-30):
   paridad verificada contra las páginas nuevas). Los alias `gold`/`ink` de Tailwind NO se
   pudieron retirar: siguen con consumidores en `MyCharacters`, `Stats/*` y `Sparkline`.
   **Sin commitear.**
-- **F33-chat-history-privacy — PENDIENTE, es lo siguiente.** Bug de privacidad real (ver
+### 🏁 Cierre del lote (2026-07-30) — 5 features, todas commiteadas
+
+| Commit | Feature |
+|---|---|
+| `569c698` | **F30** — el `0` fantasma de la ficha (4 casos, no 1) |
+| `2232ff9` | **F32** — restyle chat/canvas + 1.610 líneas de código muerto fuera |
+| `34f051c` | **F31** — vista TV + rutas por hash + sesión persistente |
+| `8476ded` | **F33** — fuga de privados en `chat:history` + Modal/Escape + timeout nginx |
+| `ecfc21c` | **F35** — retirada de la paleta v0 de Tailwind + guard anti-regresión |
+
+Stack recreado con `docker compose up -d --build` y smoke en verde: frontend 200,
+`/api/health` 200 (`vecEnabled` y `ftsEnabled` true), `Cache-Control: no-cache` en la raíz,
+y `#/tv/17` pintando la sesión demo sin login. **Pendientes: F34 (catálogo de Stormlight) y
+F36 (¿borrar `MyCharacters.jsx`? — requiere decisión del founder).**
+
+Lecciones nuevas en LEARNINGS: el footgun del entero 0/1 en guards JSX (F30), el falso
+negativo de `grep -P` por locale y el test-guard para regresiones que no rompen el build
+(F35), y filtrar por identidad tomándola del socket y no del payload (F33).
+
+**Contexto histórico del lote (por si hace falta reconstruir el porqué):**
+
+- **F33-chat-history-privacy — cerrada.** Era: Bug de privacidad real (ver
   abajo) + 2 remates pequeños (Escape/`role=dialog` en `Modal.jsx`, `proxy_read_timeout`
   del `/api/` en nginx que causa el 504 documentado de `/api/ai/ask`).
   **Se lanzó el implementer y murió al arrancar por límite de uso de la cuenta** (sin tocar
