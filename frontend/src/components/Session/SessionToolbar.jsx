@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../lib/api.js';
 import { EVENT_CATEGORIES } from '../../lib/planning.js';
+import { routeUrl } from '../../lib/route.js';
 import Button from '../ui/Button.jsx';
 import Modal from '../ui/Modal.jsx';
 import Icon from '../ui/Icon.jsx';
@@ -87,6 +88,12 @@ export default function SessionToolbar({
       active = false;
     };
   }, [isDM, session.id, characters]);
+
+  // Modo TV (F31): abre la vista de espectador en OTRA pestaña para arrastrarla al
+  // televisor sin perder el panel de control del DM en la pantalla principal.
+  function openTvView() {
+    window.open(routeUrl({ page: 'tv', sessionId: session.id }), '_blank', 'noopener');
+  }
 
   function openMap() {
     setImageDraft(currentImageUrl ?? '');
@@ -189,6 +196,9 @@ export default function SessionToolbar({
           </Button>
           <Button variant="secondary" size="sm" onClick={() => { setShowNpc(true); setError(''); }}>
             <Icon name="user" size={15} className="mr-1" /> Evento NPC
+          </Button>
+          <Button variant="secondary" size="sm" onClick={openTvView} title="Abrir la vista de televisor en otra pestaña">
+            <Icon name="dashboard" size={15} className="mr-1" /> Modo TV
           </Button>
           <div className="ml-auto flex items-center gap-2">
             <Button variant="secondary" size="sm" onClick={onReset} title="Reiniciar canvas">

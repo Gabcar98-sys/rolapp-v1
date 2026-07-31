@@ -103,7 +103,51 @@ Plan del líder:
   `BaseCharactersPanel.jsx` son huérfanos (0 imports en `src/`), superseded por
   `AttributesPage`/`BaseCharactersPage`.
 
+Estado del lote (2026-07-30):
+- **F30 — DONE + APROBADA + COMMITEADA** (`569c698`). Ver más abajo.
+- **F31-tv-session-view — IMPLEMENTADA, en revisión.** `impl_F31-tv-session-view.md`.
+  Rutas por hash + persistencia + `session:spectate` + `pages/TvView.jsx` + `PartyVitals`
+  (reusado en `SessionCharactersPanel`) + botón "Modo TV". backend 164 pass/1 skip,
+  frontend 140 pass, vigencia por hash. **Sin commitear** (orden del founder).
+- **F32-ui-debt-cleanup — IMPLEMENTADA, en revisión.** `impl_F32-ui-debt-cleanup.md`.
+  ChatPanel/CanvasBoard a tokens del handoff, últimos 3 emojis fuera, hora en los mensajes,
+  y **1.610 líneas de código muerto borradas** (4 paneles de `DMMaster/` huérfanos, con
+  paridad verificada contra las páginas nuevas). Los alias `gold`/`ink` de Tailwind NO se
+  pudieron retirar: siguen con consumidores en `MyCharacters`, `Stats/*` y `Sparkline`.
+  **Sin commitear.**
+- **F33-chat-history-privacy — PENDIENTE, es lo siguiente.** Bug de privacidad real (ver
+  abajo) + 2 remates pequeños (Escape/`role=dialog` en `Modal.jsx`, `proxy_read_timeout`
+  del `/api/` en nginx que causa el 504 documentado de `/api/ai/ask`).
+  **Se lanzó el implementer y murió al arrancar por límite de uso de la cuenta** (sin tocar
+  ningún archivo; working tree limpio). La entrada del backlog lleva el fix exacto.
+- **F34-stormlight-catalog — PENDIENTE.** Catálogo asimétrico (ver abajo).
+- **F35-last-v0-debt — PENDIENTE.** Cierra lo que F32 dejó vivo (8 emojis + tokens v0 en
+  MyCharacters y 2 paneles de Stats, exports muertos, retirar alias gold/ink). Mismo destino
+  que F33: el implementer murió por límite de uso antes de editar nada.
+
+**Verificación en vivo hecha por el líder (2026-07-30), no solo tests:** stack reconstruido
+(frontend + backend, vigencia por hash de `sockets/session.js` confirmada) y
+`http://localhost:3000/#/tv/17` abierto SIN login → pinta sesión, campaña·sistema, reloj,
+tarjeta del último evento (RECOMPENSA), party con vitales de Talani, franja de 5 eventos y
+la URL de invitación. **Tras conectar la TV, el log append-only sigue con su última entrada
+del 24-jul y `session_members` sin cambios → el espectador NO deja rastro.** Socket.io
+conectado (POST de `session:spectate` con 200). `#/dashboard` sin usuario guardado cae al
+Login y `localStorage` queda vacío (no se escribe nada antes de autenticar).
+Nota: **el stack corriendo incluye código SIN COMMITEAR** (F31+F32); para volver al estado
+publicado, `git stash` + `docker compose up -d --build`.
+
 Hallazgos del barrido de código del líder (lectura pura, 2026-07-30):
+- 🔴 **`chat:history` filtra los mensajes privados de todos a cualquiera** que abra el chat
+  (`backend/src/sockets/chat.js`): el emit en vivo sí filtra por destinatario, pero el
+  historial hace un `SELECT` sin filtro. Las notas privadas, en cambio, están bien resueltas
+  (señal por socket sin bodies + refetch REST filtrado por rol). → F33.
+- 🟡 **Catálogo asimétrico** (verificado contra la DB real): Dragonbane 91 skills / 136 items;
+  Stormlight 21 / 2. Las reglas de Stormlight sí están en el RAG (F23), el catálogo no. → F34.
+- 🟢 **Lo que estaba "pendiente del founder" ya está hecho**: el seed de Dragonbane está
+  corrido en la DB real (los 91/136 salen de ahí). No tiene que ejecutar nada.
+- `Modal.jsx` no cierra con Escape ni declara `role="dialog"`, mientras `Sheet.jsx` sí. → F33.
+- `nginx.conf`: `location /api/` con el `proxy_read_timeout` por defecto (60 s) = causa del
+  504 en `/api/ai/ask` que ya estaba documentado en LEARNINGS. → F33.
 - El footgun de F30 (`{intFlag && <…>}`) **NO existe en ningún otro sitio** del frontend
   (grep app-wide) → el barrido de F30 es suficiente.
 - `App.jsx` no persiste nada: **cualquier refresh devuelve al login y saca de la sesión**.

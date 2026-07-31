@@ -69,6 +69,38 @@ export function registerSessionHandlers(io, socket) {
     leave(io, socket, Number(sessionId), Number(user?.id ?? socket.data.userId));
   });
 
+  // session:spectate { sessionId } → SOLO se une al room para escuchar (vista TV, F31).
+  // Deliberadamente NO registra session_members, NO escribe en el log append-only y NO
+  // toca el mapa de presencia: el televisor es invisible para la mesa y para las
+  // estadísticas derivadas. Tampoco guarda userId en socket.data, así que el `leave` del
+  // disconnect corta por su guard y nunca publica un session_leave por un espectador.
+  socket.on('session:spectate', ({ sessionId } = {}) => {
+    const id = Number(sessionId);
+    if (!Number.isInteger(id) || id <= 0) {
+      socket.emit('session:error', { message: 'sessionId no válido' });
+      return;
+    }
+
+    const session = db
+      .prepare("SELECT id FROM sessions WHERE id = ? AND status = 'active'")
+      .get(id);
+    if (!session) {
+      socket.emit('session:error', { message: 'Sesión no válida' });
+      return;
+    }
+
+    socket.join(`session:${id}`);
+    socket.data.spectatingSessionId = id;
+  });
+
+  // session:unspectate { sessionId? } → suelta el room del espectador. Sin efectos.
+  socket.on('session:unspectate', ({ sessionId } = {}) => {
+    const id = Number(sessionId) || socket.data.spectatingSessionId;
+    if (!id) return;
+    socket.leave(`session:${id}`);
+    if (socket.data.spectatingSessionId === id) socket.data.spectatingSessionId = null;
+  });
+
   // session:fire_event { sessionId, actor_id, type, payload } → append-only + emite.
   socket.on('session:fire_event', ({ sessionId, actor_id = null, type, payload = {} }) => {
     sessionId = Number(sessionId);
@@ -79,6 +111,12 @@ export function registerSessionHandlers(io, socket) {
 
   // disconnect → limpia presencia con los datos guardados en socket.data.
   socket.on('disconnect', () => {
+    // Un espectador (vista TV) solo suelta el room: no tiene userId, así que `leave`
+    // corta por su guard y no escribe session_leave ni republica presencia.
+    if (socket.data.spectatingSessionId) {
+      socket.leave(`session:${socket.data.spectatingSessionId}`);
+      socket.data.spectatingSessionId = null;
+    }
     leave(io, socket, socket.data.sessionId, socket.data.userId);
   });
 }

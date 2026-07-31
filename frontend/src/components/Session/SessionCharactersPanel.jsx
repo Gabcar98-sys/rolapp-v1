@@ -4,6 +4,7 @@ import { api } from '../../lib/api.js';
 import Button from '../ui/Button.jsx';
 import Card from '../ui/Card.jsx';
 import CharacterSheet from '../Character/CharacterSheet.jsx';
+import PartyVitals from './PartyVitals.jsx';
 
 const inputCls =
   'rounded-btn border border-line bg-bg px-3 py-2 text-sm text-title outline-none focus:border-accent';
@@ -135,12 +136,15 @@ export default function SessionCharactersPanel({ sessionId, session, user }) {
         ) : (
           sessionChars.map((c) => (
             <Card key={c.id} className="flex items-center justify-between p-3">
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-title">{c.name}</p>
                 <p className="mt-0.5 text-xs text-sub">
                   {c.username}
                   {c.game_system_name ? ` · ${c.game_system_name}` : ''}
                 </p>
+                {/* Vitales en la propia tarjeta (F31): el DM ve PV/estado de la party
+                    sin abrir cada ficha. Si el personaje no tiene atributos, no pinta nada. */}
+                <PartyVitals character={c} className="mt-2" />
               </div>
               <Button size="sm" className="ml-3 flex-shrink-0" onClick={() => setActiveId(c.id)}>
                 {isDM || String(c.user_id) === String(user.id) ? 'Ficha' : 'Ver'}
