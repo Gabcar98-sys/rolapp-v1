@@ -20,6 +20,15 @@ function barWidthClass(pct) {
   return BAR_WIDTHS[step];
 }
 
+// Marcador de "atributo principal" (★). OJO: `is_core` llega como ENTERO 0/1 desde
+// SQLite; un guard `{is_core && <span/>}` renderiza el 0 literal en el DOM cuando vale 0
+// (bug F30: "0Deflect", "0Health"). Coercionar a booleano evita pintar el número.
+export function coreMarker(isCore) {
+  return Boolean(isCore) ? (
+    <span className="text-accent-text" title="atributo principal">★</span>
+  ) : null;
+}
+
 // Ficha dinámica reutilizable (MyCharacters y SessionView). Renderiza atributos según
 // el sistema de juego (agrupados por category; is_core destacados; has_max como valor/máx),
 // estado (dot-tracker editable de PV/voluntad), inventario, equipo (slots) y skills.
@@ -186,7 +195,7 @@ function AttributesTab({ character, attrDefs, user, canEdit, onSaved, setError }
             {defs.map((def) => (
               <div key={def.id} className="flex items-center gap-3">
                 <label className="flex w-28 flex-shrink-0 items-center gap-1 text-sm text-sub">
-                  {def.is_core && <span className="text-accent-text" title="atributo principal">★</span>}
+                  {coreMarker(def.is_core)}
                   {def.name}
                 </label>
                 {def.type === 'boolean' ? (
@@ -280,7 +289,7 @@ function StatusTab({ character, attrDefs, user, canEdit, onSaved, setError }) {
   );
 }
 
-function StatusRow({ def, character, user, canEdit, onSaved, setError }) {
+export function StatusRow({ def, character, user, canEdit, onSaved, setError }) {
   const val = character.templateAttrs?.find((a) => a.attribute_template_id === def.id);
   const current = Number(val?.value ?? 0);
   const [maxDraft, setMaxDraft] = useState(def.has_max ? (val?.max_value ?? '') : '');
@@ -291,7 +300,10 @@ function StatusRow({ def, character, user, canEdit, onSaved, setError }) {
   }, [val?.max_value, def.has_max]);
 
   const maxNum = def.has_max ? Number(maxDraft) : NaN;
-  const hasNumericMax = def.has_max && Number.isFinite(maxNum) && maxNum > 0;
+  // Boolean(def.has_max): has_max es ENTERO 0/1 de SQLite. Sin coercionar, hasNumericMax
+  // heredaría el 0 y se propagaría a `useDots`, cuyo guard `{useDots && (...)}` (abajo)
+  // pintaría el 0 literal para un atributo core sin máximo (mismo footgun F30).
+  const hasNumericMax = Boolean(def.has_max) && Number.isFinite(maxNum) && maxNum > 0;
   const pct = hasNumericMax ? Math.min(100, Math.round((current / maxNum) * 100)) : null;
   const useDots = hasNumericMax && maxNum <= MAX_DOTS;
 
@@ -327,7 +339,7 @@ function StatusRow({ def, character, user, canEdit, onSaved, setError }) {
     <Card className="p-3">
       <div className="flex items-center justify-between">
         <span className="flex items-center gap-1 text-sm text-sub">
-          {def.is_core && <span className="text-accent-text" title="atributo principal">★</span>}
+          {coreMarker(def.is_core)}
           {def.name}
         </span>
         <span className="num text-lg font-bold text-title">
@@ -369,7 +381,7 @@ function StatusRow({ def, character, user, canEdit, onSaved, setError }) {
           <Button size="sm" variant="secondary" disabled={saving} onClick={() => persist(current + 1, maxDraft)}>
             +
           </Button>
-          {def.has_max && (
+          {def.has_max ? (
             <label className="ml-auto flex items-center gap-1 text-xs text-faint">
               Máx
               <input
@@ -382,7 +394,7 @@ function StatusRow({ def, character, user, canEdit, onSaved, setError }) {
                 aria-label={`Máximo de ${def.name}`}
               />
             </label>
-          )}
+          ) : null}
         </div>
       )}
     </Card>

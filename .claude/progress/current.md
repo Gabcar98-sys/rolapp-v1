@@ -71,12 +71,45 @@ iniciado: no había `impl_F28` ni `review_F28`; la única línea sin commitear e
   seed genérico-por-formato absorbe formatos nuevos data-only). Sembrado en DB real (líder). Commit en
   este cierre. Follow-on documentado: escuelas como skills en 'Habilidades' (no hecho, opcional).
 
-- **F30-charsheet-iscore-zero — EN 2ª ITERACIÓN.** Bug reportado en vivo por el founder (pantallazo,
+- **F30-charsheet-iscore-zero — DONE + APROBADA** (reviewer independiente, 2ª pasada, en Docker).
+  El `0` fantasma de la ficha murió: helper `coreMarker` con `Boolean(...)` + ternario en
+  `has_max` + el footgun DERIVADO (`hasNumericMax` heredaba el entero y lo propagaba a
+  `useDots`). Re-barrido completo: no queda ningún guard `&&` con bandera entera. 97/97 tests
+  en Docker, validados POR MUTACIÓN, vigencia por hash. Commiteada. Lección nueva en LEARNINGS.
+  **Contexto histórico de la 2ª iteración:** Bug reportado en vivo por el founder (pantallazo,
   incógnito → NO caché): la ficha pinta un '0' pegado a los atributos no-core. Causa: guards `{intFlag &&
   <span/>}` con enteros 0/1 de SQLite (is_core, has_max) → React pinta el 0 literal. Fix (frontend puro,
   helper coreMarker + Boolean): is_core en 189/330 OK, pero el reviewer RECHAZÓ por un 3er caso sin barrer
   (has_max en línea 381, pestaña Estado). Implementer rematando esa línea + test has_max=0. Corre EN
   PARALELO con F29 (disjunto: F30 solo frontend). Al cerrar → rebuild frontend para el founder.
+
+## Sesión actual (2026-07-30) — "continúa + revisa + explora la vista TV"
+
+Petición del founder (se va, no pregunto nada): (1) **continuar los cambios necesarios**
+= cerrar F30; (2) **revisar código y usabilidad y hacer los cambios que considere**, esos
+**SIN COMMITEAR**, con un resumen escrito; (3) **explorar dejar la app "más en línea" y con
+interfaces más gráficas** → **vista de sesión para el televisor** que vean los jugadores.
+
+Plan del líder:
+- **F30** → 2ª revisión (el implementer ya remató `has_max`:381 y el derivado `hasNumericMax`).
+  Si aprueba: `done` + **commit** (es el "cambio necesario").
+- **F31-tv-session-view** (NUEVO, sin commit) → la cabeza del pedido. Diseño completo en
+  `.claude/docs/tv_view_and_online.md`. Tres huecos que impiden "estar en línea": cero
+  persistencia (F5 te saca de la sesión), cero rutas (nada que compartir) y cero vista de
+  espectador. Se resuelven juntos: rutas por hash + localStorage + `session:spectate`
+  (socket que solo hace join, sin presencia ni log) + `pages/TvView.jsx`.
+- **F32-ui-debt-cleanup** (NUEVO, sin commit) → deuda visual v0 (ChatPanel/CanvasBoard/
+  StatTile) + **código muerto confirmado por el líder**: `GameSystemPanel.jsx` y
+  `BaseCharactersPanel.jsx` son huérfanos (0 imports en `src/`), superseded por
+  `AttributesPage`/`BaseCharactersPage`.
+
+Hallazgos del barrido de código del líder (lectura pura, 2026-07-30):
+- El footgun de F30 (`{intFlag && <…>}`) **NO existe en ningún otro sitio** del frontend
+  (grep app-wide) → el barrido de F30 es suficiente.
+- `App.jsx` no persiste nada: **cualquier refresh devuelve al login y saca de la sesión**.
+  Es el peor problema de usabilidad vivo y nadie lo había anotado. → F31.
+- 2 componentes huérfanos (~1.500 líneas) con paleta v0. Verificada la paridad: el import de
+  game packs vive hoy en `AttributesPage.jsx:71`, así que no se pierde funcionalidad. → F32.
 
 ## Feature en progreso (contexto histórico del lote previo)
 

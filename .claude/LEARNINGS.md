@@ -132,6 +132,11 @@ Las lecciones se agrupan por categoría. Cada entrada tiene:
 - **Lección:** Con flat config de ESLint 9 + JSX, `no-unused-vars` marca como sin usar los componentes que solo aparecen en JSX. Falta la regla `react/jsx-uses-vars` de `eslint-plugin-react`. La próxima feature que toque frontend debe añadir `eslint-plugin-react` y habilitar `react/jsx-uses-vars` (o usar su config recomendada) para eliminar los falsos positivos.
 - **Por qué importa:** El ruido de warnings falsos puede ocultar warnings reales y erosiona la confianza en el checkpoint de lint.
 
+### Un entero 0/1 de SQLite en un guard `{flag && <…/>}` pinta el número: barre TODAS las banderas del archivo
+- **Contexto:** F30, la ficha mostraba un `0` pegado al nombre de los atributos no-core ("0Deflect", "0Health").
+- **Lección:** Las banderas booleanas viajan como INTEGER 0/1 desde SQLite (`is_core`, `has_max`, `is_*`) y llegan crudas al frontend (`SELECT *`). `{0 && <span/>}` devuelve `0` y React lo renderiza LITERAL. Coerciona siempre: `Boolean(flag) && …`, un ternario `flag ? … : null`, o un helper que devuelva nodo o `null` (mejor: el test ejercita el código real, no una copia). Al arreglar UNO, **barre todas las banderas enteras del archivo** con `\{[^}]*&&\s*[(<]` y clasifica cada match: ¿el flag es INTEGER en el schema? ¿el subárbol se pinta directo (footgun) o es la condición de un ternario (a salvo)? Vigila también los valores DERIVADOS (`const x = flag && …` hereda el 0 y lo propaga al guard de más abajo). Un "barrido OK" en el reporte no basta: el reviewer lo re-ejecuta con grep + schema.
+- **Por qué importa:** Pasa lint, build y tests unitarios; solo se ve en runtime y solo cuando el flag vale 0. En F30 el primer barrido dejó vivos 2 de 4 casos.
+
 ### Dos vistas de los mismos datos deben derivar de la MISMA fuente (grafo vs lista)
 - **Contexto:** F24, la pestaña Flujo (grafo) pintaba los eventos sueltos enlazados pero la pestaña Prep (lista) los perdía.
 - **Lección:** Cuando dos vistas renderizan el mismo conjunto de entidades por caminos distintos, es fácil que una rama olvide un subconjunto (aquí: la rama `hasLinks` de la lista ignoraba `freeEvents`). Extrae el cálculo a un helper puro compartido y haz que ambas vistas (y todas las ramas de render) lo consuman. Al arreglar una vista que "pierde" datos, revisa que TODAS las ramas (`hasLinks` vs `!hasLinks`) cubran el mismo conjunto.
@@ -275,3 +280,4 @@ Las lecciones se agrupan por categoría. Cada entrada tiene:
 - 2026-07-22 — líder agregó tras cerrar F25 "Seed de datos demo idempotente = reset por marcador" (Testing); tras F26 "Concisión en modelos pequeños: cláusula compartida en positivo + temp baja" (RAG); tras F27 "SPA en nginx: index.html no-cache, assets immutable" (Docker/infra).
 - 2026-07-23 — líder agregó tras cerrar F28 "Enriquecer el catálogo de un sistema YA existente ≠ importar un game pack" (Arquitectura).
 - 2026-07-23 — líder agregó tras cerrar F29 "Un seed de catálogo genérico-por-formato absorbe formatos nuevos sin tocar código" (Arquitectura).
+- 2026-07-30 — líder agregó tras cerrar F30 "Un entero 0/1 de SQLite en un guard `{flag && <…/>}` pinta el número: barre TODAS las banderas del archivo" (Frontend).
