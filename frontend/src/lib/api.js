@@ -152,10 +152,6 @@ export const api = {
     request(`/notes/${id}`, { method: 'PUT', body: { dm_id: dmId, ...fields } }),
   deleteNote: (id, dmId) => request(`/notes/${id}`, { method: 'DELETE', body: { dm_id: dmId } }),
 
-  // Resúmenes de sesiones anteriores de una campaña (checkbox "incluir sesiones anteriores").
-  listCampaignSummaries: (campaignId, excludeSessionId = null) =>
-    request(`/campaigns/${campaignId}/summaries${excludeSessionId ? `?exclude_session_id=${excludeSessionId}` : ''}`),
-
   // ── Sistemas de juego (F2) ──────────────────────────────────────────────────
   // Sin dmId devuelve TODOS los sistemas (útil para jugadores al crear personaje).
   listGameSystems: (dmId = null) => request(`/game-systems${dmId ? `?dm_id=${dmId}` : ''}`),

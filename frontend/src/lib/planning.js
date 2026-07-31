@@ -11,22 +11,10 @@ export const EVENT_CATEGORIES = [
   'NPC',
 ];
 
-// Clases Tailwind por categoría (sin estilos inline). Cada entrada da el color de
-// texto y de borde del badge/franja de la tarjeta del evento.
-const CATEGORY_CLASSES = {
-  combate: 'text-red-400 border-red-400',
-  exploración: 'text-blue-400 border-blue-400',
-  interacción: 'text-emerald-400 border-emerald-400',
-  trampa: 'text-amber-400 border-amber-400',
-  recompensa: 'text-purple-400 border-purple-400',
-  historia: 'text-teal-400 border-teal-400',
-  NPC: 'text-orange-400 border-orange-400',
-  general: 'text-gray-400 border-gray-500',
-};
-
-export function categoryClasses(category) {
-  return CATEGORY_CLASSES[category] ?? CATEGORY_CLASSES.general;
-}
+// NOTA (F35): aquí vivía `categoryClasses`, que devolvía clases de la paleta v0
+// (rojo/gris crudos de Tailwind). Quedó MUERTO cuando todas las vistas pasaron a
+// `eventCategoryClasses` (abajo), que devuelve los tokens cat-* del handoff.
+// Eliminado tras confirmar cero consumidores.
 
 // ── Mapeo de categorías v1 → 4 colores del handoff (tokens cat-*) ─────────────────
 // El handoff sólo define 4 colores de categoría (combat/social/explore/discovery).

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../lib/api.js';
 import Card from '../ui/Card.jsx';
+import Icon from '../ui/Icon.jsx';
 import BarChart from './BarChart.jsx';
 import StatTile from './StatTile.jsx';
 
@@ -24,9 +25,10 @@ export default function CharacterStatsPanel({ characterId }) {
     };
   }, [characterId]);
 
-  if (loading) return <p className="text-sm text-gray-400">Cargando estadísticas…</p>;
-  if (error) return <p className="rounded-md bg-danger/20 px-3 py-2 text-sm text-red-300">{error}</p>;
-  if (!stats) return <p className="text-sm text-gray-500">Sin estadísticas.</p>;
+  if (loading) return <p className="text-sm text-sub">Cargando estadísticas…</p>;
+  if (error)
+    return <p className="rounded-md bg-danger-tint px-3 py-2 text-sm text-danger-text">{error}</p>;
+  if (!stats) return <p className="text-sm text-faint">Sin estadísticas.</p>;
 
   const skillData = (stats.skills ?? []).map((s) => ({ label: s.name, value: s.rank }));
 
@@ -41,31 +43,43 @@ export default function CharacterStatsPanel({ characterId }) {
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Card className="p-4">
-          <h3 className="mb-3 text-sm font-semibold text-gray-200">Habilidades por rango</h3>
+          <h3 className="mb-3 text-sm font-semibold text-title">Habilidades por rango</h3>
           <BarChart data={skillData} emptyLabel="Sin habilidades del catálogo" />
         </Card>
         <Card className="p-4">
-          <h3 className="mb-3 text-sm font-semibold text-gray-200">Atributos</h3>
+          <h3 className="mb-3 text-sm font-semibold text-title">Atributos</h3>
           {(stats.attributes ?? []).length === 0 ? (
-            <p className="text-sm text-gray-500">Sin atributos.</p>
+            <p className="text-sm text-faint">Sin atributos.</p>
           ) : (
             <ul className="flex flex-col gap-1">
               {stats.attributes.map((a) => (
-                <li key={a.name} className="flex justify-between text-xs text-gray-300">
-                  <span>
-                    {a.is_core ? '⭐ ' : ''}
-                    {a.name}
-                  </span>
-                  <span className="font-semibold text-gray-100">
-                    {a.value}
-                    {a.has_max && a.max_value != null ? ` / ${a.max_value}` : ''}
-                  </span>
-                </li>
+                <AttributeRow key={a.name} attr={a} />
               ))}
             </ul>
           )}
         </Card>
       </div>
     </div>
+  );
+}
+
+// Fila de atributo. Exportada para SSR-test sin jsdom (lección F20).
+// OJO (lección F30): `is_core` y `has_max` llegan como ENTEROS 0/1 desde SQLite,
+// así que ambos se leen como CONDICIÓN de un ternario — nunca `{flag && <…/>}`,
+// que pintaría un 0 literal.
+export function AttributeRow({ attr }) {
+  return (
+    <li className="flex justify-between text-xs text-sub">
+      <span className="flex items-center gap-1">
+        {attr.is_core ? (
+          <Icon name="skills" size={12} className="text-accent-text" />
+        ) : null}
+        {attr.name}
+      </span>
+      <span className="font-semibold text-title">
+        {attr.value}
+        {attr.has_max && attr.max_value != null ? ` / ${attr.max_value}` : ''}
+      </span>
+    </li>
   );
 }

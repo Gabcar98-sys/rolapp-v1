@@ -3,7 +3,7 @@
 // El SVG escala con viewBox; el color usa currentColor para heredar del contenedor.
 export default function Sparkline({ values = [], width = 120, height = 32 }) {
   if (values.length < 2) {
-    return <span className="text-xs text-gray-500">—</span>;
+    return <span className="text-xs text-faint">—</span>;
   }
   const max = Math.max(...values);
   const min = Math.min(...values);
@@ -22,7 +22,7 @@ export default function Sparkline({ values = [], width = 120, height = 32 }) {
   return (
     <svg
       viewBox={`0 0 ${width} ${height}`}
-      className="h-8 w-full text-gold"
+      className="h-8 w-full text-accent-text"
       role="img"
       aria-label="Tendencia"
       preserveAspectRatio="none"

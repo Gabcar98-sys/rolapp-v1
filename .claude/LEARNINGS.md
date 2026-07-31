@@ -103,6 +103,11 @@ Las lecciones se agrupan por categoría. Cada entrada tiene:
 - **Lección:** Para que un router REST pueda emitir por socket sin imports circulares, expórtalo como factory `export default function createSessionsRouter(io) { ... }` y créalo en `index.js` DESPUÉS de instanciar `io`, montándolo con `app.use('/api/sessions', createSessionsRouter(io))`.
 - **Por qué importa:** Importar `io` directamente desde los routers genera ciclos de import y acoplamiento; la factory mantiene el router testeable y desacoplado.
 
+### Filtrar por identidad: el id del solicitante sale del socket, nunca del payload
+- **Contexto:** F33, `chat:history` devolvía TODOS los mensajes de la sesión — incluidos los susurros privados entre otros — a cualquiera que lo pidiera. El emit en vivo sí filtraba; el historial no.
+- **Lección:** Cuando un handler devuelve datos que dependen de "quién pregunta", toma la identidad de **`socket.data.userId`** (que fija `session:join` en el servidor), nunca de un campo del payload: un cliente pediría el historial "de otro" y leería sus privados. Y resuelve el caso **sin identidad** en fail-closed — un socket que no hizo `session:join` (p. ej. el espectador de la vista TV, que a propósito no recibe `userId`) debe recibir solo lo público, no todo. Ojo al patrón general: **un mismo dato servido por dos caminos (push en vivo vs. fetch de historial) necesita el MISMO filtro en ambos**; es fácil blindar uno y olvidar el otro. Compáralo con el patrón bien resuelto de las notas (F18): el socket emite una señal sin bodies y el cliente refetchea por REST, que filtra por rol.
+- **Por qué importa:** Pasa lint, build y todos los tests; solo se detecta leyendo la query. La fuga es silenciosa y total.
+
 ### session_events es append-only
 - **Contexto:** modelo de eventos de sesión heredado de la v0.
 - **Lección:** El log `session_events` solo recibe INSERT. Nunca UPDATE ni DELETE. El estado se deriva reproduciendo el log.
@@ -179,6 +184,16 @@ Las lecciones se agrupan por categoría. Cada entrada tiene:
 ---
 
 ## Testing
+
+### `grep -P` en Git Bash aborta por locale: un `|| echo "CERO"` convierte el fallo en un falso "limpio"
+- **Contexto:** F32/F35, censar emojis y clases de la paleta v0 en `frontend/src`.
+- **Lección:** En Git Bash, `grep -P` puede abortar con "supports only unibyte and UTF-8 locales" **sin imprimir nada**; encadenado a `|| echo "CERO"` produce un cero mentiroso que se cuela en un reporte como "barrido limpio". Antepón `LC_ALL=en_US.UTF-8` y **comprueba el exit code** (0 = hay coincidencias, 1 = no hay, **2 = el grep falló**). Para censos que autorizan un borrado destructivo (retirar alias de Tailwind, eliminar exports), añade un **control positivo**: corre el MISMO patrón contra una versión donde sabes que hay coincidencias (`git show HEAD:archivo`) y confirma que las encuentra; si el control no encuentra nada, tu patrón está roto, no el código limpio.
+- **Por qué importa:** Un censo con falso negativo autoriza un borrado que rompe cosas. Y retirar un alias de Tailwind **no rompe el build**: las clases dejan de generarse y la regresión es puramente visual y silenciosa.
+
+### Una regresión que no rompe el build necesita un test-guard que reescanee el código
+- **Contexto:** F35, retirar los alias `gold`/`ink-*` tras migrar los últimos consumidores.
+- **Lección:** Cuando la deuda que acabas de pagar puede volver sin que nada se ponga rojo (clases de una paleta muerta, emojis donde el diseño exige iconos, imports prohibidos), deja un test que **reescanee el árbol de fuentes** en cada `npm test` y falle nombrando el archivo culpable. Valídalo por mutación: reintroduce la clase, confirma el rojo, revierte. Cuesta 20 líneas y convierte una convención en un invariante ejecutable.
+- **Por qué importa:** Sin el guard, la limpieza se deshace sola en la siguiente feature y nadie se entera hasta que alguien mira la pantalla.
 
 ### El runner de vitest del frontend no tiene jsdom: testea helpers puros, no clics
 - **Contexto:** F20, cubrir la lógica del modal de evento rápido en `session.test.jsx`.
@@ -281,3 +296,5 @@ Las lecciones se agrupan por categoría. Cada entrada tiene:
 - 2026-07-23 — líder agregó tras cerrar F28 "Enriquecer el catálogo de un sistema YA existente ≠ importar un game pack" (Arquitectura).
 - 2026-07-23 — líder agregó tras cerrar F29 "Un seed de catálogo genérico-por-formato absorbe formatos nuevos sin tocar código" (Arquitectura).
 - 2026-07-30 — líder agregó tras cerrar F30 "Un entero 0/1 de SQLite en un guard `{flag && <…/>}` pinta el número: barre TODAS las banderas del archivo" (Frontend).
+- 2026-07-30 — líder agregó tras cerrar F35 "`grep -P` en Git Bash aborta por locale: un `|| echo CERO` convierte el fallo en un falso limpio" y "Una regresión que no rompe el build necesita un test-guard que reescanee el código" — ambas en Testing.
+- 2026-07-30 — líder agregó tras cerrar F33 "Filtrar por identidad: el id del solicitante sale del socket, nunca del payload" (Backend).

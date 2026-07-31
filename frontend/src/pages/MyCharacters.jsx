@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react';
 import { api } from '../lib/api.js';
 import Button from '../components/ui/Button.jsx';
 import Card from '../components/ui/Card.jsx';
+import Icon from '../components/ui/Icon.jsx';
 import CharacterSheet from '../components/Character/CharacterSheet.jsx';
 import CharacterStatsPanel from '../components/Stats/CharacterStatsPanel.jsx';
 
 const inputCls =
-  'rounded-md border border-ink-line bg-ink-900 px-3 py-2 text-sm text-gray-100 outline-none focus:border-gold';
+  'rounded-md border border-line bg-bg px-3 py-2 text-sm text-title outline-none focus:border-accent';
 
 // Mis personajes: lista, crea (eligiendo sistema o partiendo de un pregen del DM),
 // edita la ficha completa y elimina. Accesible para todos desde el Lobby.
@@ -85,8 +86,8 @@ export default function MyCharacters({ user, onBack }) {
       <div className="mx-auto flex min-h-full max-w-3xl flex-col gap-6 p-4 md:p-6">
         <header className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gold">Estadísticas</h1>
-            <p className="text-sm text-gray-400">{active?.name ?? 'Personaje'}</p>
+            <h1 className="text-2xl font-bold text-accent-text">Estadísticas</h1>
+            <p className="text-sm text-sub">{active?.name ?? 'Personaje'}</p>
           </div>
           <Button
             variant="secondary"
@@ -126,15 +127,16 @@ export default function MyCharacters({ user, onBack }) {
     <div className="mx-auto flex min-h-full max-w-4xl flex-col gap-6 p-4 md:p-6">
       <header className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gold">Mis personajes</h1>
-          <p className="text-sm text-gray-400">{user.username}</p>
+          <h1 className="text-2xl font-bold text-accent-text">Mis personajes</h1>
+          <p className="text-sm text-sub">{user.username}</p>
         </div>
         <div className="flex items-center gap-2">
           {view === 'list' && (
             <>
               {baseChars.length > 0 && (
                 <Button variant="secondary" size="sm" onClick={() => setView('pregen')}>
-                  🧙 Desde pregen
+                  <Icon name="id-card" size={15} />
+                  Desde pregen
                 </Button>
               )}
               <Button size="sm" onClick={() => setView('create')}>
@@ -150,11 +152,13 @@ export default function MyCharacters({ user, onBack }) {
         </div>
       </header>
 
-      {error && <p className="rounded-md bg-danger/20 px-3 py-2 text-sm text-red-300">{error}</p>}
+      {error && (
+        <p className="rounded-md bg-danger-tint px-3 py-2 text-sm text-danger-text">{error}</p>
+      )}
 
       {view === 'create' && (
         <Card className="max-w-lg p-4">
-          <h3 className="mb-3 text-sm font-semibold text-gray-200">Crear personaje</h3>
+          <h3 className="mb-3 text-sm font-semibold text-title">Crear personaje</h3>
           <form onSubmit={createCharacter} className="flex flex-col gap-3">
             <input
               value={form.name}
@@ -192,30 +196,14 @@ export default function MyCharacters({ user, onBack }) {
             <Button variant="secondary" size="sm" onClick={() => setView('list')}>
               ← Volver
             </Button>
-            <h2 className="text-sm font-semibold text-gray-200">Personajes base disponibles</h2>
+            <h2 className="text-sm font-semibold text-title">Personajes base disponibles</h2>
           </div>
           {baseChars.length === 0 ? (
-            <p className="text-center text-sm text-gray-500">No hay personajes base disponibles.</p>
+            <p className="text-center text-sm text-faint">No hay personajes base disponibles.</p>
           ) : (
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               {baseChars.map((bc) => (
-                <Card key={bc.id} className="p-4">
-                  <div className="flex items-center gap-3">
-                    <span className="text-3xl">{bc.avatar_icon}</span>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-gray-100">{bc.name}</p>
-                      {bc.game_system_name && <p className="text-xs text-gray-400">{bc.game_system_name}</p>}
-                    </div>
-                  </div>
-                  <p className="mt-2 flex gap-3 text-xs text-gray-500">
-                    <span>📋 {bc.attrs?.length ?? 0}</span>
-                    <span>⚡ {bc.skillLinks?.length ?? 0}</span>
-                    <span>🎒 {bc.inventory?.length ?? 0}</span>
-                  </p>
-                  <Button size="sm" className="mt-3 w-full" onClick={() => adopt(bc.id)}>
-                    Crear desde este pregen
-                  </Button>
-                </Card>
+                <PregenCard key={bc.id} baseChar={bc} onAdopt={() => adopt(bc.id)} />
               ))}
             </div>
           )}
@@ -225,53 +213,102 @@ export default function MyCharacters({ user, onBack }) {
       {view === 'list' && (
         <section className="flex flex-col gap-3">
           {characters.length === 0 ? (
-            <p className="py-8 text-center text-sm text-gray-500">
+            <p className="py-8 text-center text-sm text-faint">
               No tienes personajes. Crea uno con &quot;+ Nuevo&quot;.
             </p>
           ) : (
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               {characters.map((char) => (
-                <Card key={char.id} className="flex items-center justify-between p-4">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-gray-100">{char.name}</p>
-                    <p className="mt-0.5 text-xs text-gray-400">{char.game_system_name || 'Sin sistema'}</p>
-                  </div>
-                  <div className="ml-3 flex flex-shrink-0 gap-2">
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        setActiveId(char.id);
-                        setView('sheet');
-                      }}
-                    >
-                      Ver ficha
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      aria-label={`Ver estadísticas de ${char.name}`}
-                      onClick={() => {
-                        setActiveId(char.id);
-                        setView('stats');
-                      }}
-                    >
-                      📊
-                    </Button>
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      aria-label={`Eliminar ${char.name}`}
-                      onClick={() => remove(char)}
-                    >
-                      🗑
-                    </Button>
-                  </div>
-                </Card>
+                <CharacterRow
+                  key={char.id}
+                  char={char}
+                  onOpen={() => {
+                    setActiveId(char.id);
+                    setView('sheet');
+                  }}
+                  onStats={() => {
+                    setActiveId(char.id);
+                    setView('stats');
+                  }}
+                  onDelete={() => remove(char)}
+                />
               ))}
             </div>
           )}
         </section>
       )}
     </div>
+  );
+}
+
+// ── Tarjeta de personaje base (pregen) ───────────────────────────────────────
+// Exportada para poder testearla con SSR sin jsdom (lección F20): los contadores
+// usan iconos de línea (F35), no emojis.
+export function PregenCard({ baseChar, onAdopt }) {
+  return (
+    <Card className="p-4">
+      <div className="flex items-center gap-3">
+        {/* avatar_icon es un DATO del personaje base, no un emoji escrito en el código. */}
+        <span className="text-3xl">{baseChar.avatar_icon}</span>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium text-title">{baseChar.name}</p>
+          {baseChar.game_system_name && (
+            <p className="text-xs text-sub">{baseChar.game_system_name}</p>
+          )}
+        </div>
+      </div>
+      <p className="mt-2 flex gap-3 text-xs text-faint">
+        <span className="flex items-center gap-1" title="Atributos">
+          <Icon name="sliders" size={12} />
+          {baseChar.attrs?.length ?? 0}
+        </span>
+        <span className="flex items-center gap-1" title="Habilidades">
+          <Icon name="skills" size={12} />
+          {baseChar.skillLinks?.length ?? 0}
+        </span>
+        <span className="flex items-center gap-1" title="Inventario">
+          <Icon name="bag" size={12} />
+          {baseChar.inventory?.length ?? 0}
+        </span>
+      </p>
+      <Button size="sm" className="mt-3 w-full" onClick={onAdopt}>
+        Crear desde este pregen
+      </Button>
+    </Card>
+  );
+}
+
+// ── Fila de personaje propio (ver ficha / estadísticas / eliminar) ────────────
+// Exportada para SSR-test (lección F20). Los botones de solo-icono conservan su
+// aria-label porque el Icon es aria-hidden.
+export function CharacterRow({ char, onOpen, onStats, onDelete }) {
+  return (
+    <Card className="flex items-center justify-between p-4">
+      <div className="min-w-0">
+        <p className="truncate text-sm font-medium text-title">{char.name}</p>
+        <p className="mt-0.5 text-xs text-sub">{char.game_system_name || 'Sin sistema'}</p>
+      </div>
+      <div className="ml-3 flex flex-shrink-0 gap-2">
+        <Button size="sm" onClick={onOpen}>
+          Ver ficha
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          aria-label={`Ver estadísticas de ${char.name}`}
+          onClick={onStats}
+        >
+          <Icon name="chart" size={15} />
+        </Button>
+        <Button
+          variant="danger"
+          size="sm"
+          aria-label={`Eliminar ${char.name}`}
+          onClick={onDelete}
+        >
+          <Icon name="trash" size={15} />
+        </Button>
+      </div>
+    </Card>
   );
 }

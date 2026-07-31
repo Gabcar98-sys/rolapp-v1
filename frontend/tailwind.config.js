@@ -60,23 +60,18 @@ export default {
           discovery: { text: '#DBB55F', bg: '#332B17', bar: '#C9A24A' },
           extra: { text: '#A9AEC9', bg: '#2A2A33' },
         },
-        // ── Alias temporales de la paleta v0 (solo para vistas aún no rediseñadas;
-        // F14-F19 las migran y luego estos alias se eliminan). Mapean a tonos cálidos
-        // equivalentes para que las vistas viejas no desentonen dentro del shell. ──
-        gold: {
-          DEFAULT: '#CE6A3A',
-          soft: '#E08A5C',
-          dim: '#A8663F',
-        },
-        ink: {
-          DEFAULT: '#ECE6DB', // texto principal (token nuevo)
-          900: '#1B1815',
-          800: '#17140F',
-          700: '#221E19',
-          600: '#26221C',
-          500: '#262119',
-          line: '#2E2A24',
-        },
+        // ── Fin de los alias temporales de la paleta v0 (F35) ──────────────────
+        // Los alias `gold` (DEFAULT/soft/dim) y las sombras `ink-900|800|700|600|500`
+        // + `ink-line` existían solo para las vistas heredadas de la v0. F32 y F35
+        // migraron las últimas (ChatPanel, CanvasBoard, MyCharacters, Stats/*) al
+        // handoff, así que se retiran tras censar CERO consumidores en frontend/src.
+        // OJO: retirar un alias NO rompe el build (la clase deja de generarse y la
+        // regresión sería visual y silenciosa) → hay un test de guardia en
+        // src/designDebt.test.js que vuelve a censar el árbol en cada `npm test`.
+        //
+        // `ink` SÍ se conserva como color plano: `text-ink` es el color de texto
+        // principal y lo usan 20+ archivos, además del @apply de styles/index.css.
+        ink: '#ECE6DB',
       },
       fontFamily: {
         sans: ['"Hanken Grotesk"', 'system-ui', 'sans-serif'],
