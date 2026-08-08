@@ -171,6 +171,16 @@ Las lecciones se agrupan por categoría. Cada entrada tiene:
 
 ## Arquitectura
 
+### Un formato nuevo es más barato que un nombre mentiroso — pero el "cero coste de frontend" se prueba leyendo los tres consumidores
+- **Contexto:** F34, meter 76 objetos de equipo de Stormlight cuando el único `item_format` existente se llamaba literalmente "Armas" (y los legacy no se pueden renombrar).
+- **Lección:** Con un seed genérico-por-formato (lección de F29), añadir un `item_format`/`skill_format` ENTERO cuesta cero líneas de lógica. Cuando el formato legacy tiene un nombre estrecho que no puedes cambiar y los fields del contenido nuevo son genuinamente distintos (`damage` vs `deflect/cost/weight`), **añade un formato en vez de estirar el viejo**: meter `Soap` o `Blanket` en un formato llamado "Armas" es semánticamente falso y deja 76 items con 4 campos de arma vacíos. **Pero no des por hecho el "cero coste de frontend": pruébalo leyendo los TRES consumidores** — la página que agrupa por formato (`ItemsPage`→`FormatGroups`), el agregador de la ficha (`CharacterSheet.EquipmentTab`, que junta los items de todos los formatos del sistema) y el endpoint que valida al equipar (`SELECT id FROM item_masters WHERE id = ?`, sin atar a un formato). Si UNO de ellos tomara solo el primer formato, N objetos quedarían invisibles. Ojo también a lo que el formato nuevo NO te da gratis: `ItemsPage` no tiene chips de filtro (eso es solo `SkillsPage`), así que el truco de poner `category` como primer field solo rinde en skills.
+- **Por qué importa:** Un formato entero que no se renderiza no rompe lint, ni build, ni un solo test: el catálogo simplemente no existe para el usuario, igual que un componente huérfano.
+
+### Al borrar un huérfano, la paridad no acaba en el JSX: sigue el dato hasta el backend
+- **Contexto:** F36, borrar `MyCharacters.jsx` porque `CharactersPage.jsx` lo supersedía.
+- **Lección:** La capacidad de más riesgo al sustituir una vista no es una que falte, sino una **condición nueva** que el sucesor añade. Aquí el sucesor pinta el botón de eliminar tras `isOwner={String(char.user_id) === String(user.id)}` donde el huérfano lo mostraba siempre: si el endpoint no devolviera `user_id`, la capacidad desaparecería y `String(undefined) === String(3)` daría `false` **sin lanzar**. Regla: cuando el sucesor **añade un guard** sobre algo que el huérfano ofrecía incondicionalmente, verifica en el backend que el campo del guard viaja de verdad en la respuesta (aquí `characters.js` → `getCharacterFull` → `SELECT c.*`). Corolario útil: al comparar huérfano vs sucesor, **la divergencia suele ser el bug del huérfano** — `MyCharacters` pasaba `user.id` (un jugador) donde la API espera `dm_id`, así que su selector de sistemas salía siempre vacío y nadie lo vio en un mes. Motivo extra para borrar en vez de "recuperar".
+- **Por qué importa:** Ni el grep, ni el lint, ni el build, ni los tests ven una capacidad que se apaga en silencio detrás de un `undefined`.
+
 ### Un seed de catálogo genérico-por-formato absorbe formatos nuevos sin tocar código
 - **Contexto:** F29, añadir toda la MAGIA de Dragonbane (un `skill_format` entero nuevo, "Magia", con 56 hechizos) al catálogo.
 - **Lección:** Si el seed de catálogo itera **todos** los `skill_formats`/`item_formats` del pack y asegura cada formato por `(game_system_id, name)` (en vez de hardcodear "Habilidades"/"Equipo"), añadir un formato COMPLETO nuevo es puramente un cambio de **datos** en el pack JSON: el seed lo crea e inserta idempotentemente sin cambio de lógica. Diseña los seeds de catálogo genéricos-por-formato desde el principio. Bonus UI: si el frontend deriva el chip de filtro del **primer field** del formato vía una lista tipo `TYPE_FIELD_NAMES` (que incluye `category`), pon el campo discriminante (p. ej. la escuela de magia) como primer field y queda filtrable sin código nuevo.
@@ -184,6 +194,26 @@ Las lecciones se agrupan por categoría. Cada entrada tiene:
 ---
 
 ## Testing
+
+### Auditar trabajo previo sin commitear: la prueba es la DIFERENCIA SIMÉTRICA contra la fuente, no "parece completo"
+- **Contexto:** F34, el working tree traía +173 líneas en `game-packs/stormlight.json` de una corrida que murió sin dejar reporte.
+- **Lección:** Ante trabajo huérfano sobre el que vas a construir, el chequeo barato y concluyente es extraer los nombres de la **fuente** y del **artefacto** y comparar en **AMBAS direcciones** (`fuente \ artefacto` y `artefacto \ fuente`); los dos vacíos = fidelidad probada. Complétalo con: parseable, duplicados por nombre dentro de cada grupo, **colisiones de nombre ENTRE grupos** (críticas si algo resuelve por nombre con first-wins, como `base_character.skill_links`), referencias a campos no declarados, un barrido de valores basura (`"undefined"`/`"null"` literales, que la UI pinta tal cual) y que lo legacy sea **`JSON.stringify`-idéntico a `git show HEAD:archivo`**. En F34 esto convirtió "173 líneas de procedencia desconocida" en "auditado y aceptado" en una pasada — y de paso demostró que el conteo del ENCARGO era el erróneo (el brief decía 20 acciones; la fuente tiene 18).
+- **Por qué importa:** Construir sobre datos no auditados propaga sus errores y te los apunta a ti; y "parece completo" no distingue entre 18 y 20 entradas.
+
+### El test viejo SIN TOCAR prueba un refactor solo si, mutando el módulo nuevo, se pone rojo
+- **Contexto:** F34, extraer la lógica de `seed-dragonbane-catalog.js` a un `seed-catalog.js` genérico dejando wrappers por juego.
+- **Lección:** Cuando la única diferencia entre dos scripts son 2 constantes, extrae el cuerpo y deja wrappers que re-exporten los nombres históricos — así el test de la feature anterior pasa **sin editar una línea**, y eso es evidencia de retrocompatibilidad mucho más fuerte que releer el diff. Regla: **si al refactorizar tienes que tocar el test viejo, no era un refactor.** Pero "el test viejo pasa" por sí solo no basta: podría estar pasando por caminos que ya no se ejecutan. Ciérralo mutando el **módulo nuevo** y confirmando que ese test se pone ROJO, y demuestra que no lo editaste comparando su `sha256` con el que registró la feature anterior.
+- **Por qué importa:** Un refactor que rompe el contrato pasa desapercibido si el test que lo cubría se "adaptó" al cambio.
+
+### Antes de borrar un archivo, censa también las rutas escritas como STRING, no solo los imports
+- **Contexto:** F36, `designDebt.test.js` listaba `'pages/MyCharacters.jsx'` como cadena dentro de un array y lo abría con `readFileSync` sin guard de existencia.
+- **Lección:** El grep de imports puede dar cero y aun así existir acoplamiento: test-guards, configs y listas de rutas referencian archivos como **texto**, y borrar el archivo revienta con un `ENOENT` (fallo de infraestructura, no un assert legible). Busca el **basename**, no solo `from '…'`. Y amplía el censo a **todo el paquete** —`tailwind.config.js`, `Dockerfile`, `nginx.conf`—, no solo `src/`. Cuando una lista así se queda sin uno de sus archivos, **retira la entrada en vez de envolver el `readFileSync` en un guard de existencia**: tolerar rutas muertas debilita el guard en silencio (un archivo renombrado dejaría de vigilarse sin avisar).
+- **Por qué importa:** Ningún análisis de imports ve este acoplamiento, y el fallo aparece como error de infraestructura en un test ajeno al borrado.
+
+### Mutar para validar un guard: hazlo DENTRO del contenedor efímero, nunca en el árbol real
+- **Contexto:** F36, validar por mutación que el guard de deuda visual sigue armado, con otro agente trabajando en paralelo.
+- **Lección:** El patrón "muto → confirmo rojo → `git checkout --`" deja una ventana con el working tree corrupto; con el auto-commiteador de este entorno o con agentes en paralelo, esa ventana puede quedar **sellada en un commit**. Alternativa de coste cero: `docker run --rm <img> sh -c "muta && npx vitest run src/guard.test.js"` — la mutación vive y muere en la capa de escritura del contenedor, el host no se toca y el `git status` no se mueve. Sirve igual para provocar fallos de infraestructura (reponer una ruta borrada en una lista y ver el `ENOENT`).
+- **Por qué importa:** Una mutación commiteada por accidente introduce exactamente la regresión que el guard existía para impedir.
 
 ### `grep -P` en Git Bash aborta por locale: un `|| echo "CERO"` convierte el fallo en un falso "limpio"
 - **Contexto:** F32/F35, censar emojis y clases de la paleta v0 en `frontend/src`.
@@ -258,6 +288,11 @@ Las lecciones se agrupan por categoría. Cada entrada tiene:
 
 ## Proceso y flujo de trabajo
 
+### Para fechar una orfandad, busca el commit donde murió su ÚLTIMO importador, no el `git log` del archivo
+- **Contexto:** F36, `MyCharacters.jsx` parecía vivo: su última edición era del día anterior.
+- **Lección:** El `git log` de un archivo solo muestra cuándo se **editó**, no cuándo dejó de ser alcanzable — y da la impresión contraria. La orfandad real se data iterando `git ls-tree` + grep por commit hasta ver desaparecer al importador: aquí `pages/Lobby.jsx`, borrado en F13 (2026-07-02), **22 features antes**. Con esa fecha el coste del despiste es cuantificable: la feature anterior invirtió trabajo migrando emojis y tokens de una página inalcanzable desde hacía un mes. **Corolario de proceso: el barrido de huérfanos va AL PRINCIPIO del trabajo sobre un archivo, no después.**
+- **Por qué importa:** Un huérfano pasa lint, build y tests, y no existe para el usuario; sin fechar la orfandad no se ve cuánto trabajo se está tirando sobre él.
+
 ### No declarar un checkpoint en verde sin ejecutarlo en el entorno donde se exige
 - **Contexto:** F4, el reporte del implementer afirmó "lint ✅" sin que fuera reproducible en el contenedor.
 - **Lección:** El implementer no marca un checkpoint como verde sin correr el comando exacto en el entorno canónico (Docker). El reviewer ejecuta literalmente cada comando del checklist; no se fía del reporte.
@@ -298,3 +333,5 @@ Las lecciones se agrupan por categoría. Cada entrada tiene:
 - 2026-07-30 — líder agregó tras cerrar F30 "Un entero 0/1 de SQLite en un guard `{flag && <…/>}` pinta el número: barre TODAS las banderas del archivo" (Frontend).
 - 2026-07-30 — líder agregó tras cerrar F35 "`grep -P` en Git Bash aborta por locale: un `|| echo CERO` convierte el fallo en un falso limpio" y "Una regresión que no rompe el build necesita un test-guard que reescanee el código" — ambas en Testing.
 - 2026-07-30 — líder agregó tras cerrar F33 "Filtrar por identidad: el id del solicitante sale del socket, nunca del payload" (Backend).
+- 2026-08-07 — líder agregó tras cerrar F36: "Al borrar un huérfano, la paridad no acaba en el JSX: sigue el dato hasta el backend" (Arquitectura), "Antes de borrar un archivo, censa también las rutas escritas como STRING" y "Mutar para validar un guard: hazlo DENTRO del contenedor efímero" (Testing), y "Para fechar una orfandad, busca el commit donde murió su ÚLTIMO importador" (Proceso).
+- 2026-08-07 — líder agregó tras cerrar F34: "Un formato nuevo es más barato que un nombre mentiroso — pero el 'cero coste de frontend' se prueba leyendo los tres consumidores" (Arquitectura), "Auditar trabajo previo sin commitear: la prueba es la DIFERENCIA SIMÉTRICA contra la fuente" y "El test viejo SIN TOCAR prueba un refactor solo si, mutando el módulo nuevo, se pone rojo" (Testing).
