@@ -28,6 +28,83 @@ Los dos van **en paralelo por ser disjuntos**: F36 solo toca `frontend/`, F34 so
 `game-packs/stormlight.json` + `backend/scripts/`. Cada agente usa su propio tag de imagen
 para no competir por el build. Al cerrar F36 se sanea la violación de protocolo.
 
+### F36 — DONE + APROBADA + COMMITEADA (`c67ebfa`)
+
+Reviewer independiente APROBADO (`review_F36-mycharacters-orphan.md`). Rehízo la tabla de
+paridad por su cuenta sobre el **render completo** de `CharactersPage.jsx` contra
+`git show 5953b44^:…MyCharacters.jsx`: **cero capacidades perdidas** (`adoptBaseCharacter`
+resultó idéntico línea a línea). El único riesgo real lo encontró él y lo cerró **bajando al
+backend**: `CharactersPage:319` condiciona el botón de eliminar a `isOwner`, donde el huérfano
+lo mostraba siempre — si el endpoint no devolviera `user_id`, la capacidad desaparecería sin
+romper lint, build ni tests. Verificó `characters.js:126-139` → `getCharacterFull` → `SELECT c.*`:
+el campo llega, la capacidad se conserva. 157/157 tests, 4/4 hashes host↔imagen y los archivos
+borrados ausentes dentro de la imagen. El commit se hizo **con rutas explícitas** para no
+arrastrar el `game-packs/stormlight.json` de F34, que sigue en curso.
+
+Observaciones no bloqueantes anotadas como deuda (ver abajo). **Queda F34 como único hilo
+`in_progress` → protocolo saneado.**
+
+### F34 — DONE + APROBADA + SEMBRADA EN LA DB REAL
+
+`impl_F34-stormlight-catalog.md`. Stormlight pasa de **21 skills / 2 items** a **135 / 90**
+(Dragonbane tiene 91 / 136 → asimetría cerrada).
+
+- **Auditoría del trabajo huérfano: limpio.** El implementer contrastó las 3 secciones que
+  venían del working tree contra las fuentes por **diferencia simétrica en ambas direcciones**:
+  cero en talentos (90 nombres únicos, 103 apariciones porque 9 talentos salen en 2-3 caminos)
+  y cero en acciones. Conservado íntegro, nada que corregir. **Corrección al líder: el brief
+  decía "Acciones 20" y son 18** — mi conteo con `awk` metió en ese grupo los 2 items de
+  "Armas" que venían después. El dato bueno es el de la fuente.
+- **Items**: "Armas" 2→14 (4 fields aditivos; los 2 legacy byte a byte intactos) + **nuevo
+  `item_format` "Equipo"** con 76 (6 armaduras + 70 de las 9 secciones de equipo del MD 06).
+  Segundo formato en vez de inflar "Armas" porque el nombre legacy es estrecho y no se puede
+  renombrar, y los fields son genuinamente distintos (`damage` vs `deflect/cost/weight`).
+- **Seed generalizado, no duplicado**: la lógica se extrae a `scripts/seed-catalog.js`
+  parametrizado por pack; `seed-dragonbane-catalog.js` queda como wrapper de 26 líneas y
+  `seed-stormlight-catalog.js` es su gemelo. La prueba objetiva de la retrocompatibilidad es
+  que **`seed-dragonbane-catalog.test.js` pasa sin editar una línea**.
+- backend lint exit 0 + **182 tests** (181 pass / 1 skip preexistente / 0 fail), vigencia por
+  hash de los 5 archivos, los 2 asserts críticos (idempotencia y alcance a los 2 sistemas)
+  validados **por mutación**. Cero frontend, cero `backend/src`, cero migraciones.
+- Hallazgos anotados y NO corregidos (decisión del founder): `Thievery`/`Survival` divergen del
+  MD en su atributo gobernante; el pack legacy tiene 21 skills donde el MD lista 18; la
+  `description` del formato dice "Las 15 habilidades" y hay 21; y `Espada larga`/`Maza pesada`
+  conviven con sus equivalentes `Longsword`/`Hammer` (no se pueden borrar).
+
+**Reviewer independiente APROBADO** (`review_F34-stormlight-catalog.md`), sin puntos
+bloqueantes. Rehízo por su cuenta los 4 riesgos que le marcó el líder:
+- **El riesgo grande NO se materializa.** El implementer afirmaba "cero coste de frontend" para
+  el `item_format` nuevo; el reviewer lo probó **leyendo los tres consumidores**: `ItemsPage` →
+  `FormatGroups` mapea todos los formatos del grupo, `CharacterSheet.EquipmentTab` (584-597)
+  agrega los items de TODOS los formatos, y el endpoint de equipar hace
+  `SELECT id FROM item_masters WHERE id = ?` sin atarlo a un formato. Los 76 items son visibles
+  y equipables. **Matiz que corrige al implementer:** `ItemsPage` NO tiene chips de filtro (eso
+  es solo `SkillsPage`), así que el argumento del "chip por `category`" vale para
+  Talentos/Acciones, no para Items.
+- **Retrocompatibilidad probada más fuerte que "el test viejo pasa":** mutó `seed-catalog.js` en
+  un contenedor efímero y el test de Dragonbane de F28/F29 se puso **ROJO** → cubre de verdad el
+  módulo compartido; y su `sha256` coincide con el que registró F29 (no se editó).
+- Confirmado el conflicto 20 vs 18 acciones a favor de la fuente (18), legacy `JSON.stringify`-
+  idéntico a HEAD, pregens byte a byte y **cero colisiones de nombre entre formatos** (los 135
+  nombres son únicos globalmente: el first-wins de `skill_links` ni llega a desempatar).
+
+**Runtime ejecutado por el líder (2026-08-07), no solo tests.** Stack recreado
+(`docker compose up -d --build`) y `docker compose exec backend node scripts/seed-stormlight-catalog.js`:
+
+```
+Seed catálogo Stormlight RPG — 2 sistema(s)
+  sistema id=3 (dm 2): +114 skills (+453 valores), +88 items (+342 valores)
+  sistema id=5 (dm 3): +114 skills (+453 valores), +88 items (+342 valores)
+2ª corrida: +0 / +0 en ambos   ← idempotencia probada sobre la DB REAL
+```
+
+Estado verificado en la DB real: **Stormlight 3 y 5 → 135 skills / 90 items cada uno**
+(Acciones 18 / Caminos Heroicos 6 / Stormlight Skills 21 / Talentos 90; Armas 14 / Equipo 76),
+**Dragonbane 4 y 6 intactos en 91 / 136**, los 2 items legacy con exactamente 4 valores, y los
+**6 pregens del Puente Nueve con todos sus `skill_links` apuntando a "Stormlight Skills"**
+(3/5/3/4/4/5), ninguno derivado a un talento. Smoke: frontend 200 y `/api/health` con
+`vecEnabled` y `ftsEnabled` true. **La asimetría de catálogo entre los dos sistemas queda cerrada.**
+
 ## Sesión actual (2026-08-07) — exploración: "¿qué tan difícil sería tenerla en línea?"
 
 Pregunta conceptual del founder (no es una feature). El líder respondió con lectura directa
@@ -372,6 +449,39 @@ Riesgo: la IA real nunca corrió en vivo (todo con stubs). La calidad LLM + rein
 - Deuda visual: `AIPanel`/`SessionView` aún con tokens viejos + emojis (`App.jsx:17`) → re-tematizar en F18.
 
 ## Deuda menor
+- **De la revisión de F34 (2026-08-07), no bloqueantes:**
+  - `ItemsPage` **no tiene filtro por sección**. Con 76 items de "Equipo" repartidos en 9
+    categorías, buscarlos es incómodo. `SkillsPage` sí tiene chips; portarlos a Items es una
+    feature pequeña de frontend.
+  - `item_formats` se listan `ORDER BY created_at DESC` → "Equipo" sale **antes** que "Armas"
+    en la app. Cosmético y preexistente.
+  - Falta un `assert.throws` de 2 líneas para la única rama sin ejercitar de `seed-catalog.js`
+    (pack sin `name`).
+  - Mezcla de idioma en los nombres de field: inglés en los formatos de items, español en los
+    de skills. Coherente con lo legacy de cada uno y con lo que hizo F29, pero el DM los ve.
+- **DECISIÓN PENDIENTE DEL FOUNDER — datos legacy de Stormlight** (ni implementer ni reviewer los
+  tocaron a propósito; los cuatro son cambios de datos, no de código):
+  1. `Thievery` y `Survival` tienen atributo gobernante `Intellect`/`Willpower` en el pack, pero
+     `01-mecanicas-core.md` los clasifica SPD/AWA. Corregirlo son 2 líneas.
+  2. El pack trae **21 skills donde el MD lista 18** (añade `Trickery`, `Influence`, `Performance`).
+  3. La `description` del formato dice **"Las 15 habilidades documentadas"** y hay 21. Ojo: el seed
+     **nunca hace UPDATE de descripciones**, así que cambiarla en el pack solo afectaría a
+     instalaciones nuevas → crearía divergencia silenciosa pack↔DB.
+  4. `Espada larga`≈`Longsword` y `Maza pesada`≈`Hammer` conviven, y los legacy usan rasgos
+     inventados ("Versatil", "Pesada") que no existen en la fuente. Inevitable: los legacy no se
+     pueden borrar ni renombrar sin romper los pregens.
+- **De la revisión de F36 (2026-08-07), las tres no bloqueantes:**
+  - `CharactersPage` — si `createCharacter` falla, el modal **sigue abierto** (el
+    `setCreateOpen(false)` va después del `await` y se salta al lanzar) y el banner de error se
+    pinta en la página **por debajo** del backdrop del `Modal`: el usuario ve el botón volver de
+    "Creando…" sin mensaje legible. Es **preexistente**, no lo introdujo F36. Arreglo: mover el
+    banner dentro del `<Modal>`.
+  - `pages.test.jsx:29` solo renderiza `CharactersPage` con `user={DM}` → **la ruta de jugador no
+    tiene test**, y justo `isOwner` (el guard del botón eliminar) es lógica sin cobertura. Añadir
+    `<CharactersPage user={player}/>` al array `PAGES` cuesta una línea.
+  - El censo que autoriza un borrado debe cubrir **todo el paquete**, no solo `src/`: configs,
+    `Dockerfile`, `nginx.conf`. Al de F36 se le escapó `tailwind.config.js:66` (mención histórica
+    inocua, no hace falta tocarla).
 - **Deuda de estilo v0 (importante antes de eliminar alias v0 de Tailwind):** quedan con tokens v0
   (`gold/ink/gray`) + emojis: `ChatPanel`, `CanvasBoard`, `SessionStatsPanel` (📜⏱️⚔️ en `StatTile`).
   F19 puede rematar `SessionStatsPanel` (está en su superficie); ChatPanel/CanvasBoard necesitan una
