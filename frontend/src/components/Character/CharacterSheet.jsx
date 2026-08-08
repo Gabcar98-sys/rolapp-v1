@@ -29,7 +29,7 @@ export function coreMarker(isCore) {
   ) : null;
 }
 
-// Ficha dinámica reutilizable (MyCharacters y SessionView). Renderiza atributos según
+// Ficha dinámica reutilizable (CharactersPage y SessionView). Renderiza atributos según
 // el sistema de juego (agrupados por category; is_core destacados; has_max como valor/máx),
 // estado (dot-tracker editable de PV/voluntad), inventario, equipo (slots) y skills.
 // El backend valida permisos; aquí `canEdit` solo decide si se muestran los controles.

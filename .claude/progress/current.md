@@ -4,6 +4,72 @@
 
 ---
 
+## Sesión actual (2026-08-07) — "continúa con las tareas que tenías a medias"
+
+Petición del founder: retomar los hilos abiertos. El líder hizo el protocolo de arranque y
+encontró **las dos features `in_progress`** que el aviso del 2026-08-07 ya señalaba como
+violación de la regla "una a la vez". Estado real de cada una:
+
+- **F36-mycharacters-orphan — IMPLEMENTADA, faltaba la revisión.** Existe
+  `impl_F36-mycharacters-orphan.md` con tabla de paridad de 30 capacidades y verificación en
+  Docker (157/157). El **borrado ya está commiteado** por el auto-commiteador del entorno
+  (`5953b44 refactor: remove MyCharacters component…`), fuera del flujo del harness; en el
+  working tree quedan los 2 archivos modificados de la feature (`designDebt.test.js` y un
+  comentario en `CharacterSheet.jsx`). → **reviewer lanzado** (`review_F36-*.md`).
+- **F34-stormlight-catalog — A MEDIAS, sin reporte.** `game-packs/stormlight.json` está
+  modificado en el working tree (+173/-22) por una corrida anterior que murió sin dejar
+  `impl_F34-*.md`: añadió el field `category` a las 21 skills legacy y **3 skill_formats
+  nuevos** (Caminos Heroicos 6, Talentos 90, Acciones 20). **Falta todo lo demás**: los items
+  siguen en 2 (Espada larga, Maza pesada), no hay seed para Stormlight y no hay tests.
+  → **implementer lanzado** con encargo explícito de AUDITAR primero ese trabajo huérfano
+  contra las fuentes (`03-talentos-y-paths.md`, `02-acciones.md`) antes de construir encima.
+
+Los dos van **en paralelo por ser disjuntos**: F36 solo toca `frontend/`, F34 solo
+`game-packs/stormlight.json` + `backend/scripts/`. Cada agente usa su propio tag de imagen
+para no competir por el build. Al cerrar F36 se sanea la violación de protocolo.
+
+## Sesión actual (2026-08-07) — exploración: "¿qué tan difícil sería tenerla en línea?"
+
+Pregunta conceptual del founder (no es una feature). El líder respondió con lectura directa
+y redactó **`.claude/docs/online_deployment.md`**: diagnóstico + decisiones propuestas +
+desglose en F37-F42. **Nada aprobado ni dado de alta en `feature_list.json`** — el documento
+termina con 4 preguntas para el founder (§10).
+
+Resumen del diagnóstico: el obstáculo no es arquitectura sino **seguridad**. La identidad del
+usuario viaja en el body (`canvas.js:22` y ~12 sitios más), el PIN se hashea con SHA-256 sin
+sal (`auth.js:8`) y no hay tokens. A favor: F31 ya dio rutas/persistencia/espectador,
+`api.js:2` es un embudo único donde meter el token, y el patrón correcto de identidad ya
+existe en el socket (`socket.data.userId`, lección de F33).
+
+⚠️ **Aviso de protocolo:** hay **dos** features en `in_progress` a la vez —
+`F34-stormlight-catalog` y `F36-mycharacters-orphan` — lo que viola la regla de una a la vez.
+No bloquea esta tarea (es documentación), pero hay que sanearlo antes de abrir F37.
+
+**Iteración 2 del founder:** *"¿y si lo hacemos sin IA, y el auth y backend en Supabase?
+Sigue siendo de uso personal para mi mesa"*. El líder evaluó y **separó las dos decisiones**,
+que el founder venía juntando: (1) quitar la IA → **sí**, son 2.289 líneas de producción +
+1.388 de tests = un tercio del backend, y elimina el único coste variable; (2) mover TODO a
+Supabase → **no**, es reescritura (los 24 routers + 975 líneas de servicios se mudan de casa,
+no desaparecen). Tercera opción propuesta y elegida por el founder: **Supabase SOLO para
+auth**, backend Express + SQLite + Socket.io intactos.
+
+`online_deployment.md` reescrito sobre esa variante. Claves del diseño:
+- **`users.id` INTEGER no se toca** (17 FKs dependen de él): se añade `supabase_uid TEXT UNIQUE`
+  vía M004 → cero migración de datos, `req.user.id` sigue siendo el entero que esperan los routers.
+- Verificación por **JWKS asimétrico** (`jose` + `createRemoteJWKSet`) → el backend nunca guarda
+  un secreto.
+- Socket autenticado en el **handshake** (`io.use()`), no en `session:join`.
+- Frontend: solo `api.js:2`, `socket.js:4` y `Login.jsx`.
+- ⚠️ **Rompe el principio nº1 de `architecture.md` (local-first)** — pero lo rompe el hosting en
+  VPS antes que Supabase. Decisión (a) retirar el principio vs (b) mantener LAN en paralelo →
+  pendiente del founder (§7 del doc).
+
+Backlog propuesto: **F37** drop-ai-keep-search → **F38** supabase-auth → **F39**
+identity-from-token → **F40** scoping → **F41** hardening → **F42** deploy-vps.
+**Sigue sin darse de alta nada en `feature_list.json`**: 4 preguntas abiertas en §10.
+
+---
+
 ## Sesión actual (2026-07-20) — autónoma
 
 Petición del founder: (1) completar las features que faltan para poder **llevar una

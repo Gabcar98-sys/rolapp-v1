@@ -29,8 +29,10 @@ const SCANNED_EXT = /\.(?:jsx?|css)$/;
 const IS_TEST = /\.test\.[jt]sx?$/;
 
 // Archivos que F35 migró a los tokens del handoff (aquí no debe volver un emoji).
+// F36 borró 'pages/MyCharacters.jsx' de esta lista junto con el archivo: era un
+// huérfano (cero imports desde F13) y F35 lo migró sin saberlo. El censo general
+// de V0_CLASS de abajo recorre todo src/, así que no se pierde cobertura real.
 const F35_FILES = [
-  'pages/MyCharacters.jsx',
   'components/Stats/CampaignStatsPanel.jsx',
   'components/Stats/CharacterStatsPanel.jsx',
   'components/Stats/Sparkline.jsx',
