@@ -351,6 +351,25 @@ const RULES_SYSTEM =
   'Eres el asistente de reglas de una mesa de rol. Responde SIEMPRE en español de forma ' +
   'directa y factual (nada robótico, sin divagar). ' + RULES_GROUNDING + ' ' + DIRECT_STYLE;
 
+// System prompt de la pregunta libre CON contexto de sesión (F37). No sustituye a
+// RULES_SYSTEM: el camino sin `sessionId` (modo Sistema) sigue usando aquel intacto. Aquí
+// el prompt tiene que resolver un conflicto que el de reglas no tenía: hay DOS fuentes en
+// el contexto y, para preguntas sobre lo ocurrido en la mesa, la partida manda sobre el
+// manual. Se formula en positivo (lección F21) y conserva la cita de reglas y DIRECT_STYLE.
+const SESSION_RULES_SYSTEM =
+  'Eres el asistente de mesa del DM en una sesión de rol en vivo. Responde SIEMPRE en ' +
+  'español de forma directa y factual. Tienes dos fuentes en el contexto: el ESTADO DE ' +
+  'SESIÓN con su HISTORIAL DE EVENTOS (lo que ha ocurrido de verdad en esta partida) y las ' +
+  'REGLAS RECUPERADAS del manual. Para todo lo que pregunte por la partida —qué ha pasado, ' +
+  'quién ha aparecido, qué NPCs, dónde están, qué decidieron los personajes— la fuente que ' +
+  'manda es el contexto de la sesión: los NPCs que han actuado están listados en NPCS QUE ' +
+  'HAN APARECIDO y marcados en el historial como "NPC <nombre>", y los personajes ' +
+  'implicados en cada evento como participantes. Cuando la respuesta sea una lista, ' +
+  'enumérala COMPLETA. Reserva las reglas recuperadas para las preguntas de mecánica y, ' +
+  'cuando las uses, cita entre corchetes la sección que respalda cada afirmación, p. ej. ' +
+  '[Combate > Iniciativa]. Cíñete a los hechos del contexto; si algo no está ni en la ' +
+  'sesión ni en las reglas, dilo con naturalidad en una línea. ' + DIRECT_STYLE;
+
 const SUMMARY_SYSTEM =
   'Eres el cronista de una mesa de rol. Resume la sesión en español con un tono natural y ' +
   'cercano, razonando ÚNICAMENTE sobre el contexto de la sesión que se te da (eventos, ' +
@@ -467,8 +486,11 @@ export function getSessionState(sessionId) {
 }
 
 // ── Historial de eventos narrativos (append-only, solo lectura) ───────────────────
+// `session_reset` (reiniciar el canvas) entra aquí como ruido puro: no narra nada y se
+// dispara en ráfagas (16 en una sola sesión demo), desplazando eventos reales del
+// presupuesto de contexto. Se filtra junto al resto de eventos de infraestructura (F37).
 export function getEventHistory(sessionId) {
-  const SKIP = new Set(['session_join', 'session_leave', 'session_end', 'message']);
+  const SKIP = new Set(['session_join', 'session_leave', 'session_end', 'session_reset', 'message']);
   const events = db
     .prepare(`
       SELECT se.type, se.payload, u.username AS actor
@@ -511,19 +533,105 @@ function renderSessionState(state) {
   return out + '\n';
 }
 
+// Etiqueta del actor de un evento. `e.actor` es SIEMPRE el username de `actor_id`, o sea
+// el DM que disparó el evento — incluso cuando quien actúa en ficción es un NPC, cuyo
+// nombre vive solo en el payload (`actor_type:'npc'` + `npc_name`). Sin esta distinción el
+// modelo nunca ve un solo nombre de NPC y no puede responder "¿qué NPC han aparecido?" (F37).
+export function eventActorLabel(event) {
+  const payload = event.payload ?? {};
+  if (payload.actor_type === 'npc' && payload.npc_name) return `NPC ${payload.npc_name}`;
+  return event.actor;
+}
+
+// Nombres de los personajes implicados en el evento. `participants` es [{ id, name }]
+// cuando `participant_type === 'specific'`; se toleran strings sueltos por robustez.
+export function eventParticipantNames(event) {
+  const list = event.payload?.participants;
+  if (!Array.isArray(list)) return [];
+  return list.map((p) => (typeof p === 'string' ? p : p?.name)).filter(Boolean);
+}
+
+// Una línea de texto compacta por evento. Se extrae de `renderEvents` para poder
+// empaquetar los eventos por presupuesto de tokens sin duplicar el formato.
+export function renderEventLine(event) {
+  const payload = event.payload ?? {};
+  const loc = [payload.location, payload.sub_location].filter(Boolean).join(' › ');
+  const parts = [];
+  if (loc) parts.push(`[${loc}]`);
+  parts.push(`(${event.type})`);
+  if (payload.title) parts.push(payload.title);
+  if (payload.description) parts.push(`— ${payload.description}`);
+  const names = eventParticipantNames(event);
+  if (names.length) parts.push(`(participantes: ${names.join(', ')})`);
+  return `${eventActorLabel(event)}: ${parts.join(' ')}`;
+}
+
 function renderEvents(events) {
   if (!events.length) return '';
   let out = '=== HISTORIAL DE EVENTOS ===\n';
-  for (const e of events) {
-    const loc = [e.payload.location, e.payload.sub_location].filter(Boolean).join(' › ');
-    const parts = [];
-    if (loc) parts.push(`[${loc}]`);
-    parts.push(`(${e.type})`);
-    if (e.payload.title) parts.push(e.payload.title);
-    if (e.payload.description) parts.push(`— ${e.payload.description}`);
-    out += `${e.actor}: ${parts.join(' ')}\n`;
-  }
+  for (const e of events) out += `${renderEventLine(e)}\n`;
   return out + '\n';
+}
+
+// ── Contexto de sesión para la pregunta libre de modo Sesión (F37) ───────────────
+// El modo "Sesión" del panel de IA mandaba la pregunta libre por el camino de REGLAS, así
+// que el contexto era solo el manual y la partida no entraba nunca. Ahora, cuando llega un
+// `sessionId`, se inyecta ADEMÁS el estado de la sesión y su historial de eventos.
+//
+// Los eventos llevan su PROPIO presupuesto de tokens (independiente del de reglas): con un
+// modelo local pequeño (qwen2.5:3b) volcar decenas de eventos crudos desborda la ventana y
+// expulsa la parte útil del prompt.
+const SESSION_CONTEXT_TOKEN_BUDGET = Math.max(
+  200,
+  Number(process.env.AI_SESSION_CONTEXT_TOKEN_BUDGET) || 1200
+);
+
+// Empaqueta líneas de eventos dentro del presupuesto priorizando las MÁS RECIENTES (una
+// pregunta de mesa mira casi siempre a lo último ocurrido) y devolviéndolas en orden
+// cronológico. Garantiza al menos una línea si hay eventos: recortar a cero reproduciría
+// exactamente el bug que esta feature arregla, pero en silencio.
+export function packEventLines(lines, budget = SESSION_CONTEXT_TOKEN_BUDGET) {
+  const kept = [];
+  let used = 0;
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const cost = estimateChunkTokens(lines[i]);
+    if (kept.length && used + cost > budget) break;
+    kept.unshift(lines[i]);
+    used += cost;
+  }
+  return { lines: kept, omitted: lines.length - kept.length };
+}
+
+// NPCs que han actuado en la sesión, en orden de aparición y sin repetir. No hay tabla de
+// "NPCs presentes": el dato se deriva del log append-only, donde el nombre vive en el
+// payload del evento. Se calcula sobre TODOS los eventos, no solo sobre los que caben en el
+// presupuesto, para que un recorte por espacio no borre a un NPC de la respuesta.
+export function collectSessionNpcs(events) {
+  const seen = new Map();
+  for (const e of events) {
+    if (e.payload?.actor_type !== 'npc') continue;
+    const name = String(e.payload.npc_name ?? '').trim();
+    if (name && !seen.has(name)) seen.set(name, name);
+  }
+  return [...seen.values()];
+}
+
+// Bloque de contexto de la sesión en curso: estado estructurado + NPCs aparecidos +
+// eventos acotados. Devuelve '' si la sesión no existe (degrada a solo-reglas, sin lanzar).
+export function buildSessionContext(sessionId, { budget = SESSION_CONTEXT_TOKEN_BUDGET } = {}) {
+  const state = getSessionState(sessionId);
+  if (!state) return '';
+  const events = getEventHistory(sessionId);
+  const { lines, omitted } = packEventLines(events.map(renderEventLine), budget);
+  let out = renderSessionState(state);
+  const npcs = collectSessionNpcs(events);
+  if (npcs.length) out += `=== NPCS QUE HAN APARECIDO ===\n${npcs.join(', ')}\n\n`;
+  if (lines.length) {
+    out += '=== HISTORIAL DE EVENTOS ===\n';
+    if (omitted > 0) out += `(${omitted} eventos anteriores omitidos por espacio)\n`;
+    out += `${lines.join('\n')}\n\n`;
+  }
+  return out;
 }
 
 // Convierte los chunks recuperados en el formato de fuentes citadas de la respuesta.
@@ -611,38 +719,60 @@ function dedupChunksToSources(chunks) {
 }
 
 // ── (a) Consulta de reglas con citas ─────────────────────────────────────────────
-function buildRulesPrompt(query, chunks, history = []) {
-  const messages = [{ role: 'system', content: RULES_SYSTEM }];
+// `sessionBlock` (F37) es el contexto de la partida en curso. Cuando viene vacío —el camino
+// del modo Sistema y de cualquier consumidor que no pase `sessionId`— el prompt resultante
+// es IDÉNTICO al anterior, byte a byte: mismo system, misma instrucción, mismo user.
+function buildRulesPrompt(query, chunks, history = [], sessionBlock = '') {
+  const messages = [{ role: 'system', content: sessionBlock ? SESSION_RULES_SYSTEM : RULES_SYSTEM }];
   for (const turn of history) messages.push(turn);
   // Con contexto: responde factual y cita. Sin contexto (chunks vacío): en vez de "responde
   // solo con las reglas recuperadas" a secas (que empuja al rechazo robótico), pide una
   // respuesta útil y honesta que reconozca la ausencia y ofrezca orientación no oficial.
-  const instruction = chunks.length
-    ? 'Responde la pregunta apoyándote en las reglas recuperadas y cita las secciones entre corchetes.'
-    : 'No se recuperaron reglas para esta consulta. Reconoce con naturalidad que eso no ' +
+  let instruction;
+  // Ojo (lección F21): NO repetir en esta instrucción un ejemplo literal de cita tipo
+  // "[Combate > Iniciativa]". Medido contra la sesión 17: con el ejemplo pegado a la
+  // pregunta, el modelo lo COPIA como cita inventada en vez de usar la sección real.
+  if (sessionBlock) {
+    instruction =
+      'Si la pregunta es sobre lo ocurrido en esta partida, respóndela con el estado y el ' +
+      'historial de eventos de la sesión, nombrando a los NPCs y personajes tal como ' +
+      'aparecen ahí. Si es una pregunta de mecánica, apóyate en las reglas recuperadas y ' +
+      'cita las secciones entre corchetes.';
+  } else if (chunks.length) {
+    instruction =
+      'Responde la pregunta apoyándote en las reglas recuperadas y cita las secciones entre corchetes.';
+  } else {
+    instruction =
+      'No se recuperaron reglas para esta consulta. Reconoce con naturalidad que eso no ' +
       'aparece en las reglas cargadas y, si puedes, ofrece una orientación general útil ' +
       'marcada claramente como sugerencia NO oficial. No inventes una regla como si fuera ' +
       'oficial ni respondas con una frase enlatada de rechazo.';
+  }
   messages.push({
     role: 'user',
-    content: `${renderRules(chunks)}=== PREGUNTA ===\n${query}\n\n${instruction}`,
+    // El bloque de sesión va DESPUÉS de las reglas, pegado a la pregunta: en modelos
+    // pequeños lo más cercano a la consulta pesa más, y la pregunta es sobre la partida.
+    content: `${renderRules(chunks)}${sessionBlock}=== PREGUNTA ===\n${query}\n\n${instruction}`,
   });
   return messages;
 }
 
-export async function answerRulesQuestion({ query, gameSystemId, history = [], sectionType = null }) {
+// `sessionId` es OPCIONAL (F37): con él la respuesta se apoya además en la partida en
+// curso (modo Sesión del panel); sin él, el comportamiento es el de siempre (modo Sistema).
+export async function answerRulesQuestion({ query, gameSystemId, sessionId = null, history = [], sectionType = null }) {
   if (!query || !query.trim()) throw new Error('La consulta está vacía');
   if (!gameSystemId) throw new Error('game_system_id es requerido');
 
   const cfg = resolveTaskConfig('rules');
   const turns = normalizeHistory(history);
+  const sessionBlock = sessionId ? buildSessionContext(sessionId) : '';
 
   // Ruta tool-use: el modelo decide qué recuperar (function-calling).
   if (toolsEnabled() && (activeLlmTools || defaultLlmTools())) {
     const { answer, sources } = await runToolLoop({
-      system: RULES_SYSTEM,
+      system: sessionBlock ? SESSION_RULES_SYSTEM : RULES_SYSTEM,
       messages: [...turns, { role: 'user', content: query }],
-      context: { gameSystemId },
+      context: sessionId ? { gameSystemId, sessionId } : { gameSystemId },
       model: cfg.model,
       temperature: cfg.temperature,
     });
@@ -651,7 +781,7 @@ export async function answerRulesQuestion({ query, gameSystemId, history = [], s
 
   // Fallback: inyección de contexto (comportamiento previo a F12).
   const chunks = await retrieveRules({ query, gameSystemId, k: cfg.topK, budget: cfg.contextBudget, sectionType });
-  const answer = await callLlm(buildRulesPrompt(query, chunks, turns), {
+  const answer = await callLlm(buildRulesPrompt(query, chunks, turns, sessionBlock), {
     model: cfg.model,
     temperature: cfg.temperature,
   });
@@ -663,18 +793,22 @@ export async function answerRulesQuestion({ query, gameSystemId, history = [], s
 // Variante streaming: emite tokens vía onToken y devuelve { answer, sources }.
 // El streaming de tokens solo aplica a la ruta de inyección de contexto; con tool-use la
 // respuesta se produce tras el loop, así que se emite completa como un único token.
-export async function streamRulesQuestion({ query, gameSystemId, history = [], sectionType = null }, onToken) {
+export async function streamRulesQuestion(
+  { query, gameSystemId, sessionId = null, history = [], sectionType = null },
+  onToken
+) {
   if (!query || !query.trim()) throw new Error('La consulta está vacía');
   if (!gameSystemId) throw new Error('game_system_id es requerido');
 
   const cfg = resolveTaskConfig('rules');
   const turns = normalizeHistory(history);
+  const sessionBlock = sessionId ? buildSessionContext(sessionId) : '';
 
   if (toolsEnabled() && (activeLlmTools || defaultLlmTools())) {
     const { answer, sources } = await runToolLoop({
-      system: RULES_SYSTEM,
+      system: sessionBlock ? SESSION_RULES_SYSTEM : RULES_SYSTEM,
       messages: [...turns, { role: 'user', content: query }],
-      context: { gameSystemId },
+      context: sessionId ? { gameSystemId, sessionId } : { gameSystemId },
       model: cfg.model,
       temperature: cfg.temperature,
     });
@@ -683,7 +817,7 @@ export async function streamRulesQuestion({ query, gameSystemId, history = [], s
   }
 
   const chunks = await retrieveRules({ query, gameSystemId, k: cfg.topK, budget: cfg.contextBudget, sectionType });
-  const answer = await callLlmStream(buildRulesPrompt(query, chunks, turns), onToken, {
+  const answer = await callLlmStream(buildRulesPrompt(query, chunks, turns, sessionBlock), onToken, {
     model: cfg.model,
     temperature: cfg.temperature,
   });

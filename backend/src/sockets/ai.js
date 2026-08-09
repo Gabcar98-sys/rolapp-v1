@@ -19,16 +19,19 @@ export function registerAiHandlers(io, socket) {
     }
   }
 
-  // ai:ask { requestId, query, gameSystemId, history?, sectionType? } → stream de respuesta citada.
+  // ai:ask { requestId, query, gameSystemId, sessionId?, history?, sectionType? } → stream
+  // de respuesta citada.
   // `history` (opcional) es la memoria corta de la conversación para follow-ups (F12 §4).
   // `sectionType` (opcional, F18) filtra el retrieval por metadato para los "topics" de
   // sistema (core/habilidades/items/NPCs); el REST ya lo soportaba, el socket ahora también.
-  socket.on('ai:ask', ({ requestId, query, gameSystemId, history = [], sectionType = null }) => {
+  // `sessionId` (opcional, F37) inyecta ADEMÁS el contexto de la partida en curso: lo manda
+  // la pregunta libre del modo Sesión. Sin él, el camino es exactamente el de antes.
+  socket.on('ai:ask', ({ requestId, query, gameSystemId, sessionId = null, history = [], sectionType = null }) => {
     if (!query || !gameSystemId) {
       socket.emit('ai:error', { requestId, error: 'query y gameSystemId son requeridos' });
       return;
     }
-    run(streamRulesQuestion, { query, gameSystemId, history, sectionType }, requestId, 'ai:answer_done');
+    run(streamRulesQuestion, { query, gameSystemId, sessionId, history, sectionType }, requestId, 'ai:answer_done');
   });
 
   // ai:session_preset { requestId, sessionId, preset, includePrevious?, history? } (F18)

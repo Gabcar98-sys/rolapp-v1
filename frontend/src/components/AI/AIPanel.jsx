@@ -86,6 +86,14 @@ export function resolveSessionGameSystems({ session, characters = [] } = {}) {
   return { systems, defaultId };
 }
 
+// Qué sessionId acompaña a una pregunta libre (F37). Solo el modo Sesión pide al backend
+// que inyecte el contexto de la partida; el modo Sistema pregunta al manual y debe seguir
+// yendo SIN sessionId (camino retrocompatible). Helper puro para poder testearlo sin DOM
+// (lección F20: el vitest del frontend no tiene jsdom).
+export function freeAskSessionId(mode, sessionId) {
+  return mode === 'session' ? sessionId ?? null : null;
+}
+
 // Panel de IA dentro de la sesión (F18: modos Sesión/Sistema + presets/topics + checkbox
 // "incluir sesiones anteriores"). ENVUELVE el motor de F9-F12: conserva STREAMING (tokens
 // vía socket), CITAS con score, FOLLOW-UPS (memoria corta), REGENERAR y DEGRADACIÓN. El
@@ -171,15 +179,17 @@ export default function AIPanel({ sessionId, user, campaignId = null }) {
     });
   }
 
-  // Pregunta libre de reglas (con follow-ups y, en modo sesión, opción de topic=null).
-  function runFreeAsk(queryText, history, sectionType = null) {
+  // Pregunta libre (con follow-ups y, en modo sesión, opción de topic=null). `askSessionId`
+  // viaja en lastRun para que Regenerar reproduzca la MISMA consulta aunque se haya
+  // cambiado de modo entretanto.
+  function runFreeAsk(queryText, history, sectionType = null, askSessionId = null) {
     if (!gameSystemId) {
       setError('No hay sistema de juego asociado a esta sesión.');
       return;
     }
-    setLastRun({ kind: 'free', queryText, sectionType });
+    setLastRun({ kind: 'free', queryText, sectionType, askSessionId });
     runStream(
-      (cb) => streamAiAsk({ query: queryText, gameSystemId, history, sectionType }, cb),
+      (cb) => streamAiAsk({ query: queryText, gameSystemId, sessionId: askSessionId, history, sectionType }, cb),
       {
         onComplete: (finalAnswer) =>
           setConversation((prev) =>
@@ -204,7 +214,7 @@ export default function AIPanel({ sessionId, user, campaignId = null }) {
       const q = query.trim();
       if (!q) return;
       const t = SYSTEM_TOPICS.find((x) => x.id === topic) ?? SYSTEM_TOPICS[0];
-      runFreeAsk(`${t.prefix}${q}`, [], t.sectionType);
+      runFreeAsk(`${t.prefix}${q}`, [], t.sectionType, freeAskSessionId('system', sessionId));
       setQuery('');
       return;
     }
@@ -212,7 +222,7 @@ export default function AIPanel({ sessionId, user, campaignId = null }) {
     if (preset === 'libre') {
       const q = query.trim();
       if (!q) return;
-      runFreeAsk(q, conversation, null);
+      runFreeAsk(q, conversation, null, freeAskSessionId('session', sessionId));
       setQuery('');
     } else {
       runPreset(preset);
@@ -226,7 +236,7 @@ export default function AIPanel({ sessionId, user, campaignId = null }) {
     } else {
       const priorHistory = conversation.slice(0, -2);
       setConversation(priorHistory);
-      runFreeAsk(lastRun.queryText, priorHistory, lastRun.sectionType);
+      runFreeAsk(lastRun.queryText, priorHistory, lastRun.sectionType, lastRun.askSessionId ?? null);
     }
   }
 

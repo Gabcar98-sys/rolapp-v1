@@ -4,7 +4,163 @@
 
 ---
 
-## Sesión actual (2026-08-07) — "continúa con las tareas que tenías a medias"
+## Sesión actual (2026-08-08) — "ayúdame a revisar" (3 síntomas reportados en vivo)
+
+El founder usó la app en la sesión 17 (`[DEMO] Asedio de la Torre`) y reportó tres cosas:
+"cuando le doy atrás en la sesión no retrocede", la IA no sabe qué NPCs han aparecido
+aunque estén en la línea de eventos, y "pensaba que ya habíamos arreglado lo robótico".
+
+El líder investigó por lectura directa (pregunta de exploración → no se delega) y **contra
+la DB real y el backend en marcha**, no de memoria. Los tres síntomas tienen causas
+distintas y **ninguno es el prompt del bot**:
+
+1. **El "atrás"** es `SessionToolbar.jsx:203-206`, un `Icon name='arrow-left'` sin etiqueta
+   visible cuya única pista es `title='Reiniciar canvas'`. Prueba en la DB: **16 eventos
+   `session_reset` en la sesión 17, SEIS entre las 11:12:23 y 11:12:24**, más 11:12:29/30,
+   tres a las 11:20:08 y uno a las 11:21:10 — patrón de botón machacado. Sin mapa cargado
+   el efecto visible es ninguno ("no retrocede"), pero cada clic emite `session:reset` a
+   todo el room y escribe un evento. → **F38-session-reset-clarity**.
+2. **Los NPCs**: en modo Sesión, "Pregunta libre" va por `streamRulesQuestion`, que solo
+   recupera `doc_chunks`. `ai:ask` **ni acepta `sessionId`**. Reproducido vía
+   `POST /api/ai/ask` → devolvió Talentos > Cazador > Ojos Fríos. → **F37-session-aware-ai**.
+3. **Ni los presets podrían responderlo**: `renderEvents` (`ai.js:514-527`) tira
+   `npc_name`/`participants` e imprime el username del DM como actor; y `session_reset` no
+   está en el `SKIP` de `getEventHistory`, así que los 16 resets contaminan el contexto.
+   Verificado en la DB: 3 apariciones de NPC (Amaram ×2, Vela ×1) con el nombre solo en el
+   payload. → va dentro de **F37**.
+4. **Lo "robótico" NO es una regresión.** `DIRECT_STYLE` (F21, formulado en positivo) y
+   `TASK_DEFAULT_TEMP.rules = 0.2` (F26) siguen intactos en `ai.js:335-352` y `ai.js:58`.
+   El rechazo es exactamente lo que pide `RULES_GROUNDING` cuando no hay respaldo, y las
+   dos respuestas distintas son la varianza de temp 0.2. **Tocar el prompt no arregla nada:
+   el problema es el contexto.** Queda dicho explícitamente en el brief del implementer.
+
+**Decisiones del founder (2026-08-08):** (a) inyectar SIEMPRE sesión + reglas en la
+pregunta libre de modo Sesión — descartados el clasificador de intención (frágil con
+`qwen2.5:3b`) y el tool-use (`AI_TOOLS_ENABLED=0`, el loop de reglas no pasa `sessionId`,
+y se perdería el streaming); (b) al botón de reset: etiqueta + icono correcto +
+confirmación, sin añadir un "Volver" nuevo.
+
+### F37 — CERRADA (reviewer APROBADO sin bloqueantes)
+
+`impl_F37-session-aware-ai.md` + `review_F37-session-aware-ai.md`. **La pregunta del founder
+ya se responde**: por el camino real (socket `ai:ask` con `sessionId:17`), *"¿qué NPC han
+aparecido hoy?"* → **"Brightlord Amaram, Vela la mensajera"**, 11/11 corridas del implementer
+y 3/3 del reviewer, con streaming y 8 fuentes citadas.
+
+La prueba de causa raíz y retrocompatibilidad es **la misma corrida**: sin `sessionId`,
+mismo modelo y misma temperatura, reproduce el bug original palabra por palabra. El reviewer
+no se fió del test del implementer (comparaba contra un literal, que podría venir del código
+nuevo): montó `HEAD:ai.js` junto al actual en un contenedor efímero y comparó los `messages`
+de ambas versiones → 5 escenarios idénticos **más un control positivo**. Los 7 prompts que el
+encargo prohibía tocar: verificados **por hash de región**, 7/7 iguales a HEAD.
+
+Efecto colateral medido: `estado` e `inventarios` idénticos byte a byte; `resumen` y
+`cronologia` cambian solo en lo pretendido y bajan de 30 a 14 líneas de contexto sin perder
+un evento real.
+
+**Dos decisiones fuera de encargo, ambas auditadas y aceptadas:** el bloque derivado
+`NPCS QUE HAN APARECIDO` (probado *apagando* el dato: sin él el modelo llegó a listar a
+Buenatracio, un personaje JUGADOR, como NPC) y el `SKIP` de `aiTools.js` (una palabra, F33).
+
+**Deuda menor que dejó F37** (no bloqueante, anotada en la entrada de la feature): el `SKIP`
+de `aiTools.js` sin test (si alguien lo revierte, nada se pone rojo); las citas *inline* se
+pierden en preguntas de mecánica dentro de modo Sesión — la vía sana sería bajar el `topK`
+de reglas cuando hay sesión, no endurecer el prompt; `collectSessionNpcs` solo ve NPCs
+ETIQUETADOS, así que un NPC mencionado solo en la prosa no entra en el roster y la respuesta
+puede sonar exhaustiva sin serlo.
+
+**Hallazgo que NO es de F37 y merece decisión propia:** el reviewer comprobó que el backend
+**no tiene capa de autenticación en absoluto** (cero `requireAuth`/`req.user` en
+`routes/*.js`). `ai:ask` con `sessionId` devuelve el contexto de esa sesión a cualquier
+socket que lo pida — pero `ai:session_preset` ya lo devolvía **literalmente** desde F18, y
+`GET /api/sessions/:id/events` también. F37 no amplía el conjunto de datos expuestos, añade
+una tercera puerta sobre un dato ya expuesto. En LAN es teórico; con el plan de salir a
+internet deja de serlo. → **candidato a feature propia** ("guard de pertenencia en los
+handlers de IA": `socket.data.userId` + `session_members`, fail-closed para el espectador
+de TV, patrón F33), decisión del founder.
+
+### F38 — CERRADA (reviewer APROBADO, en dos pases)
+
+`impl_F38-session-reset-clarity.md` + `review_F38-session-reset-clarity.md`. El botón dejó de
+mentir: icono `refresh` nuevo, texto visible **"Reiniciar mapa"**, `aria-label`, y confirmación
+con el `Modal` del proyecto cuya copy nombra el alcance (*"para toda la mesa… los jugadores y
+el Modo TV verán el canvas vacío al instante"*). **Endpoint y socket intactos**, como decidió
+el founder: la operación era correcta, engañaba su presentación.
+
+**Lo interesante de esta feature pasó en el review, y el código no tuvo la culpa.** El reviewer
+aprobó el código —lo leyó línea por línea— pero encontró que **la protección estaba por dentro
+y no por fuera**: el helper puro `resolveMapReset` estaba cubierto, el cableado del diálogo no.
+Cuatro mutaciones destructivas suyas quedaban en **verde**, y dos eran justo la regresión que
+F38 existe para impedir:
+
+| Mutación | Consecuencia | Estado en el 1er review |
+|---|---|---|
+| Cancelar pasa `closeReset(true)` | el botón de escape se vuelve el destructivo | **VERDE** |
+| `onClick={() => onReset()}` | esquiva el guard, que solo veía la forma literal | **VERDE** |
+| Borrar "para toda la mesa" | desaparece el corazón de la decisión del founder | **VERDE** |
+| Borrar el modal entero | — | **VERDE** |
+
+Y demostró (M8) que la aserción "endurecida" del implementer, anclada entre el cierre del
+`svg` y el del `button`, daba **falso positivo** al envolver la etiqueta en un
+`<span className="hidden sm:inline">` — el retoque que invita una toolbar apretada.
+
+**Además pilló que la copy mentía en una palabra:** *"No afecta a eventos…"* era falso porque
+el endpoint **sí** escribe una fila `session_reset` y `stats.js:136` cuenta `event_count` sin
+filtrar los tipos de motor (16 de 41 en la sesión 17: el **39%**). Irónico en una feature cuyo
+objetivo era que el botón dejara de mentir. Corregido a *"No borra… ; el reinicio queda
+registrado en el historial de la sesión"*, con un `not.toContain('No afecta a')` para que el
+verbo total no vuelva en silencio.
+
+**El pase de endurecimiento eligió la vía fuerte.** Entre asertar más regex sobre la fuente
+(duplicar la apuesta sobre el método que acababa de fallar) y extraer el diálogo, el
+implementer **extrajo `MapResetConfirm`, un componente SIN HOOKS** que se puede invocar como
+función y dispararle los `onClick` de verdad, sin jsdom ni dependencias nuevas. Eso convirtió
+tres mutaciones supervivientes en tests de **comportamiento**. Declaró el coste (al mover el
+diálogo, la mutación "borrar el modal" dejaba de caer sola) y lo cubrió con un guard de montaje.
+
+**Delta verificado por el reviewer, reproduciendo las mutaciones y no leyendo su tabla:**
+M1-M7 **rojas**, M8 **verde** (el falso positivo no volvió), con un control positivo inyectado
+en **cada** corrida. 179/179 y 36 tests en `session.test.jsx`, contados por él; `git diff -U0`
+con exactamente **2 líneas eliminadas**, las dos imports → ningún test previo tocado, probado y
+no supuesto. `Icon.jsx` con **el mismo sha256 antes y después** del pase: la prueba de alcance
+más limpia. Y comparó por SSR el modal viejo contra el extraído: **27 de 28 fragmentos
+idénticos**, el único distinto es el párrafo que se mandaba cambiar.
+
+**Escape residual declarado (no bloqueante):** el guard de cableado es **léxico y se derrota
+renombrando** — aliasear la prop y puentear con el alias deja el censo cuadrando, el regex sin
+hallazgos, y lint y build en 0 errores, con el botón destructivo de vuelta. No bloquea (exige
+tres ediciones coordinadas, no la errata de una línea) y el hueco es **estructural**:
+`SessionToolbar` tiene hooks, así que no se puede ejecutar como función pura. **La lección se
+canonizó con esa cláusula dentro**, que es lo que el reviewer pidió explícitamente.
+
+**Deuda que deja F38** (anotada en la entrada de la feature): el censo de iconos literales solo
+cubre `SessionToolbar.jsx` — llevarlo a `designDebt.test.js`, que ya reescanea todo `src/`, es
+candidato limpio a micro-feature (comprobado que hoy pasaría en verde con los 37 usos del
+árbol); y `SessionView.handleReset` es `await api.resetSession(...)` **sin try/catch ni estado
+de ocupado** — si el PATCH falla, el modal ya se cerró y el usuario cree que reinició. Deuda
+**preexistente**, no la introdujo F38.
+
+**Limitación declarada: no se corrió ningún e2e.** Nadie ha abierto dos pestañas. No bloquea
+—el camino de red no cambió y los seis resets propagados del propio bug son la prueba de campo
+de que la propagación funciona—, pero **el founder tiene una comprobación de 60 segundos**:
+abrir la sesión, pulsar "Reiniciar mapa", pulsar "Cancelar", y ver que el mapa sigue ahí.
+
+**Estado:** F37 y F38 `done`. **41 features, 41 `done`, ninguna `in_progress`** (validado
+parseando el JSON en el contenedor, no a ojo). 7 lecciones nuevas de F37 y **5 de F38** en
+`LEARNINGS.md`.
+
+**Colisión de numeración a resolver:** `.claude/docs/online_deployment.md` reservaba
+F37-F42 para el plan de despliegue online, que **sigue sin aprobar y sin registrar**. Al
+ocupar F37/F38 con estos bugs, ese plan debe renumerarse a F39+ si el founder lo aprueba.
+
+**El entorno cambió respecto al reporte anterior:** el perfil `ai` YA ESTÁ ARRIBA —
+`ollama` running con `qwen2.5:3b` y `nomic-embed-text`, `/api/ai/status` → `ready:true`,
+`toolsEnabled:false`. Es decir, la pregunta abierta nº1 de `online_deployment.md` (retirar
+la IA generativa) ya se puede evaluar con datos.
+
+---
+
+## Sesión anterior (2026-08-07) — "continúa con las tareas que tenías a medias"
 
 Petición del founder: retomar los hilos abiertos. El líder hizo el protocolo de arranque y
 encontró **las dos features `in_progress`** que el aviso del 2026-08-07 ya señalaba como

@@ -66,6 +66,14 @@ const ICONS = {
   ),
   // Acciones
   plus: <path d="M12 5v14M5 12h14" />,
+  // Flecha circular de reinicio (F38): el set no tenía ningún glifo de "reiniciar/refrescar"
+  // y el botón de reset de la sesión usaba una flecha que se leía como "volver".
+  refresh: (
+    <>
+      <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+      <path d="M21 3v5h-5" />
+    </>
+  ),
   edit: (
     <>
       <path d="M17 3a2.85 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5z" />

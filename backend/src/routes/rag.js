@@ -133,13 +133,20 @@ export default function createRagRouter(io) {
 
   // POST /api/ai/ask  { query, game_system_id, session_id?, history? } → respuesta citada.
   // `history` (opcional) es la memoria corta de la conversación (follow-ups, F12 §4).
+  // `session_id` (opcional, F37) añade el contexto de la partida en curso (eventos +
+  // estado) al de las reglas. Sin él, la respuesta se arma solo con el manual, como antes.
   router.post('/ai/ask', async (req, res) => {
-    const { query, game_system_id, history } = req.body ?? {};
+    const { query, game_system_id, session_id, history } = req.body ?? {};
     if (!query || !game_system_id) {
       return res.status(422).json({ error: 'query y game_system_id son requeridos' });
     }
     try {
-      const result = await answerRulesQuestion({ query, gameSystemId: game_system_id, history });
+      const result = await answerRulesQuestion({
+        query,
+        gameSystemId: game_system_id,
+        sessionId: session_id || null,
+        history,
+      });
       res.json(result);
     } catch (err) {
       fail(res, err);

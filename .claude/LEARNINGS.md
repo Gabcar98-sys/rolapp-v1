@@ -65,6 +65,11 @@ Las lecciones se agrupan por categoría. Cada entrada tiene:
 - **Lección:** `ALTER TABLE … DROP COLUMN` funciona en better-sqlite3 11.x. Antes de eliminar: (1) confirma CERO consumidores reales con `rg --pcre2 'game_system(?!_id|_name|_template|s)\b'` (ripgrep necesita `--pcre2` para look-ahead) y `rg --pcre2 '\.game_system(?![_a-zA-Z])'`; (2) migración idempotente que hace el DROP solo si `PRAGMA table_info` encuentra la columna; (3) elimina también la columna de `schema.sql` (fresh install) y comenta el porqué. Cubre AMBOS caminos en tests: upgrade (DB aislada CON la columna → drop → reejecutar no-op) y fresh install (schema sin la columna → M00x no-op pero registrada en `_migrations`).
 - **Por qué importa:** Sin el guard, reejecutar la migración lanza; sin tocar schema.sql, las instalaciones nuevas recrean la columna muerta; sin cubrir ambos caminos, el upgrade real del founder queda sin verificar.
 
+### Al leer una SQLite en modo WAL desde fuera, copia también el `-wal` o verás la base de hace semanas
+- **Contexto:** F37, el reviewer copió `rolapp.db` a un contenedor para auditar la sesión 17 y le salió **cero eventos** y la sesión inexistente.
+- **Lección:** El `.db` era de hacía dos semanas: todo lo reciente vivía en un `rolapp.db-wal` de 6 MB. Al auditar la DB real, copia **`base.db` Y `base.db-wal`** (montando la original `:ro`) y abre la copia. Si el resultado sale sospechosamente vacío, sospecha del WAL **antes** que del código.
+- **Por qué importa:** El síntoma es idéntico a "la feature no escribe nada" o "ese id no existe", así que se diagnostica mal y se persigue un bug que no existe.
+
 ---
 
 ## RAG / embeddings / sqlite-vec
@@ -89,6 +94,16 @@ Las lecciones se agrupan por categoría. Cada entrada tiene:
 - **Lección:** No prohíbas literalmente una frase (`Nunca menciones "documentos cargados"`): (1) reintroduce en el prompt justo el texto a evitar y (2) con un modelo pequeño la negación puede *primar* lo prohibido. Formula el alcance en POSITIVO ("tu única fuente es el contexto de la sesión"). Además, endurecer la abstención ("REGLA CRÍTICA… es preferible abstenerse") hace que un modelo 3B sobre-abstenga y recite frases enlatadas; prefiere tono natural + anti-alucinación acotado a afirmaciones factuales.
 - **Por qué importa:** Un prompt bienintencionado pero mal formulado produce justo la respuesta robótica que se quería eliminar.
 
+### Con un modelo pequeño, el dato correcto en el contexto no basta: hay que ponerlo también AGREGADO
+- **Contexto:** F37. Tras arreglar el render de eventos, los dos NPCs de la sesión estaban en el contexto y qwen2.5:3b **seguía nombrando solo a uno en 4 de 6 corridas** (sesgo de recencia: el último evento era de ese NPC; y `DIRECT_STYLE` empuja a respuestas mínimas).
+- **Lección:** Para preguntas del tipo "enumera los X de la sesión", **precomputa la lista en el contexto** (`=== NPCS QUE HAN APARECIDO ===\nA, B`) en vez de esperar que el modelo la extraiga del historial. Es dato estructurado derivado, no una respuesta enlatada, y de paso **sobrevive a los recortes por presupuesto** si lo calculas sobre TODOS los eventos y no solo sobre los que caben. Dedupe por **nombre**, no por id: en la DB real el mismo NPC viajaba como `npc_id: 5` y como `"5"`. El acierto pasó de 4/6 a 11/11. Ver el criterio de revisión en [Testing](#testing).
+- **Por qué importa:** Sin el agregado el modelo improvisa desde la prosa: en la medición de control llegó a responder el nombre de un personaje **jugador** como si fuera un NPC.
+
+### Un ejemplo literal de formato pegado a la generación se copia como contenido
+- **Contexto:** F37, ampliación de la lección de F21 con evidencia nueva. El implementer intentó forzar la cita inline repitiendo `p. ej. [Combate > Iniciativa]` en la instrucción final del mensaje `user`.
+- **Lección:** El **mismo** ejemplo es inofensivo en el system prompt (donde vive desde F21) y **tóxico** en la instrucción final: 1 de 3 corridas devolvió *"Las reglas están respaldadas por [Combate > Iniciativa]"* — una cita **inventada** (esa sección no existe en los docs). Los ejemplos de formato van **lejos** de la generación; cerca, se convierten en respuesta. Si necesitas mejorar las citas, baja el ruido del retrieval (menos `topK`) en vez de endurecer el prompt.
+- **Por qué importa:** Una cita fabricada es peor que ninguna: parece verificable y no lo es.
+
 ### La tabla virtual vec0 no puede vivir en schema.sql
 - **Contexto:** F1, al consolidar el esquema con la tabla de vectores de sqlite-vec.
 - **Lección:** La tabla virtual `vec0` solo existe **tras** `sqliteVec.load(db)`. Patrón: aplicar `schema.sql` primero y luego crear `vec_chunks` con `CREATE VIRTUAL TABLE IF NOT EXISTS … vec0(…, embedding FLOAT[768])` dentro de un try/catch que degrade `vecEnabled` sin romper el arranque. nomic-embed-text = 768 dims. vec0 genera 4 tablas sombra (`vec_chunks_*`) que aparecen en `sqlite_master` — no las cuentes como tablas de aplicación.
@@ -112,6 +127,11 @@ Las lecciones se agrupan por categoría. Cada entrada tiene:
 - **Contexto:** modelo de eventos de sesión heredado de la v0.
 - **Lección:** El log `session_events` solo recibe INSERT. Nunca UPDATE ni DELETE. El estado se deriva reproduciendo el log.
 - **Por qué importa:** Mutar el log rompe la reproducción de estado, el historial y las estadísticas derivadas.
+
+### El actor de un evento no es siempre quien lo escribió: sigue el payload hasta el render
+- **Contexto:** F37. La IA atribuía al DM las acciones de los NPCs: `renderEvents` hacía JOIN con `users` por `actor_id` y pintaba `DM1:` donde la ficción decía *Brightlord Amaram*.
+- **Lección:** `session_events.actor_id` guarda **quién disparó** el evento (el DM), mientras que **quién actúa en ficción** vive en `payload.npc_name` con `payload.actor_type === 'npc'`. Cuando una tabla tenga `actor_id` **y** un `actor_type` en el payload: el `actor_id` es la **procedencia técnica**, el payload es la **verdad narrativa**. Cualquier vista que muestre "quién hizo algo" (IA, cronología, stats, TV) tiene que resolver la etiqueta desde el payload. Lo mismo con `payload.participants`: se perdían enteros.
+- **Por qué importa:** El síntoma es perfecto para pasar desapercibido — la línea se ve bien formada, solo que atribuida a la persona equivocada. Aquí hizo que "¿qué NPC han aparecido?" fuera irrespondible sin que nada fallara.
 
 ---
 
@@ -167,6 +187,16 @@ Las lecciones se agrupan por categoría. Cada entrada tiene:
 - **Lección:** El AppShell con sidebar 236px es para las páginas de navegación (Dashboard, catálogos…). Las pantallas de trabajo intensivo (planificación, sesión en vivo) van **full-bleed con su propio rail de iconos 62px** (réplica solo-iconos del sidebar), como ya hace `SessionView`. No colapses el sidebar 236px para esto; monta la vista full-bleed en `App.jsx`.
 - **Por qué importa:** Mantiene consistencia entre las pantallas-lienzo del handoff y evita hacks de layout para exprimir ancho dentro del shell.
 
+### Un control destructivo que afecta a OTROS usuarios no puede ser un icono sin etiqueta
+- **Contexto:** F38. El único botón con pinta de "atrás" dentro de la sesión era un `arrow-left` cuya única pista era `title="Reiniciar canvas"`. Borraba el mapa de **toda la mesa**. El founder lo pulsó 16 veces: seis de ellas en dos segundos.
+- **Lección:** Tres cosas que se dan por buenas y no lo son: (1) el `title` **no es una etiqueta** — hay que dejar el ratón encima, y en móvil no existe; (2) una flecha **se lee como "volver"** diga lo que diga el `title`, y el usuario no va a descubrir lo contrario antes de pulsar; (3) cuando el efecto no se ve en la propia pantalla, el usuario **repite el clic** porque "no pasa nada" — y multiplica el daño en las pantallas de los demás. Un control destructivo necesita glifo con significado, **texto visible**, `aria-label`, y confirmación con el `Modal` del proyecto (no `window.confirm`) cuyo texto **nombre el alcance**: quién más lo va a notar y cuándo.
+- **Por qué importa:** El caso peor de un icono ambiguo no es que no se entienda, es que se pulse repetidamente — y en una app multiusuario cada repetición se propaga a las pantallas del resto.
+
+### La copy de una confirmación es una afirmación técnica: verifícala contra el handler entero, telemetría incluida
+- **Contexto:** F38. El modal decía "No afecta a eventos, notas, chat ni personajes". Pero el endpoint **escribe** una fila `session_reset`, y `stats.js` cuenta `event_count` sin filtrar los tipos de motor: en la sesión 17 eso era el 39% del total.
+- **Lección:** Al redactar la copy de un diálogo de confirmación, recorre **todos** los efectos del handler —el `UPDATE`, el `logEvent`, el `emit`, el snapshot— y comprueba que **cada negación de la copy sobrevive a los cuatro**. Prefiere verbos concretos ("no borra") a verbos totales ("no afecta"), que son casi siempre falsos. Y deja la copy **cubierta por un test**: en F38 se podía borrar entera la frase que nombraba el alcance sin que nada se pusiera rojo, y el verbo total volvió a prohibirse con un `not.toContain('No afecta a')` explícito.
+- **Por qué importa:** Es la frase que el usuario lee justo antes de aceptar. Si es falsa, la confirmación —que existe para que decida con la información correcta— está haciendo lo contrario de su trabajo.
+
 ---
 
 ## Arquitectura
@@ -191,9 +221,24 @@ Las lecciones se agrupan por categoría. Cada entrada tiene:
 - **Lección:** `importGamePack` solo puebla skills/items al **CREAR** un sistema nuevo; sobre sistemas ya existentes es no-op para el catálogo. Para rellenar entidades faltantes en sistemas existentes (varios, uno por DM) hace falta un **seed dedicado** que: (1) asegure el `skill_format`/`item_format` + sus fields por `game_system_id` (aditivo por `field_name`, sin renombrar ni borrar los previos); (2) inserte entidades faltantes **por nombre** (idempotente, sin duplicar); (3) rellene los values con `INSERT OR IGNORE` sobre el `UNIQUE(entity, field)` — nunca UPDATE ni DELETE, para no clobbering ediciones del DM. Opera **por NOMBRE de sistema** (`WHERE name='X'`) para alcanzar todas las copias per-DM (ver lección de F23). Mantén el pack JSON como **única fuente de verdad** y que el seed lo lea (DRY); no hardcodees los datos en el script.
 - **Por qué importa:** Reimportar el pack no rellena catálogos existentes (silencioso), y un seed que haga UPDATE/DELETE pisaría el trabajo del DM o duplicaría al reejecutar.
 
+### Un modo que se llama "Sesión" pero cuyo contrato de transporte no acepta `sessionId` es un bug de CONTRATO, no de prompt
+- **Contexto:** F37. El panel de IA tenía modo "Sesión", pero su preset "Pregunta libre" iba por `streamRulesQuestion`, que solo recupera `doc_chunks`. El evento de socket `ai:ask` **ni siquiera aceptaba** un `sessionId`.
+- **Lección:** Cuando una respuesta salga irrelevante o "robótica", **imprime el contexto REAL que se está mandando** antes de tocar un prompt. El síntoma invita a retocar el system prompt; la causa puede estar dos capas más abajo, en el payload del evento. Corolario: una etiqueta de UI que promete un ámbito ("Sesión") es una afirmación sobre el contrato de transporte — verifica que el ámbito viaje de verdad, de punta a punta. Hallazgo de paso en F37: el frontend ya mandaba `session_id` por REST desde F9 y el backend lo ignoraba — un contrato declarado a medias sobrevive años sin que nada falle.
+- **Por qué importa:** Se pierden días afinando prompts contra un contexto que nunca contuvo el dato, y el arreglo real es un parámetro opcional.
+
 ---
 
 ## Testing
+
+### Para probar retrocompatibilidad, corre las DOS versiones a la vez — y con control positivo
+- **Contexto:** F37. El implementer escribió un test que comparaba el mensaje `user` contra un literal escrito a mano. Si lo hubiera copiado del código nuevo, habría pasado demostrando **nada**.
+- **Lección:** La prueba fuerte es barata: vuelca `git show HEAD:ruta` como `modulo_head.js` dentro de un **contenedor efímero**, importa los DOS módulos en el mismo proceso y compara el artefacto (aquí, el array de `messages`) con comparación estricta sobre la misma DB. **Acompáñalo SIEMPRE de un control positivo** — un caso donde el resultado DEBE diferir: sin él, un arnés roto produce cinco "iguales" tranquilizadores. Complemento estático para "no toqué el prompt X": **hashea la región de cada constante** en HEAD y ahora, en vez de leer el diff (en F37, 7/7 idénticas).
+- **Por qué importa:** Un test contra un literal no distingue el contrato histórico de una copia del código nuevo; es exactamente el caso en que un test verde no prueba nada.
+
+### Un bloque agregado en el contexto no es "hacer trampa" si desaparece cuando el dato no existe — pruébalo APAGANDO el dato
+- **Contexto:** F37, auditar un bloque derivado (`=== NPCS QUE HAN APARECIDO ===`) que el implementer añadió fuera de encargo para que el modelo acertara.
+- **Lección:** Ante un agregado así, la pregunta de revisión no es "¿está enlatado?" sino dos comprobaciones **ejecutables**: (1) que con el dato ausente el bloque **no se emita** — ni encabezado vacío ni "ninguno"; y (2) que **sin él el modelo empeore de verdad**, medido levantando un backend efímero sobre una **COPIA** de la DB con el dato neutralizado. Con las dos, un agregado derivado pasa de "decisión fuera de encargo" a "dato estructurado justificado".
+- **Por qué importa:** Distingue el contexto estructurado legítimo de una respuesta enlatada que solo funciona para la pregunta que se demostró. En F37 la medición fue concluyente: sin el bloque, el modelo llegó a listar un personaje **jugador** como NPC.
 
 ### Auditar trabajo previo sin commitear: la prueba es la DIFERENCIA SIMÉTRICA contra la fuente, no "parece completo"
 - **Contexto:** F34, el working tree traía +173 líneas en `game-packs/stormlight.json` de una corrida que murió sin dejar reporte.
@@ -224,6 +269,21 @@ Las lecciones se agrupan por categoría. Cada entrada tiene:
 - **Contexto:** F35, retirar los alias `gold`/`ink-*` tras migrar los últimos consumidores.
 - **Lección:** Cuando la deuda que acabas de pagar puede volver sin que nada se ponga rojo (clases de una paleta muerta, emojis donde el diseño exige iconos, imports prohibidos), deja un test que **reescanee el árbol de fuentes** en cada `npm test` y falle nombrando el archivo culpable. Valídalo por mutación: reintroduce la clase, confirma el rojo, revierte. Cuesta 20 líneas y convierte una convención en un invariante ejecutable.
 - **Por qué importa:** Sin el guard, la limpieza se deshace sola en la siguiente feature y nadie se entera hasta que alguien mira la pantalla.
+
+### Ejecuta si puedes, escanea si no puedes — y sabe cuál de las dos estás usando
+- **Contexto:** F38. El guard de "el botón no puentea el modal" era `not.toMatch(/onClick=\{onReset\}/)`. El reviewer lo mató con `onClick={() => onReset()}`: misma regresión, otra sintaxis, suite entera en verde.
+- **Lección:** Un guard de fuente que afirma sobre **una forma sintáctica** es casi siempre más estrecho que su nombre. Afirma sobre el **conjunto** de apariciones del símbolo peligroso (censo con número fijo + la familia `on[A-Z]\w*=\{[^}]*sym`, colapsando espacios), y **valida el guard con su propio control positivo**: pásale las formas peligrosas que se te ocurran y una legítima. Pero aunque lo hagas bien, **un guard de fuente es léxico y se derrota renombrando** — probado en F38: aliasea la prop (`onReset: fireReset`), puentea con el alias, y el censo sigue cuadrando, el regex no encuentra nada, y lint y build pasan con 0 errores. Lo que garantiza es que la regresión **no vuelva por accidente en una línea**, no que sea imposible. Por eso: **cuando la unidad se pueda ejecutar, prefiere siempre el test de comportamiento**. Un componente JSX **sin hooks** se puede invocar como función, recorrer su árbol de elementos y dispararle los `onClick` de verdad — sin jsdom y sin dependencias nuevas. Deja el guard de fuente solo para lo que no se puede ejecutar (en F38, el componente con estado que monta el diálogo).
+- **Por qué importa:** Sin la jerarquía, se canoniza el escaneo como si fuera prueba de comportamiento y el harness aprende una técnica con el agujero dentro. En F38 la diferencia fue concreta: extraer `MapResetConfirm` convirtió tres mutaciones supervivientes en tests reales, incluido "Cancelar que reinicia el canvas de toda la mesa".
+
+### En una corrida de mutación, el control positivo va DENTRO de cada corrida, no una vez al principio
+- **Contexto:** F38. Había que leer una mutación cuyo resultado esperado era **verde** (envolver una etiqueta en un `<span>` inocuo no debe romper nada).
+- **Lección:** Cuando alguna mutación se espera verde, un control positivo corrido una sola vez no basta: no distingue "verde porque la aserción es robusta" de "verde porque el runner no arrancó". Inyecta un test que **siempre falla** en todas las corridas, de modo que el **suelo de cada una sea 1 rojo**, y cuenta los rojos *sobre el suelo*. Complementos que salvaron la corrida en F38: que el script **aborte si el patrón a mutar no aparece exactamente 1 vez** (el reviewer descubrió así que su propia mutación sustituía una frase que vivía en **dos** sitios —la copy y el `title`— y por eso no probaba lo que creía), y comprobar que el rojo es un `AssertionError` y no un error de sintaxis disfrazado de test caído.
+- **Por qué importa:** Un arnés roto devuelve verdes tranquilizadores, y una mutación mal aplicada se disfraza de "el guard funciona". Las dos producen la misma sensación de seguridad y ninguna de las dos es evidencia.
+
+### Un `aria-label` puede hacer pasar en verde el test de "el texto es visible"
+- **Contexto:** F38. `expect(html).toContain('Reiniciar mapa')` seguía verde tras revertir el botón a un icono mudo: la cadena estaba en el `aria-label`.
+- **Lección:** Sobre HTML renderizado por SSR, `toContain('texto')` no distingue **contenido** de **atributo**. La receta robusta es **borrar todas las etiquetas y asertar sobre el texto que queda** — los atributos viven dentro de los corchetes angulares y se van con ellas: `const visibleText = (html) => html.replace(/<[^>]*>/g, '')`. Lo que **no** funciona es anclar el texto a la estructura (`/<\/svg>\s*Etiqueta<\/button>/`): sobrevive a Prettier —el HTML lo genera React, no el formateo del JSX— pero da **falso positivo** en cuanto alguien mete un `<span className="hidden sm:inline">` entre medias, que es justo el retoque que invita una toolbar apretada. Asértalo por separado: el atributo con `toContain('aria-label="…"')`, el texto visible con la versión sin etiquetas.
+- **Por qué importa:** El test que creías que protegía "el usuario ve la etiqueta" en realidad solo protegía "la cadena está en el archivo", y esa es exactamente la regresión que se quería impedir.
 
 ### El runner de vitest del frontend no tiene jsdom: testea helpers puros, no clics
 - **Contexto:** F20, cubrir la lógica del modal de evento rápido en `session.test.jsx`.
@@ -334,4 +394,6 @@ Las lecciones se agrupan por categoría. Cada entrada tiene:
 - 2026-07-30 — líder agregó tras cerrar F35 "`grep -P` en Git Bash aborta por locale: un `|| echo CERO` convierte el fallo en un falso limpio" y "Una regresión que no rompe el build necesita un test-guard que reescanee el código" — ambas en Testing.
 - 2026-07-30 — líder agregó tras cerrar F33 "Filtrar por identidad: el id del solicitante sale del socket, nunca del payload" (Backend).
 - 2026-08-07 — líder agregó tras cerrar F36: "Al borrar un huérfano, la paridad no acaba en el JSX: sigue el dato hasta el backend" (Arquitectura), "Antes de borrar un archivo, censa también las rutas escritas como STRING" y "Mutar para validar un guard: hazlo DENTRO del contenedor efímero" (Testing), y "Para fechar una orfandad, busca el commit donde murió su ÚLTIMO importador" (Proceso).
+- 2026-08-08 — líder agregó tras cerrar F37 (7 lecciones, la cosecha de un bug reportado en vivo por el founder): "El actor de un evento no es siempre quien lo escribió: sigue el payload hasta el render" (Backend), "Un modo que se llama 'Sesión' pero cuyo contrato de transporte no acepta sessionId es un bug de CONTRATO, no de prompt" (Arquitectura), "Con un modelo pequeño, el dato correcto en el contexto no basta: hay que ponerlo también AGREGADO" y "Un ejemplo literal de formato pegado a la generación se copia como contenido" (RAG), "Para probar retrocompatibilidad, corre las DOS versiones a la vez — y con control positivo" y "Un bloque agregado en el contexto no es 'hacer trampa' si desaparece cuando el dato no existe" (Testing), y "Al leer una SQLite en modo WAL desde fuera, copia también el -wal" (Base de datos/SQLite).
+- 2026-08-08 — líder agregó tras cerrar F38 (5 lecciones; la feature se aprobó en dos pases y la cosecha salió del PRIMER review, que aprobó el código pero encontró cuatro mutaciones destructivas en verde): "Ejecuta si puedes, escanea si no puedes — y sabe cuál de las dos estás usando", "En una corrida de mutación, el control positivo va DENTRO de cada corrida" y "Un `aria-label` puede hacer pasar en verde el test de 'el texto es visible'" (Testing), más "Un control destructivo que afecta a OTROS usuarios no puede ser un icono sin etiqueta" y "La copy de una confirmación es una afirmación técnica: verifícala contra el handler entero" (Frontend). La primera va CON la cláusula del límite que pidió el reviewer: un guard léxico se derrota renombrando el símbolo, y él lo probó (alias de la prop → censo cuadrando, regex sin hallazgos, lint y build en 0 errores, y el botón destructivo de vuelta).
 - 2026-08-07 — líder agregó tras cerrar F34: "Un formato nuevo es más barato que un nombre mentiroso — pero el 'cero coste de frontend' se prueba leyendo los tres consumidores" (Arquitectura), "Auditar trabajo previo sin commitear: la prueba es la DIFERENCIA SIMÉTRICA contra la fuente" y "El test viejo SIN TOCAR prueba un refactor solo si, mutando el módulo nuevo, se pone rojo" (Testing).

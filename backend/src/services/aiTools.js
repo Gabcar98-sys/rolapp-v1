@@ -120,7 +120,9 @@ function getSessionStateTool({ sessionId }) {
 // ── get_event_history: log narrativo append-only de la sesión (solo lectura) ──────
 function getEventHistoryTool({ sessionId }) {
   if (!sessionId) throw new Error('get_event_history: sessionId es requerido');
-  const SKIP = new Set(['session_join', 'session_leave', 'session_end', 'message']);
+  // MISMO filtro que `getEventHistory` de ai.js (el mismo dato servido por dos caminos:
+  // tool-use e inyección de contexto). `session_reset` es ruido de infraestructura (F37).
+  const SKIP = new Set(['session_join', 'session_leave', 'session_end', 'session_reset', 'message']);
   const events = db
     .prepare(`
       SELECT se.type, se.payload, u.username AS actor

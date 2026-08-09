@@ -44,10 +44,13 @@ function newRequestId(prefix) {
 
 // callbacks: { onToken(token), onDone({ answer, sources }), onError(message) }
 // `sectionType` (opcional, F18) filtra el retrieval por metadato para los topics de sistema.
-export function streamAiAsk({ query, gameSystemId, history = [], sectionType = null }, callbacks) {
+// `sessionId` (opcional, F37) pide al backend que inyecte también el contexto de la partida
+// (eventos + estado); lo manda la pregunta libre del modo Sesión. En modo Sistema va null y
+// el backend responde exactamente como antes.
+export function streamAiAsk({ query, gameSystemId, sessionId = null, history = [], sectionType = null }, callbacks) {
   return streamAi(
     'ai:ask',
-    { requestId: newRequestId('ask'), query, gameSystemId, history, sectionType },
+    { requestId: newRequestId('ask'), query, gameSystemId, sessionId, history, sectionType },
     callbacks
   );
 }

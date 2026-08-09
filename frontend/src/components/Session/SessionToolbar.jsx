@@ -28,9 +28,54 @@ export function buildQuickEventPayload({ user, form, partType, chars, selectedId
   };
 }
 
+// Resuelve el modal de confirmación de "Reiniciar mapa" (F38). El botón de la toolbar ya
+// NO ejecuta el reset: solo abre el modal, y este paso es el único que puede dispararlo.
+// Se exporta aparte del componente para poder verificar sin DOM (no hay jsdom en el runner
+// de vitest) que confirmar cierra el modal y llama al reset UNA vez, y que cancelar —o
+// cerrar por backdrop/Escape— lo cierra sin llamarlo nunca.
+export function resolveMapReset({ confirmed, onReset, closeModal }) {
+  closeModal?.();
+  if (confirmed) onReset?.();
+}
+
+// Cuerpo del diálogo de confirmación de "Reiniciar mapa" (F38). Se extrae a un componente
+// propio —sin estado ni efectos— para que los tests puedan ejercitar los TRES caminos de
+// salida (Cancelar, confirmar y el cierre por backdrop/Escape/aspa) sin DOM: basta con
+// invocarlo como función y disparar los `onClick` del árbol de elementos que devuelve.
+// Importa porque en un diálogo de confirmación el booleano que pasa cada botón ES la
+// feature: un `true` en Cancelar convertiría el botón de escape en el destructivo, y eso
+// no lo detecta ni el build ni un test del helper.
+// `onResolve(confirmed)` es el ÚNICO punto de salida del diálogo.
+export function MapResetConfirm({ open, onResolve }) {
+  return (
+    <Modal open={open} onClose={() => onResolve(false)} title="Reiniciar mapa">
+      <div className="flex flex-col gap-3">
+        <p className="text-sm text-sub">
+          Se borrarán el mapa de fondo y los dibujos del canvas{' '}
+          <strong className="font-semibold text-title">para toda la mesa</strong>, no solo en tu pantalla:
+          los jugadores y el Modo TV verán el canvas vacío al instante.
+        </p>
+        {/* La copy tiene que ser CIERTA contra el endpoint: PATCH /api/sessions/:id/reset
+            pone image_url y tldraw_snapshot a NULL, pero ADEMÁS escribe una fila
+            `session_reset` en session_events (que stats.event_count cuenta sin filtrar).
+            Por eso "no borra" —que es exactamente cierto— y nunca "no afecta". */}
+        <p className="text-xs text-muted">
+          No borra eventos, notas, chat ni personajes; el reinicio queda registrado en el
+          historial de la sesión.
+        </p>
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" size="sm" onClick={() => onResolve(false)}>Cancelar</Button>
+          <Button variant="danger" size="sm" onClick={() => onResolve(true)}>Sí, reiniciar mapa</Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 // Toolbar de la sesión en vivo (F18 + F20). Expone como barra las acciones ya existentes:
 //   DM: Cambiar mapa (modal), Nuevo Evento (modal de evento rápido: crear-y-disparar al
-//       instante, F20), Nuevo Evento NPC (modal con catálogo F16), Reset, Finalizar.
+//       instante, F20), Nuevo Evento NPC (modal con catálogo F16), Reiniciar mapa
+//       (etiquetado y con confirmación desde F38), Finalizar.
 //   Jugador: Salir.
 // El evento rápido y el evento NPC se disparan aquí porque son flujos cortos y aislados;
 // el disparo de eventos YA planificados sigue viviendo en PlanningPanel, accesible desde
@@ -55,6 +100,9 @@ export default function SessionToolbar({
   const [npcs, setNpcs] = useState([]);
   const [npcForm, setNpcForm] = useState({ npc_id: '', category: 'general', title: '', description: '' });
   const [npcBusy, setNpcBusy] = useState(false);
+
+  // Confirmación del reinicio de mapa (F38).
+  const [showReset, setShowReset] = useState(false);
 
   // Evento rápido (F20): crear-y-disparar un evento genérico al instante.
   const [showQuick, setShowQuick] = useState(false);
@@ -105,6 +153,10 @@ export default function SessionToolbar({
     e.preventDefault();
     onSetImage(imageDraft.trim());
     setShowMap(false);
+  }
+
+  function closeReset(confirmed) {
+    resolveMapReset({ confirmed, onReset, closeModal: () => setShowReset(false) });
   }
 
   function resetQuick() {
@@ -200,9 +252,17 @@ export default function SessionToolbar({
           <Button variant="secondary" size="sm" onClick={openTvView} title="Abrir la vista de televisor en otra pestaña">
             <Icon name="dashboard" size={15} className="mr-1" /> Modo TV
           </Button>
-          <div className="ml-auto flex items-center gap-2">
-            <Button variant="secondary" size="sm" onClick={onReset} title="Reiniciar canvas">
-              <Icon name="arrow-left" size={15} />
+          {/* flex-wrap también en el grupo derecho: "Reiniciar mapa" ganó texto en F38 y en
+              pantallas muy estrechas el trío no cabía en una línea (se desbordaba). */}
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setShowReset(true)}
+              aria-label="Reiniciar mapa"
+              title="Borra el mapa de fondo y los dibujos del canvas para toda la mesa"
+            >
+              <Icon name="refresh" size={15} className="mr-1" /> Reiniciar mapa
             </Button>
             <Button variant="success" size="sm" onClick={onClose}>
               <Icon name="check" size={15} className="mr-1" /> Finalizar
@@ -240,6 +300,12 @@ export default function SessionToolbar({
           </div>
         </form>
       </Modal>
+
+      {/* Confirmación de Reiniciar mapa (F38). El PATCH /api/sessions/:id/reset limpia el
+          canvas_state y emite session:reset a TODO el room, así que el efecto no es local:
+          antes era un icono de flecha sin etiqueta ni confirmación y se leía como "volver"
+          (16 resets accidentales en la sesión 17). El texto nombra el alcance real. */}
+      <MapResetConfirm open={showReset} onResolve={closeReset} />
 
       {/* Modal Evento rápido (F20): crear y disparar un evento ad-hoc al instante. */}
       <Modal open={showQuick} onClose={() => setShowQuick(false)} title="Nuevo Evento">
